@@ -1,6 +1,5 @@
 function permAniso = getAnisotropyRatio(vcl, isClayVcl, zf, clayMine, ...
-                                        faultDisp, faultThick, ...
-                                        silt, porozf, idHW)
+                                        gamma, silt, porozf, idHW)
 % Get permeability anisotropy [m^2] for smear fault materials. Note that an 
 % object fault with fields disp (displacement in meters) and thick 
 % (thickness in meters) must be passed as well.
@@ -54,7 +53,7 @@ function permAniso = getAnisotropyRatio(vcl, isClayVcl, zf, clayMine, ...
 %--------------------------------------------------------------
 permAniso = ones(1, numel(vcl));
 id = find(vcl >= isClayVcl);
-if nargin > 8
+if nargin > 7
     assert(numel(zf) == 2)
     zf = [repelem(zf(1), sum(id < idHW(1))), ...
           repelem(zf(2), sum(id >= idHW(1)))];
@@ -64,7 +63,7 @@ end
 
 if ~isempty(id)
     % (1) Grain aspect ratio
-    if nargin > 8
+    if nargin > 7
         assert(numel(clayMine) == 2);           % predominant in FW and HW
         m = zeros(2, 1);
         if strcmp(clayMine{1}, 'kao') || ...
@@ -95,13 +94,13 @@ if ~isempty(id)
     end
     
     if ~isempty(silt) && silt == 1
-        f = [0.75 0.25];
+        f = [0.9 0.1];
         m = [sqrt(1/(f(1)/m(1)^2 + f(2)/1)); ...
              sqrt(1/(f(1)/m(2)^2 + f(2)/1))];  % m equivalent. Eq. (13) in
                                                % Daigle & Dugan (2011).
     end
     
-    if nargin > 8
+    if nargin > 7
        m = [repelem(m(1), sum(id < idHW(1))), ...
              repelem(m(2), sum(id >= idHW(1)))]; 
     else
@@ -110,7 +109,11 @@ if ~isempty(id)
     
     
     % (2) Porosity at faulting depth
-    poro = porozf(id, 1) + rand(numel(id), 1).*(porozf(id, 2) - porozf(id, 1));
+    if size(porozf, 2) == 2
+        poro = porozf(id, 1) + rand(numel(id), 1).*(porozf(id, 2) - porozf(id, 1));
+    elseif size(porozf, 2) == 1
+        poro = porozf(id);
+    end
     
     % Clay grain orientation after compaction and shearing (i.e. 45 degrees 
     % is totally random, 0 degrees is completely flat leading to max 
@@ -126,7 +129,6 @@ if ~isempty(id)
     epsv   = 0.3149*exp(0.0002304*zf) -0.3117*exp(-0.001417*zf);
     theta0 = 45;                            % [deg]
     theta1 = atand((1-epsv)*tand(theta0));  % after compaction
-    gamma  = faultDisp / faultThick;
     theta  = acotd(gamma + cotd(theta1));   % after shearing
     
     

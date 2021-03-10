@@ -67,7 +67,7 @@ classdef Fault
             
             % Geometry
             obj.Dip    = dip;
-            obj.Throw  = sum(FS.FW.Thickness);    
+            obj.Throw  = sum(FS.Thick);    
             obj.Grid.Resolution = [0.1, 1];     % [thickness, displacement]
         end
         
@@ -118,10 +118,10 @@ classdef Fault
             % Perm Anisotropy Ratio
             poroAtZf = getPorosity(FS.Vcl, FS.IsClayVcl, zf, zmax, ...
                                    'zf', opt.isUndercompacted, FS.HW.Id);
+            gamma = obj.Disp / obj.MatProps.Thick;
             obj.MatProps.PermAnisoRatio = ...
                 getAnisotropyRatio(FS.Vcl, FS.IsClayVcl, zf, clayMine, ...
-                                   obj.Disp, obj.MatProps.Thick, ...
-                                   opt.siltInClay, poroAtZf, FS.HW.Id);
+                                   gamma, opt.siltInClay, poroAtZf, FS.HW.Id);
             % Porosity
             obj.MatProps.Poro = getPorosity(FS.Vcl, FS.IsClayVcl, ...         
                                             zf, zmax, 'zmax', ...
