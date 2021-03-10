@@ -326,7 +326,122 @@ set(fh6, 'position', [500, 200, 175*numel(shear_strain), ...
 
 
 
-%% Permeability 
+%% Permeability
+
+% Sands
+vcls   = [0.1 0.25 0.35];
+ids    = 1:numel(vcls);
+zmax_all = repmat(repmat(zmax', 1, numel(vcls)), numel(zf), 1);
+zf_all   = repelem(zf', numel(zmax), 1);
+idRem    = zf_all > zmax_all(:, 1);  % faulting depth must be <= max burial
+zmax_all(idRem, :) = []; zf_all(idRem, :) = [];
+N = numel(zf_all);
+perms =  zeros(Nsim, numel(vcls), N);
+for n=1:N
+   permf = getPermeability(vcls, isClayVcl, zf_all(n), zmax_all(n, :), ...
+                           [], []);
+   for k = 1:numel(vcls)
+   perms(:, k, n) = permf{k}(Nsim) / (milli*darcy);     % mD
+   end
+end
+
+% hist params
+nbins = 25;
+edg_perms = logspace(-4, 6, nbins);
+colrs = repmat(hsv(numel(zmax)), numel(zf), 1);
+colrs(idRem, :) = [];
+nextzf = [1; 1 + find(diff(zf_all))];  
+
+% Plot
+fh7 = figure(7);
+tiledlayout(numel(vcls), numel(zf), 'Padding', 'compact', 'TileSpacing', 'compact');
+for n = 1:numel(vcls)
+    for j=1:N
+        if any(ismember(nextzf, j))
+            nexttile
+            hold on
+        end
+        if j <= numel(zmax) && n == 1
+                histogram(perms(:, ids(n), j), edg_perms, 'Normalization', ...
+                  'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
+                  ['$z_\mathrm{max} =$ ' num2str(zmax_all(j))], 'EdgeColor', ...
+                  colrs(j, :));
+            xlabel('$k_\mathrm{xx}$ [mD]', latx{:}, 'fontSize', sz(2))
+            ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+            title(['$V_\mathrm{cl}$ = ' num2str(vcls(n)) ...
+                   ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf_all(j)) ' m'], ...
+                   latx{:}, 'fontSize', sz(2))
+            legend(latx{:}, 'fontSize', sz(2), 'location', 'northwest')
+        else
+            histogram(perms(:, ids(n), j), edg_perms, 'Normalization', ...
+                  'probability', 'DisplayStyle', 'stairs', ...
+                  'EdgeColor', colrs(j, :));
+            title(['$V_\mathrm{cl}$ = ' num2str(vcls(n)) ...
+                   ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf_all(j)) ' m'], ...
+                   latx{:}, 'fontSize', sz(2))
+        end
+        plot([0.0001 10^6], [0 0], '-k', 'HandleVisibility','off')
+        set(gca,'XScale','log')
+        xlim([0.0001, 10^6]); xticks([1e-4 0.01 1 10^2 10^4 10^6]); ...
+        xticklabels({'10^{-4}' '10^{-2}' '1' '10^2' '10^{4}' '10^{6}'})
+        yticks([0 0.2 0.4 0.6 0.8 1]); ylim([0 1]); grid on;
+    end
+end
+hold off
+set(fh7, 'position', [500, 200, 200*numel(zf), 150*numel(vcls)]);
 
 
-%% Smears
+% Clays
+vclc   = vcl(vcl >= isClayVcl);
+idc = 1:numel(vclc);
+zmaxc = repmat(zmax', 1, numel(vclc));
+permc =  zeros(Nsim, numel(vclc), numel(zmax));
+for n=1:numel(zmax)
+    poro = getPorosity(vclc, isClayVcl, zf(1), zmaxc(n, :), 'zmax', 0);
+    permf = getPermeability(vclc, isClayVcl, zf(1), zmaxc(n, :), ...
+                           [], poro);
+    for k = 1:numel(vclc)
+   permc(:, k, n) = permf{k}(Nsim) / (micro*darcy);    
+   end
+end
+
+
+% hist params
+nbins = 25;
+edg_permc = logspace(-5, 1, nbins);
+colrs = hsv(numel(zmax));
+%nextzf = [1; 1 + find(diff(zf_all))];  
+
+% Plot
+fh8 = figure(8);
+tiledlayout(1, numel(vclc), 'Padding', 'compact', 'TileSpacing', 'compact');
+for n = 1:numel(vclc)
+    nexttile
+    hold on
+    for j=1:numel(zmax)
+        if n == 1
+            histogram(permc(:, n, j), edg_permc, 'Normalization', ...
+                  'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
+                  ['$z_\mathrm{m} =$ ' num2str(zmax(j))], 'EdgeColor', ...
+                  colrs(j, :));
+            xlabel('$k_\mathrm{xx}$ [$\mu$D]', latx{:}, 'fontSize', sz(2))
+            ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+            title(['$V_\mathrm{cl}$ = ' num2str(vclc(n))], ...
+                   latx{:}, 'fontSize', sz(2))
+            legend(latx{:}, 'fontSize', sz(2), 'location', 'northwest')
+        else
+            histogram(permc(:, n, j), edg_permc, 'Normalization', ...
+                  'probability', 'DisplayStyle', 'stairs', ...
+                  'EdgeColor', colrs(j, :));
+            title(['$V_\mathrm{cl}$ = ' num2str(vclc(n))], ...
+                   latx{:}, 'fontSize', sz(2))
+        end
+        plot([10^-5 10], [0 0], '-k', 'HandleVisibility','off')
+        set(gca,'XScale','log')
+        xlim([10^-5, 10]); xticks([1e-5 1e-4 0.001 0.01 0.1 1 10]); ...
+        xticklabels({'10^{-5}' '10^{-4}' '10^{-3}' '10^{-2}' '0.1' '1' '10'})
+        yticks([0 0.2 0.4 0.6 0.8 1]); ylim([0 1]); grid on;
+    end
+end
+hold off
+set(fh8, 'position', [500, 200, 200*numel(vclc), 200]);

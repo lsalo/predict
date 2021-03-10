@@ -84,9 +84,9 @@ faults{plotId}.plotMaterials(mySect)
 
 % Histograms for each MatProp (all sims, we select one stratigraphic layer)
 % This should plot for all realizations that contain the given id.
-%layerId = 12;                                            
-%plotMatPropsHist(faults, smears, mySect, layerId) 
+layerId = 1;                                            
+plotMatPropsHist(faults, smears, mySect, layerId) 
 % TO ADD: Save figs automatically.
 
 % Plot upscaled Poro and Perm (all sims, 3 directions)
-%plotUpscaledPerm(faults)
+plotUpscaledPerm(faults)

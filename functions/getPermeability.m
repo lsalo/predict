@@ -74,7 +74,7 @@ if numel(ids) > 0
                 (a(4)*zfs - a(5)).*(1-vcl(ids)).^7)));    % [mD]
     permSand = [0.5.*permSand; 5.*permSand];        % min & max
     % Cap values
-    if ~isempty(cap)
+    if ~isempty(cap) && cap ~= 0
         permSand(permSand > cap) = cap;
     end
     permSand = log10(permSand*md_to_m2);
