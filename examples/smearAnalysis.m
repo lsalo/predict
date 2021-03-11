@@ -8,7 +8,7 @@ Nsim = 1000;
 isClayVcl = 0.4;
 vcl = [0.4 0.55 0.7 0.9];
 T = [2 10 20 50 100];
-zf = 1000;                         
+zf = [100 1000 2000];                         
 
 f.Dip = 60;
 f.Throw = 100;    
@@ -19,19 +19,20 @@ Tap = T ./ sind(f.Dip);
 f.Disp = f.Throw/sind(f.Dip);
 
 % Generate smear samples
-N = numel(T);
-thick = repelem(T', 1, numel(vcl));
-thickap = repelem(Tap', 1, numel(vcl));
+N = numel(T)*numel(zf);
+thick = repmat(repelem(T', 1, numel(vcl)), numel(zf), 1);
+thickap = repmat(repelem(Tap', 1, numel(vcl)), numel(zf), 1);
+zf_all = repelem(zf', numel(T), 1);
 sThick        = zeros(Nsim, numel(vcl), N);
 sThickInFault = zeros(Nsim, numel(vcl), N);
 sLen          = zeros(Nsim, numel(vcl), N);
 sSegLenMax    = zeros(Nsim, numel(vcl), N);
 sDomLen       = zeros(Nsim, N);
-sFrac        = zeros(Nsim, numel(vcl), N);
+sFrac         = zeros(Nsim, numel(vcl), N);
 Trat          = zeros(Nsim, numel(vcl), N);
 segLenFrac    = zeros(Nsim, numel(vcl), N);
 for j=1:N
-    [~, f.MatProps.SSFcBounds] = getSSFc(vcl, isClayVcl, zf, ...
+    [~, f.MatProps.SSFcBounds] = getSSFc(vcl, isClayVcl, zf_all(j), ...
                                          thick(j, :), f.Throw);
     for n=1:Nsim
         % Variable props
@@ -39,11 +40,11 @@ for j=1:N
         [f.Alpha, f.Delta, f.Zeta] = getFaultAngles(f.Throw, f.Dip, ...
                                                     f.MatProps.Thick);
         f.MatProps.ResFric = getResidualFrictionAngle(vcl);
-        f.MatProps.SSFc = getSSFc(vcl, isClayVcl, zf, thick(j, :), f.Throw);
+        f.MatProps.SSFc = getSSFc(vcl, isClayVcl, zf_all(j), thick(j, :), f.Throw);
         
         % smear struct
         smear = Smear(vcl, isClayVcl, thick(j, :), thickap(j, :), ...
-                      zf, f, 1);
+                      zf_all(j), f, 1);
         
         % unpack
         sThick(n, :, j) = smear.Thick;
@@ -63,8 +64,11 @@ edg_Trat = linspace(0, 0.3, nbins);
 edg_sfrac = linspace(0, 1, nbins);
 edg_segLenFrac = linspace(0, 1, nbins);
 rat = f.Throw ./ T;
-colrs = hsv(numel(T));
-
+colrs = repmat(hsv(numel(T)), numel(vcl), 1);
+id_vcl = repelem((1:numel(vcl))', numel(T), 1);
+nextvcl = [1; 1 + find(diff(id_vcl))];  
+zf_all = repmat(reshape(zf_all, numel(T), numel(zf)), numel(vcl), 1);
+idd = repmat((1:numel(T))', numel(vcl), 1);
 
 % Plots
 latx = {'Interpreter', 'latex'};
@@ -73,35 +77,91 @@ sz = [14, 12];
 
 fh1 = figure(1);
 tiledlayout(1, numel(vcl), 'Padding', 'compact', 'TileSpacing', 'compact');
-for n = 1:numel(vcl)
-    nexttile
-    hold on
-    for j=1:N
-        if n == 1
-            histogram(Trat(:, n, j), edg_Trat, 'Normalization', ...
+for j=1:numel(id_vcl)       %   DOES NOT CHANGE WITH ZF (ONLY T, Vcl)  
+    if any(ismember(nextvcl, j))
+        nexttile
+        hold on
+    end
+    if j <= numel(rat) 
+        histogram(Trat(:, id_vcl(j), idd(j)), edg_Trat, 'Normalization', ...
+            'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
+            ['$t / T =$ ' num2str(rat(j), '%1.1f')], 'EdgeColor', ...
+            colrs(j, :));
+        xlabel('$s_\mathrm{T} / T$ [-]', latx{:}, 'fontSize', sz(2))
+        ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+        title(['$V_\mathrm{cl}$ = ' num2str(vcl(id_vcl(j)))], ...
+            latx{:}, 'fontSize', sz(2))
+        legend(latx{:}, 'fontSize', sz(2), 'location', 'northeast')
+    else
+        histogram(Trat(:, id_vcl(j), idd(j)), edg_Trat, 'Normalization', ...
+            'probability', 'DisplayStyle', 'stairs', ...
+            'EdgeColor', colrs(j, :));
+        title(['$V_\mathrm{cl}$ = ' num2str(vcl(id_vcl(j)))], ...
+            latx{:}, 'fontSize', sz(2))
+    end
+    plot([0 0.3], [0 0], '-k', 'HandleVisibility','off')
+    xlim([0, 0.3]); ylim([0 1]); grid on
+    xticks([0 0.05 0.1 0.15 0.2 0.25 0.3])
+    yticks([0 0.2 0.4 0.6 0.8 1]);
+end
+hold off
+set(fh1, 'position', [500, 200, 200*numel(vcl), 175]);
+
+lst = repmat({'-', '-', '-.', '--', ':'}', numel(vcl), 1);
+lwi = repmat([0.5, .5, .5, .5, .5]', numel(vcl), 1);
+fh2 = figure(2);
+tiledlayout(numel(zf), numel(vcl), 'Padding', 'compact', 'TileSpacing', 'compact');
+k = 0;
+for n = 1:numel(zf)
+    for j=1:numel(id_vcl)
+        if any(ismember(nextvcl, j))
+            nexttile
+            hold on
+        end
+        if j <= numel(rat) && n == 1
+            histogram(sFrac(:, id_vcl(j), idd(j)+numel(T)*k), edg_sfrac, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
                   ['$t / T =$ ' num2str(rat(j), '%1.1f')], 'EdgeColor', ...
-                  colrs(j, :));
-            xlabel('$s_\mathrm{T} / T$ [-]', latx{:}, 'fontSize', sz(2))
+                  colrs(j, :), 'LineStyle', lst{j}, 'lineWidth', lwi(j));
+            xlabel('$s_\mathrm{L} / f_\mathrm{L}$ [-]', latx{:}, 'fontSize', sz(2))
             ylabel('P [-]', latx{:}, 'fontSize', sz(2))
-            title(['$V_\mathrm{cl}$ = ' num2str(vcl(n)) ...
-                   ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf) ' m'], ...
+            title(['$V_\mathrm{cl}$ = ' num2str(vcl(id_vcl(j))) ...
+                   ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf_all(j, n)) ' m'], ...
                    latx{:}, 'fontSize', sz(2))
             legend(latx{:}, 'fontSize', sz(2), 'location', 'northeast')
         else
-            histogram(Trat(:, n, j), edg_Trat, 'Normalization', ...
+            histogram(sFrac(:, id_vcl(j), idd(j)+numel(T)*k), edg_sfrac, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', ...
-                  'EdgeColor', colrs(j, :));
-            title(['$V_\mathrm{cl}$ = ' num2str(vcl(n)) ...
-                   ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf) ' m'], ...
+                  'EdgeColor', colrs(j, :), 'LineStyle', lst{j}, 'lineWidth', lwi(j));
+            title(['$V_\mathrm{cl}$ = ' num2str(vcl(id_vcl(j))) ...
+                   ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf_all(j, n)) ' m'], ...
                    latx{:}, 'fontSize', sz(2))
         end
-        plot([0 24], [0 0], '-k', 'HandleVisibility','off')
-        xlim([0, 0.3]); ylim([0 1]); grid on
-        xticks([0 0.05 0.1 0.15 0.2 0.25 0.3])
+        plot([0 1], [0 0], '-k', 'HandleVisibility','off')
+        xlim([0, 1]); ylim([0 1]); grid on
+        xticks([0 0.2 0.4 0.6 0.8 1])
         yticks([0 0.2 0.4 0.6 0.8 1]);
     end
+    k = k+1;
 end
 hold off
-set(fh1, 'position', [500, 200, 200*N, 200]);
+set(fh2, 'position', [500, 200, 200*numel(vcl), 175*numel(zf)]);
+
+fh3 = figure(3);            % THIS RATIO JUST DEPENDS ON T, not zf or vcl
+hold on
+for n=1:numel(T)
+    histogram(segLenFrac(:, 2, n), edg_segLenFrac, 'Normalization', ...
+             'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
+             ['$t / T =$ ' num2str(rat(n), '%1.1f')], 'EdgeColor', ...
+             colrs(n, :), 'lineWidth', lwi(n));
+    xlabel('$s_\mathrm{l} / s_\mathrm{L}$ [-]', latx{:}, 'fontSize', sz(2))
+    ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+    legend(latx{:}, 'fontSize', sz(2), 'location', 'northeast')
+end
+plot([0 1], [0 0], '-k', 'HandleVisibility','off')
+hold off
+xlim([0, 1]); ylim([0 0.5]); grid on
+xticks([0 0.2 0.4 0.6 0.8 1])
+yticks([0 0.1 0.2 0.3 0.4 0.5]);
+set(fh3, 'position', [500, 200, 250, 200]);
 
