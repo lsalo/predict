@@ -57,7 +57,7 @@ nbins = 25;
 edg_phi = linspace(0, 35, nbins);
 
 fh2 = figure(2);
-tiledlayout(1, 7, 'Padding', 'compact', 'TileSpacing', 'compact');
+tiledlayout(1, numel(vcl), 'Padding', 'compact', 'TileSpacing', 'compact');
 for n = 1:numel(vcl)
     nexttile
     histogram(phi(:, n), edg_phi, 'Normalization', 'probability','FaceColor', ...
@@ -73,7 +73,7 @@ for n = 1:numel(vcl)
     end
     xlim([0, 35]); ylim([0 1]); grid on; xticks([0 10 20 30]);
 end
-set(fh2, 'position', [500, 200, 1000, 175]);
+set(fh2, 'position', [500, 200, 150*numel(vcl), 175]);
 
 
 %% SSFc 
@@ -205,7 +205,9 @@ for n = 1:numel(vcls)
             title(['$V_\mathrm{cl}$ = ' num2str(vcls(n)) ...
                    ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf_all(j)) ' m'], ...
                    latx{:}, 'fontSize', sz(2))
-            legend(latx{:}, 'fontSize', sz(2), 'location', 'northwest')
+            h = legend(latx{:}, 'fontSize', sz(2), 'location', 'northwest');
+            set(h.BoxFace, 'ColorType','truecoloralpha', ...
+                'ColorData', uint8(255*[1;1;1;.5]));  
         else
             histogram(poros(:, ids(n), j), edg_poro, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', ...
@@ -236,9 +238,9 @@ xlabel('$n$ [-]', latx{:}, 'fontSize', sz(2))
 ylabel('P [-]', latx{:}, 'fontSize', sz(2))
 %title('Clay Porosity', latx{:}, 'fontSize', sz(2))
 legend(latx{:}, 'fontSize', sz(2), 'location', 'northeast')
-xlim([0, 0.6]); xticks([0 0.1 0.2 0.3 0.4 0.5 0.6]); 
+xlim([0, 0.5]); xticks([0 0.1 0.2 0.3 0.4 0.5]); 
 yticks([0 0.2 0.4 0.6 0.8 1]); ylim([0 1]); grid on;
-set(fh5, 'position', [500, 200, 275, 250]);
+set(fh5, 'position', [500, 200, 275, 225]);
 
 
 %% Permeability Anisotropy ratio
@@ -304,7 +306,9 @@ for j=1:N/numel(silt)
         ylabel('P [-]', latx{:}, 'fontSize', sz(2))
         title(['  $z_\mathrm{f}$ = ' num2str(zf_all(j)) ...
                ' $\vert$ $\gamma = $' num2str(ss_all(j))], latx{:}, 'fontSize', sz(2))
-        legend(latx{:}, 'fontSize', sz(2), 'location', 'northeast')
+        h = legend(latx{:}, 'fontSize', sz(2), 'location', 'northeast');
+         set(h.BoxFace, 'ColorType','truecoloralpha', ...
+                'ColorData', uint8(255*[1;1;1;.7])); 
     else
         histogram(krat(:, j), edg_krat, 'Normalization', ...
             'probability', 'DisplayStyle', 'stairs', ...
@@ -321,8 +325,8 @@ for j=1:N/numel(silt)
     xlim([0, 10000]); yticks([0 0.2 0.4 0.6 0.8 1]); ylim([0 1]); grid on;
 end
 hold off
-set(fh6, 'position', [500, 200, 175*numel(shear_strain), ...
-    125*numel(zf)]);
+set(fh6, 'position', [500, 200, 200*numel(shear_strain), ...
+    150*numel(zf)]);
 
 
 
@@ -371,7 +375,9 @@ for n = 1:numel(vcls)
             title(['$V_\mathrm{cl}$ = ' num2str(vcls(n)) ...
                    ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf_all(j)) ' m'], ...
                    latx{:}, 'fontSize', sz(2))
-            legend(latx{:}, 'fontSize', sz(2), 'location', 'northwest')
+            h = legend(latx{:}, 'fontSize', sz(2), 'location', 'northwest');
+            set(h.BoxFace, 'ColorType','truecoloralpha', ...
+                'ColorData', uint8(255*[1;1;1;.7])); 
         else
             histogram(perms(:, ids(n), j), edg_perms, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', ...
