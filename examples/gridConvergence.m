@@ -103,7 +103,7 @@ limy = [floor(log10(fix(min(min(k_md))))), ...
         ceil(log10(fix(max(max(k_md)))))];
 
 f1 = figure(1);
-tiledlayout(1, 3, 'Padding', 'compact', 'TileSpacing', 'compact');
+tiledlayout(Nstrat, 3, 'Padding', 'compact', 'TileSpacing', 'compact');
 nexttile
 plot(1./hL, k_md(:,1), '-ok', 'MarkerSize', 4)
 hold on
