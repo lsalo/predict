@@ -485,6 +485,13 @@ if any(M.nDiag==0)
    M.unit(id) = [];
 end
 
+% Adjust DiagBot and DiagTop if needed (very coarse grids, few nDiag)
+if sum((abs(M.DiagBot - M.DiagTop) + 1) - M.nDiag) ~= 0
+    id1 = -(G.cartDims(1)-1);
+    M.DiagBot = [id1 id1+cumsum(M.nDiag(1:end-1))];
+    M.DiagTop = [M.DiagBot(2:end)-1 G.cartDims(1)-1];
+end
+
 % Final check if we are missing a 0 in either DiagBot or DiagTop;
 % [~, idb] = min(abs(M.DiagBot));
 % [~, idt] = min(abs(M.DiagTop));
@@ -501,10 +508,6 @@ end
 %assert(sum(M.nDiag(hw.id))+M.divLayerDiag(2) == G.cartDims(1)-1)
 
 % 4. Populate mapping matrix with all potential 1s and sure 0s
-%id1 = -(G.cartDims(1)-1);
-%idi = [id1 id1+cumsum(M.nDiag(1:end-1))];                    % initial (all units)
-%idf = [DiagBot(2:end)-1 (DiagBot(end)-1)+M.nDiag(end)];      % final
-
 for n = 1:numel(M.nDiag)
     if M.DiagTop(n) < M.DiagBot(n), M.DiagTop(n) = M.DiagBot(n); end    
     if M.isclay(n) == 1

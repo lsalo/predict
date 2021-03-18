@@ -59,7 +59,7 @@ classdef Fault
     end
     
     methods
-        function obj = Fault(FS, dip)
+        function obj = Fault(FS, dip, targetCellDim)
             %
             % We instantiate a Fault object with the fundamental 
             % dimensions.
@@ -67,8 +67,18 @@ classdef Fault
             
             % Geometry
             obj.Dip    = dip;
-            obj.Throw  = sum(FS.Thick);    
-            obj.Grid.Resolution = [0.1, 1];     % [thickness, displacement]
+            obj.Throw  = sum(FS.FW.Thickness);    
+            
+            % User can pass different grid resolution
+            if nargin < 3
+                obj.Grid.TargetCellDim = [0.1, 1];     % [thickness, disp.]
+            else
+                assert(isa(targetCellDim, 'double') && numel(targetCellDim) == 2, ...
+                       ['If grid resolution is passed, it must be a ', ...
+                       'double array with 2 elements: ', ...
+                       '[res. in thick. dir. (x), res. in displ. dir (y)]'])
+                obj.Grid.TargetCellDim = targetCellDim;
+            end
         end
         
         function disp = get.Disp(obj)
@@ -139,7 +149,8 @@ classdef Fault
             
             % Generate Grid
             G = makeFaultGrid(obj.MatProps.Thick, obj.Disp, ...
-                              obj.Grid.Resolution);
+                              obj.Grid.TargetCellDim);
+            obj.Grid.CellDim = G.CellDim;
             
             % Mapping matrix (material in each grid cell)
             % MatMap makes this somewhat heavy on RAM.

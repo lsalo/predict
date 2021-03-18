@@ -147,9 +147,9 @@ classdef Smear
                 % length or 2 times the grid resolution in the length
                 % dimension, whichever is larger.
                 minVal(zf > 50) = max(0.1*smear.Length(n, zf>50), ...
-                                      3*fault.Grid.Resolution(2));
+                                      3*fault.Grid.TargetCellDim(2));
                 minVal(zf <= 50) = max(0.05*smear.Length(n, zf<=50), ...
-                                       2*fault.Grid.Resolution(2));
+                                       2*fault.Grid.TargetCellDim(2));
                 idBelowLim = smear.SegLenMax(n, :) < minVal;
                 smear.SegLenMax(n, idBelowLim) = minVal(idBelowLim);
                 

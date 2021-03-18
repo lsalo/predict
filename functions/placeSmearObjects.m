@@ -141,7 +141,7 @@ for j = 1:numel(cunits)
     % 2.1 Initial parameters to place smear segments in each subdomain
     smearL = min([maxLSmearSeg(j), Lsmear(j)]);
     DiagCellsNum = G.cartDims(1)-cDiagMain(j);
-    cellDiagL  = sqrt(sum(G.xzFaceDim.^2));
+    cellDiagL  = sqrt(sum(G.CellDim.^2));
     if smearL > G.cartDims(1)*cellDiagL
         smearL = G.cartDims(1)*cellDiagL;
     end

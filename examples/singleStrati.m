@@ -8,7 +8,7 @@ close all
 
 %% Mrst modules. 
 % Run startup (enough for grid) + add required for flow upscaling. With 
-% both development and release version of MRST.
+% either development or release version of MRST.
 %
 % We use the following MRST utilities:
 %   * merge_options.m -->
@@ -20,7 +20,6 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 %% Define model and upscale permeability
 % Mandatory Input parameters
 %           {[FW], [HW]}
-tic
 thickness = {[20 10 20 10 30 10], [20 10 20 10 30 10]};
 vcl       = {repmat([0.05 0.4 0.1 0.5 0.15 0.6], 1, 1), ...
              repmat([0.2, 0.7, 0.25, 0.8, 0.3, 0.9], 1, 1)};
@@ -53,7 +52,8 @@ mySect = FaultedSection(footwall, hangingwall);
 % Generate fault object with properties for each realization
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
-for n=1:Nsim
+tic
+for n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     myFault = Fault(mySect, faultDip);
     
     % Get dependent variables
