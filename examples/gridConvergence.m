@@ -97,11 +97,11 @@ mySect = FaultedSection(footwall, hangingwall);
     perm(n, :, k) = myFault.Perm;
     cellDim(n, :, k) = myFault.Grid.CellDim;
     %disp(myFault.MatProps)
-    disp(['Grid ' num2str(n) 'out of ' num2str(Ngrid) ' completed.'])
+    disp(['Grid ' num2str(n) ' / ' num2str(Ngrid) ' completed.'])
     end
  
 disp('-------------------------------------------------------------------')
-disp(['Case ' num2str(k) 'out of ' num2str(Nstrat) ' finished.'])
+disp(['Case ' num2str(k) ' out of ' num2str(Nstrat) ' finished.'])
 disp('-------------------------------------------------------------------')
 end
 toc
