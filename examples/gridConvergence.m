@@ -127,14 +127,14 @@ nexttile(1)
 hold on
 plot(1./hL, k_md(:,1,k), '-o', 'color', colrs(k, :), 'MarkerSize', 4, ...
      'DisplayName', name{k})
-plot(1/hL(5), k_md(5,1,k), '-o', 'color', colrs(k, :), 'MarkerFaceColor', ...
+plot(1/hL(4), k_md(4,1,k), '-o', 'color', colrs(k, :), 'MarkerFaceColor', ...
      colrs(k, :), 'MarkerSize', 6, 'HandleVisibility','off')
 hold off
 if k == Nstrat
     grid on
     xlabel('$1/h_\mathrm{L}$ [m$^{-1}$]', latx{:}, 'fontSize', 12)
-    ylabel('$\hat{k}_{xx}$ [mD]', latx{:}, 'fontSize', 12)
-    xlim([0.1 12])
+    ylabel('$k_{xx}$ [mD]', latx{:}, 'fontSize', 12)
+    xlim([0.05 12])
     xticks([0.1 0.5 1 5 10])
     xticklabels({'0.1' '0.5' '1' '5' '10'})
     set(gca,'XScale','log', 'YScale', 'log')
@@ -149,14 +149,14 @@ end
 nexttile(2)
 hold on
 plot(1./hL, k_md(:,2,k), '-o', 'color', colrs(k, :), 'MarkerSize', 4)
-plot(1/hL(5), k_md(5,2,k), '-o', 'color', colrs(k, :), ...
+plot(1/hL(4), k_md(4,2,k), '-o', 'color', colrs(k, :), ...
      'MarkerFaceColor', colrs(k, :), 'MarkerSize', 6)
 hold off
 if k == Nstrat
     grid on
     %xlabel('$1/h_\mathrm{L}$ [m$^{-1}$]', latx{:}, 'fontSize', 12)
-    ylabel('$\hat{k}_{yy}$ [mD]', latx{:}, 'fontSize', 12)
-    xlim([0.1 12])
+    ylabel('$k_{yy}$ [mD]', latx{:}, 'fontSize', 12)
+    xlim([0.05 12])
     xticks([0.1 0.5 1 5 10])
     xticklabels({'0.1' '0.5' '1' '5' '10'})
     set(gca,'XScale','log', 'YScale', 'log')
@@ -167,14 +167,14 @@ end
 nexttile(3)
 hold on
 plot(1./hL, k_md(:,3,k), '-o', 'color', colrs(k, :), 'MarkerSize', 4)
-plot(1/hL(5), k_md(5,3,k), '-o', 'color', colrs(k, :), ...
+plot(1/hL(4), k_md(4,3,k), '-o', 'color', colrs(k, :), ...
      'MarkerFaceColor', colrs(k, :), 'MarkerSize', 6)
 hold off
 if k == Nstrat
     grid on
     %xlabel('$1/h_\mathrm{L}$ [m$^{-1}$]', latx{:}, 'fontSize', 12)
-    ylabel('$\hat{k}_{zz}$ [mD]', latx{:}, 'fontSize', 12)
-    xlim([0.1 12])
+    ylabel('$k_{zz}$ [mD]', latx{:}, 'fontSize', 12)
+    xlim([0.05 12])
     xticks([0.1 0.5 1 5 10])
     xticklabels({'0.1' '0.5' '1' '5' '10'})
     set(gca,'XScale','log', 'YScale', 'log')
