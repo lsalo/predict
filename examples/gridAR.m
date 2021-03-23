@@ -1,6 +1,8 @@
-%% Example 0: Single stratigraphic case + analysis
+%% Analysis of cell aspect ratio for flow-based upscaling
 %
-% Use parfor instead of for when running several simulations.
+% This analysis is very RAM intensive, so start by modifying the 'arTarget'
+% variable to a minimum of 25 and then diminish progressively based on
+% available RAM.
 % 
 
 clear
@@ -30,7 +32,7 @@ vcl       = {[repmat([0.2 0.6], 1, 5); repmat([0.5 0.3], 1, 5)], ...
              [0.05 0.4 0.1 0.5 0.15 0.6; 0.2, 0.7, 0.25, 0.8, 0.3, 0.9], ...
              [0 0.4 0.3 0.6; 0.1 0.4 0.2 0.6]};
 dip       = {[0, 0], [0, 0], [10, 20], [10, 5], [0, 0]};
-faultDip  = [45, 60, 65, 75, 55];
+faultDip  = [85, 60, 65, 75, 70];
 
 % Optional Input parameters
 nl   = [size(vcl{1}, 2), size(vcl{2}, 2), size(vcl{3}, 2), ...
@@ -54,9 +56,10 @@ U.ARcheck         = 0;          % check if Perm obtained with grid with
                                 
 % Prepare
 Nstrat = numel(vcl);
-ar = [NaN, 50, 25]; %10 5 2]
-Ngrid = numel(ar);
-perm = zeros(Ngrid, 3, Nstrat);
+arTarget = [NaN, 50, 25, 10, 3];
+ar = zeros(Nstrat, numel(arTarget));
+Ngrid = numel(arTarget);
+perm = nan(Ngrid, 2, Nstrat);
 cellDim = zeros(Ngrid, 2, Nstrat);
 tic
 for k=1:Nstrat
@@ -80,6 +83,16 @@ for k=1:Nstrat
     % Get dependent variables
     myFault = myFault.getMaterialProperties(mySect, 'maxPerm', maxPerm, ...
                                             'siltInClay', siltInClay(k));
+    itnum = 0;
+    while myFault.MatProps.Thick < myFault.Disp/100  % avoid thinest faults
+        if itnum == 0
+            disp('Material properties recalculated.')
+        end
+        myFault = myFault.getMaterialProperties(mySect, 'maxPerm', maxPerm, ...
+                                                'siltInClay', siltInClay(k));
+        itnum = itnum + 1;
+        disp(['iteration number = ' num2str(itnum)])
+    end
     
     % Generate smear object with T, Tap, L, Lmax
     Tap = getApparentThick(mySect, myFault.Dip);
@@ -91,24 +104,28 @@ for k=1:Nstrat
     
     for n=1:Ngrid
         if n == 1
-            perm(n, :, k) = myFault.Perm;
+            perm(n, :, k) = [myFault.Perm(1) myFault.Perm(end)];
             cellDim(n, :, k) = myFault.Grid.CellDim;
     
             % Base grid
             G = makeFaultGrid(myFault.MatProps.Thick, myFault.Disp, ...
                               myFault.Grid.TargetCellDim);
-            ar(n) = G.CellDim(2)/G.CellDim(1);
+            ar(k, n) = G.CellDim(2)/G.CellDim(1);
             L = max(G.faces.centroids) - min(G.faces.centroids);
             Dp{1} = 5*barsa;
+            disp(['Base grid aspect ratio = ' num2str(ar(k, n))])
 
-        elseif ar(n) < ar(1)
+        elseif arTarget(n) < ar(k, 1)
             % Iteration grid
             Lz = G.cartDims(2)*G.CellDim(2);
-            nels = [G.cartDims(1) round(Lz/(ar(n)*G.CellDim(1)))];
+            nels = [G.cartDims(1) round(Lz/(arTarget(n)*G.CellDim(1)))];
+            cellDim(n, :, k) = [myFault.MatProps.Thick/nels(1), ...
+                                myFault.Disp/nels(2)];
+            ar(k, n) = cellDim(n, end, k) / cellDim(n, 1, k);
             G2 = computeGeometry(cartGrid([nels(1), nels(2)], ...
                                           [myFault.MatProps.Thick, myFault.Disp]));
-            disp(['--> Iteration grid with cell aspect ratio = ' num2str(ar(n)) ...
-                  ' created.'])
+            disp(['--> Iteration grid with cell aspect ratio = ' ...
+                  num2str(round(ar(k, n), 2)) ' created.'])
             disp(['    This grid has a total of ' num2str(G2.cells.num) ...
                   ' cells. Now computing cell distances...'])
 
@@ -133,16 +150,15 @@ for k=1:Nstrat
                   num2str(perm2(1)/myFault.Perm(1)) ' ' ...
                   num2str(perm2(end)/myFault.Perm(end)) ']'])
 
-            % Save result
-            perm2 = [perm2(1), perm2(2), perm2(4)];
+            % Save perm result
+            perm2 = [perm2(1), perm2(4)];
             perm(n, :, k) = perm2; clear perm2
-            cellDim(n, :, k) = [myFault.MatProps.Thick/nels(1), ...
-                                myFault.Disp/nels(2)];
         end
         
-        disp(['Simulation ' num2str(n) 'out of ' num2str(Ngrid) ' completed.'])
+        
+        disp(['    Simulation ' num2str(n) ' out of ' num2str(Ngrid) ...
+              ' completed.'])
     end
-    
     disp('---------------------------------------------------------------')
 end
 toc
@@ -150,4 +166,59 @@ toc
 
 %% Output analysis
 
-% Plot Perm in each dir. vs aspect ratio
+% Plotting utilities
+sz = [14, 12];
+latx = {'Interpreter','latex'};
+%colrs = [128 0 0; 0 130 200; 255 225 128; 0 0 128; 0 0 0] ./ 255;
+markrs = ['o', 's', 'd', 'p', 'h'];
+limx = [1 max([max(max(ar)), 100])];
+
+f1 = figure(1);
+tiledlayout(1, 2, 'Padding', 'compact', 'TileSpacing', 'compact');
+for k=1:Nstrat
+k_md = perm(:,:,k)./(milli*darcy);
+idnan = isnan(k_md(:,1));
+k_md(idnan, :) = [];
+
+nexttile(1)
+hold on
+plot(ar(k, ~idnan), k_md(:,1)/k_md(1,1), '-', 'marker', markrs(k), 'color', ...
+     'k', 'MarkerSize', 4, 'DisplayName', name{k})
+plot(ar(k, 1), 1, '-', 'marker', markrs(k), 'color', 'k', 'MarkerFaceColor', ...
+     [0.5 0.5 0.5], 'MarkerSize', 6, 'HandleVisibility','off')
+hold off
+if k == Nstrat
+    grid on
+    xlabel('AR [-]', latx{:}, 'fontSize', 12)
+    ylabel('$k_{xx}$ [mD]', latx{:}, 'fontSize', 12)
+    xlim(limx)
+    xticks([1 10 100])
+    xticklabels({'1' '10' '100'})
+    set(gca,'XScale','log')
+    ylim([1 1.4])
+    yticks(1:.1:1.4)
+    leg = legend(latx{:}, 'fontSize', sz(2), 'location', 'northeast');
+    set(leg.BoxFace, 'ColorType','truecoloralpha', ...
+        'ColorData', uint8(255*[1;1;1;.6])); 
+end
+
+nexttile(2)
+hold on
+plot(ar(k, ~idnan), k_md(:,2)/k_md(1,2), '-', 'marker', markrs(k), 'color', ...
+     'b', 'MarkerSize', 4)
+plot(ar(k, 1), 1, '-', 'marker', markrs(k), 'color', 'b', ...
+     'MarkerFaceColor', [125, 125, 255]/255, 'MarkerSize', 6)
+hold off
+if k == Nstrat
+    grid on
+    %xlabel('$1/h_\mathrm{L}$ [m$^{-1}$]', latx{:}, 'fontSize', 12)
+    ylabel('$k_{zz}$ [mD]', latx{:}, 'fontSize', 12)
+    xlim(limx)
+    xticks([1 10 100])
+    xticklabels({'1' '10' '100'})
+    set(gca,'XScale','log')
+    ylim([1 1.4])
+    yticks(1:.1:1.4)
+end
+end
+set(f1, 'position', [500, 500, 500, 250]);
