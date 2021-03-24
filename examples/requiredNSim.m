@@ -54,8 +54,8 @@ hangingwall = Stratigraphy(thickness{2}, vcl{2}, dip(2), 'IsHW', 1, ...
 mySect = FaultedSection(footwall, hangingwall);
 
 % Prepare loop
-Nsim = [10 20 50 100 200 500 1000];% 2000 5000];
-perms = cell(numel(Nsim), 1);
+Nsim = [10 20 50 100 200];% 500 1000 2000 5000];
+k_md = cell(numel(Nsim), 1);
 for k=1:numel(Nsim) 
 perm = nan(Nsim(k), 3);
 
@@ -77,7 +77,7 @@ parfor n=1:Nsim(k)    % parallel computing toolbox required for parfor
     % Save result
     perm(n, :) = myFault.Perm;
 end
-perms{k} = perm;
+k_md{k} = perm ./ (milli*darcy);
 
 disp(['Simulation ' num2str(k) ' (' num2str(Nsim(k)) ' realizations) done.']) 
 disp([num2str(numel(Nsim) - k) ' simulations remaining.'])
@@ -87,3 +87,38 @@ toc
 
 %% Output analysis
 % Compare perm distros
+
+% Plot utils
+sz = [14, 12];
+latx = {'Interpreter','latex'};
+
+% Hist params
+nbins = 25;
+lims = [floor(log10(min(min(k_md{end})))), ceil(log10(max(max(k_md{end}))))];
+edges = logspace(lims(1), lims(2), nbins);
+colrs = repmat(hsv(numel(Nsim)), 1, 1);
+
+f1 = figure(1);
+tiledlayout(1, 3, 'Padding', 'compact', 'TileSpacing', 'compact');
+for k=1:numel(Nsim)
+   nexttile(1)
+   hold on
+   histogram(k_md{k}(:, 1), edges, 'Normalization', 'probability', ...
+             'DisplayStyle', 'stairs', 'EdgeColor', colrs(k, :), ...
+             'DisplayName', ['$N_\mathrm{sim}$ = ' num2str(Nsim(k))])
+   xlabel('$k_{xx}$ [mD]', latx{:}, 'fontSize', sz(2))
+   ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+   xlim([10^lims(1) 10^lims(2)])
+   ylim([0 1])
+   grid on
+   set(gca,'XScale','log')
+   leg = legend(latx{:}, 'fontSize', sz(2), 'location', 'northwest');
+   set(leg.BoxFace, 'ColorType','truecoloralpha', ...
+       'ColorData', uint8(255*[1;1;1;.6])); 
+   
+   %nexttile(2)
+   
+   
+   %nexttile(3)
+end
+set(f1, 'position', [200, 200, 700, 350]);
