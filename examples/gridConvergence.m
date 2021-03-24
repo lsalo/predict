@@ -116,70 +116,76 @@ k_md = perm./(milli*darcy);
 % Plotting utilities
 sz = [14, 12];
 latx = {'Interpreter','latex'};
-colrs = [128 0 0; 0 130 200; 255 225 128; 0 0 128; 0 0 0] ./ 255;
-limy = [floor(log10(min(min(min(k_md))))), ...
-        ceil(log10(max(max(max(k_md)))))];
+%colrs = [128 0 0; 0 130 200; 255 225 128; 0 0 128; 0 0 0] ./ 255;
 
 f1 = figure(1);
-tiledlayout(1, 3, 'Padding', 'compact', 'TileSpacing', 'compact');
+tiledlayout(3, Nstrat, 'Padding', 'compact', 'TileSpacing', 'compact');
 for k=1:Nstrat
-nexttile(1)
+limy = [floor(log10(min(min(k_md(:,1,k))))), ...
+        ceil(log10(max(max(k_md(:,1,k))))); ...
+        floor(log10(min(min(k_md(:,2,k))))), ...
+        ceil(log10(max(max(k_md(:,2,k))))); ...
+        floor(log10(min(min(k_md(:,3,k))))), ...
+        ceil(log10(max(max(k_md(:,3,k)))))];
+    
+nexttile(k)
 hold on
-plot(1./hL, k_md(:,1,k), '-o', 'color', colrs(k, :), 'MarkerSize', 4, ...
+plot(1./hL, k_md(:,1,k), '-o', 'color', 'k', 'MarkerSize', 4, ...
      'DisplayName', name{k})
-plot(1/hL(4), k_md(4,1,k), '-o', 'color', colrs(k, :), 'MarkerFaceColor', ...
-     colrs(k, :), 'MarkerSize', 6, 'HandleVisibility','off')
+plot(1/hL(4), k_md(4,1,k), '-o', 'color', 'k', 'MarkerFaceColor', ...
+     [0.5 0.5 0.5], 'MarkerSize', 6, 'HandleVisibility','off')
 hold off
-if k == Nstrat
-    grid on
+grid on
+if k == 1
     xlabel('$1/h_\mathrm{L}$ [m$^{-1}$]', latx{:}, 'fontSize', 12)
     ylabel('$k_{xx}$ [mD]', latx{:}, 'fontSize', 12)
-    xlim([0.05 12])
-    xticks([0.1 0.5 1 5 10])
-    xticklabels({'0.1' '0.5' '1' '5' '10'})
-    set(gca,'XScale','log', 'YScale', 'log')
-    ylim(10.^limy)
-    yticks(10.^(limy(1):limy(2)))
-    leg = legend(latx{:}, 'fontSize', sz(2), 'location', 'west');
-    set(leg.BoxFace, 'ColorType','truecoloralpha', ...
-        'ColorData', uint8(255*[1;1;1;.6])); 
 end
+xlim([0.05 12])
+xticks([0.1 1 10])
+xticklabels({'0.1' '1' '10'})
+set(gca,'XScale','log', 'YScale', 'log')
+ylim(10.^limy(1, :))
+yticks(10.^(limy(1, 1):limy(1, 2)))
+%leg = legend(latx{:}, 'fontSize', sz(2), 'location', 'northwest');
+%set(leg.BoxFace, 'ColorType','truecoloralpha', ...
+%    'ColorData', uint8(255*[1;1;1;.6]));
+title(name{k}, latx{:}, 'fontSize', sz(2));
 
-
-nexttile(2)
+nexttile(k + Nstrat)
 hold on
-plot(1./hL, k_md(:,2,k), '-o', 'color', colrs(k, :), 'MarkerSize', 4)
-plot(1/hL(4), k_md(4,2,k), '-o', 'color', colrs(k, :), ...
-     'MarkerFaceColor', colrs(k, :), 'MarkerSize', 6)
+plot(1./hL, k_md(:,2,k), '-o', 'color','r', 'MarkerSize', 4)
+plot(1/hL(4), k_md(4,2,k), '-o', 'color', 'r', ...
+     'MarkerFaceColor', [255, 125, 125]/255, 'MarkerSize', 6)
 hold off
-if k == Nstrat
-    grid on
+grid on
+if k==1
     %xlabel('$1/h_\mathrm{L}$ [m$^{-1}$]', latx{:}, 'fontSize', 12)
     ylabel('$k_{yy}$ [mD]', latx{:}, 'fontSize', 12)
-    xlim([0.05 12])
-    xticks([0.1 0.5 1 5 10])
-    xticklabels({'0.1' '0.5' '1' '5' '10'})
-    set(gca,'XScale','log', 'YScale', 'log')
-    ylim(10.^limy)
-    yticks(10.^(limy(1):limy(2)))
 end
+xlim([0.05 12])
+xticks([0.1 1 10])
+xticklabels({'0.1' '1' '10'})
+set(gca,'XScale','log', 'YScale', 'log')
+ylim(10.^limy(2, :))
+yticks(10.^(limy(2, 1):limy(2, 2)))
 
-nexttile(3)
+
+nexttile(k + 2*Nstrat)
 hold on
-plot(1./hL, k_md(:,3,k), '-o', 'color', colrs(k, :), 'MarkerSize', 4)
-plot(1/hL(4), k_md(4,3,k), '-o', 'color', colrs(k, :), ...
-     'MarkerFaceColor', colrs(k, :), 'MarkerSize', 6)
+plot(1./hL, k_md(:,3,k), '-o', 'color', 'b', 'MarkerSize', 4)
+plot(1/hL(4), k_md(4,3,k), '-o', 'color', 'b', ...
+     'MarkerFaceColor', [125, 125, 255]/255, 'MarkerSize', 6)
 hold off
-if k == Nstrat
-    grid on
+grid on
+if k == 1
     %xlabel('$1/h_\mathrm{L}$ [m$^{-1}$]', latx{:}, 'fontSize', 12)
     ylabel('$k_{zz}$ [mD]', latx{:}, 'fontSize', 12)
-    xlim([0.05 12])
-    xticks([0.1 0.5 1 5 10])
-    xticklabels({'0.1' '0.5' '1' '5' '10'})
-    set(gca,'XScale','log', 'YScale', 'log')
-    ylim(10.^limy)
-    yticks(10.^(limy(1):limy(2)))
 end
+xlim([0.05 12])
+xticks([0.1 1 10])
+xticklabels({'0.1' '1' '10'})
+set(gca,'XScale','log', 'YScale', 'log')
+ylim(10.^limy(3, :))
+yticks(10.^(limy(3, 1):limy(3, 2)))
 end
-set(f1, 'position', [500, 500, 700, 300]);
+set(f1, 'position', [200, 200, 700, 450]);

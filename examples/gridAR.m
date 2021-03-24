@@ -166,6 +166,27 @@ toc
 
 %% Output analysis
 
+% Cell permeability assignment check
+% f99 = figure(99);
+% tiledlayout(1, 4, 'Padding', 'compact', 'TileSpacing', 'compact');
+% nexttile
+% plotCellData(G, log10(myFault.Grid.Perm(:,end)./(milli*darcy)), 'facea', 1, 'edgea', 0);
+% colormap(copper); title('G, Z Perm')
+% xlim([0 myFault.MatProps.Thick]); ylim([0 myFault.Disp]); colorbar;
+% nexttile
+% plotCellData(G2, log10(rock2.perm(:,end)./(milli*darcy)), 'facea', 1, 'edgea', 0);
+% colormap(copper); title('G2, Z Perm')
+% xlim([0 myFault.MatProps.Thick]); ylim([0 myFault.Disp]); colorbar;
+% nexttile
+% plotCellData(G, log10(myFault.Grid.Perm(:,end)./(milli*darcy)), 'facea', 1, 'edgea', 0.2);
+% colormap(copper); title('G, Z Perm')
+% xlim([0 myFault.MatProps.Thick]); axis equal; ylim([20 25]);
+% nexttile
+% plotCellData(G2, log10(rock2.perm(:,end)./(milli*darcy)), 'facea', 1, 'edgea', 0.2);
+% colormap(copper); title('G2, Z Perm')
+% xlim([0 myFault.MatProps.Thick]); axis equal; ylim([20 25]); 
+% set(f99, 'position', [300, 300, 800, 600]);
+
 % Plotting utilities
 sz = [14, 12];
 latx = {'Interpreter','latex'};
