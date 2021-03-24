@@ -211,7 +211,7 @@ hold off
 if k == Nstrat
     grid on
     xlabel('AR [-]', latx{:}, 'fontSize', 12)
-    ylabel('$k_{xx}$ [mD]', latx{:}, 'fontSize', 12)
+    ylabel('$k_{xx}^{\mathrm{ref.}} / k_{xx}^{\mathrm{base}}$ [-]', latx{:}, 'fontSize', 12)
     xlim(limx)
     xticks([1 10 100])
     xticklabels({'1' '10' '100'})
@@ -233,7 +233,7 @@ hold off
 if k == Nstrat
     grid on
     %xlabel('$1/h_\mathrm{L}$ [m$^{-1}$]', latx{:}, 'fontSize', 12)
-    ylabel('$k_{zz}$ [mD]', latx{:}, 'fontSize', 12)
+    ylabel('$k_{zz}^{\mathrm{ref.}} / k_{zz}^{\mathrm{base}}$ [-]', latx{:}, 'fontSize', 12)
     xlim(limx)
     xticks([1 10 100])
     xticklabels({'1' '10' '100'})
