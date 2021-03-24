@@ -206,7 +206,7 @@ classdef Fault
            
            % Generate Grid (Must be same as grid used within Fault)
             G = makeFaultGrid(obj.MatProps.Thick, obj.Disp, ...
-                              obj.Grid.Resolution);
+                              obj.Grid.TargetCellDim);
            
            % utils
            M = obj.MatMap;
