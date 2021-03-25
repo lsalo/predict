@@ -12,7 +12,7 @@ zf = [100 1000 2000];
 
 f.Dip = 60;
 f.Throw = 100;    
-f.Grid.Resolution = [0.1, 1];       % needed for min smear dimensions
+f.Grid.TargetCellDim = [0.1, 1];       % needed for min smear dimensions
 
 % Other dependent params
 Tap = T ./ sind(f.Dip);
@@ -91,7 +91,9 @@ for j=1:numel(id_vcl)       %   DOES NOT CHANGE WITH ZF (ONLY T, Vcl)
         ylabel('P [-]', latx{:}, 'fontSize', sz(2))
         title(['$V_\mathrm{cl}$ = ' num2str(vcl(id_vcl(j)))], ...
             latx{:}, 'fontSize', sz(2))
-        legend(latx{:}, 'fontSize', sz(2), 'location', 'northeast')
+        leg = legend(latx{:}, 'fontSize', sz(2), 'location', 'northeast');
+        set(leg.BoxFace, 'ColorType','truecoloralpha', ...
+            'ColorData', uint8(255*[1;1;1;.6])); 
     else
         histogram(Trat(:, id_vcl(j), idd(j)), edg_Trat, 'Normalization', ...
             'probability', 'DisplayStyle', 'stairs', ...
@@ -105,7 +107,7 @@ for j=1:numel(id_vcl)       %   DOES NOT CHANGE WITH ZF (ONLY T, Vcl)
     yticks([0 0.2 0.4 0.6 0.8 1]);
 end
 hold off
-set(fh1, 'position', [500, 200, 200*numel(vcl), 175]);
+set(fh1, 'position', [500, 200, 250*numel(vcl), 225]);
 
 lst = repmat({'-', '-', '-.', '--', ':'}', numel(vcl), 1);
 lwi = repmat([0.5, .5, .5, .5, .5]', numel(vcl), 1);
@@ -128,7 +130,9 @@ for n = 1:numel(zf)
             title(['$V_\mathrm{cl}$ = ' num2str(vcl(id_vcl(j))) ...
                    ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf_all(j, n)) ' m'], ...
                    latx{:}, 'fontSize', sz(2))
-            legend(latx{:}, 'fontSize', sz(2), 'location', 'northeast')
+            leg = legend(latx{:}, 'fontSize', sz(2), 'location', 'northeast');
+            set(leg.BoxFace, 'ColorType','truecoloralpha', ...
+                'ColorData', uint8(255*[1;1;1;.6])); 
         else
             histogram(sFrac(:, id_vcl(j), idd(j)+numel(T)*k), edg_sfrac, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', ...
@@ -145,7 +149,7 @@ for n = 1:numel(zf)
     k = k+1;
 end
 hold off
-set(fh2, 'position', [500, 200, 200*numel(vcl), 175*numel(zf)]);
+set(fh2, 'position', [500, 200, 250*numel(vcl), 225*numel(zf)]);
 
 fh3 = figure(3);            % THIS RATIO JUST DEPENDS ON T, not zf or vcl
 hold on
