@@ -23,18 +23,35 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 
 
 %% Define model and upscale permeability
+name = {'A', 'B', 'C', 'D', 'E'};           % strati base names.
+fname = 'requiredNSim';                     % [] (empty) to not save data.
+
 % Mandatory Input parameters
-%           {[FW], [HW]}
-thickness = {[20 10 20 10 30 10], [20 10 20 10 30 10]};
-vcl       = {repmat([0.05 0.4 0.1 0.5 0.15 0.6], 1, 1), ...
-             repmat([0.2, 0.7, 0.25, 0.8, 0.3, 0.9], 1, 1)};
-dip       = [0, 0];
-faultDip  = 60;
+thickness = {[repelem(10, 1, 10); repelem(10, 1, 10)], ...
+             [25 25 25 25; 25 25 25 25], [50 50; 50 50], ...
+             [20 10 20 10 30 10; 20 10 20 10 30 10], ...
+             [5 5 10 5 15 5 5 10 5 5 5 10 10 5; ...
+              5 10 10 5 5 5 10 5 5 15 5 10 5 5]};
+vcl       = {[repmat([0.2 0.6], 1, 5); repmat([0.5 0.3], 1, 5)], ...
+             [0.8 0.3 0.5 0; 0.3, 0.7, 0.15, 0.6], [0.5 0.1; 0.5 0.1], ...
+             [0.05 0.4 0.1 0.5 0.15 0.6; 0.2, 0.7, 0.25, 0.8, 0.3, 0.9], ...
+             [0 0.4 0.3 0.6 0.4 0.15 0.7 0.3 0.8 0.2 0.4 0.6 0 0.4; ...
+              0 0.4 0.3 0.6 0.4 0.15 0.7 0.3 0.8 0.2 0.4 0.6 0 0.4]};
+dip       = {[0, 0], [0, 0], [10, 20], [10, 5], [0, 0]};
+faultDip  = [85, 60, 65, 75, 70];
 
 % Optional Input parameters
-zf   = [500, 500];              % m
-maxPerm = [];                   % mD
-siltInClay = true;              % consider 25% of silt fraction in clay     
+nl   = [size(vcl{1}, 2), size(vcl{2}, 2), size(vcl{3}, 2), ...
+        size(vcl{4}, 2), size(vcl{5}, 2)];   % just for convenience here
+zf   = {[100, 100], [500, 500], [1000, 1000], [100, 100], [2000, 2000]};    % m
+zmax = {[repelem(800, 1, nl(1)); repelem(800, 1, nl(1))], ...
+        [repelem(1000, 1, nl(2)); repelem(1000, 1, nl(2))], ...
+        [repelem(1000, 1, nl(3)); repelem(1000, 1, nl(3))], ...
+        [repelem(2000, 1, nl(4)); repelem(2000, 1, nl(4))], ...
+        [repelem(3000, 1, nl(5)); repelem(3000, 1, nl(5))]};
+cm = {'kao', 'sme', 'ill', 'mic', 'kao'};       % predominant clay mineral
+maxPerm = [];                                   % cap max perm? [mD]
+siltInClay = [false, true, true, true, true];   % silt fraction in clay?    
 
 % Flow upscaling options
 U.useAcceleration = 1;          % requires MEX and AMGCL setup
@@ -43,46 +60,75 @@ U.outflux         = 0;          % compare outflux of fine and upsc. models
 U.ARcheck         = 0;          % check if Perm obtained with grid with 
                                 % Aspect Ratio of only 3 gives same Perm
 
-% FW and HW
-footwall = Stratigraphy(thickness{1}, vcl{1}, dip(1), ...
-                        'DepthFaulting', zf(1));
-hangingwall = Stratigraphy(thickness{2}, vcl{2}, dip(2), 'IsHW', 1, ...
-                           'NumLayersFW', footwall.NumLayers, ...
-                           'DepthFaulting', zf(2));
-
-% Strati in Faulted Section
-mySect = FaultedSection(footwall, hangingwall);
-
 % Prepare loop
-Nsim = [10 20 50 100 200];% 500 1000 2000 5000];
-k_md = cell(numel(Nsim), 1);
-for k=1:numel(Nsim) 
-perm = nan(Nsim(k), 3);
-
-parfor n=1:Nsim(k)    % parallel computing toolbox required for parfor
-    myFault = Fault(mySect, faultDip);
+nStrat = numel(vcl);
+nSim = [10 100 500 1000 2000 5000 10000 20000];
+k_md = cell(nStrat, numel(nSim));
+tic
+for j=1:nStrat           % For each stratigraphy
+    fDipIt = faultDip(j);
+    siltIt = siltInClay(j);
     
-    % Get dependent variables
-    myFault = myFault.getMaterialProperties(mySect, 'maxPerm', maxPerm, ...
-                                            'siltInClay', siltInClay);
+    % FW and HW
+    footwall = Stratigraphy(thickness{j}(1,:), vcl{j}(1,:), dip{j}(1), ...
+                            'DepthFaulting', zf{j}(1), ...
+                            'DepthBurial', zmax{j}(1,:), 'ClayMine', cm{j});
+    hangingwall = Stratigraphy(thickness{j}(2,:), vcl{j}(2,:), dip{j}(2), ...
+                               'IsHW', 1, 'NumLayersFW', footwall.NumLayers, ...
+                               'DepthFaulting', zf{j}(2), ...
+                               'DepthBurial', zmax{j}(2,:), 'ClayMine', cm{j});
     
-    % Generate smear object with T, Tap, L, Lmax
-    Tap = getApparentThick(mySect, myFault.Dip);
-    smear = Smear(mySect.Vcl, mySect.IsClayVcl, mySect.Thick, Tap, ...
-                  mySect.DepthFaulting, myFault, 1, mySect);
+    % Strati in Faulted Section
+    mySect = FaultedSection(footwall, hangingwall);
     
-    % Compute upscaled permeability distribution
-    myFault = myFault.upscaleSmearPerm(mySect, smear, U);
+    % Loop over multiple simulation numbers
+    for k=1:numel(nSim)
+        nSimIt = nSim(k);
+        perm = nan(nSimIt, 3);
+        
+        parfor n=1:nSimIt    % loop for each realization in a given simulation
+            myFault = Fault(mySect, fDipIt);
+            
+            % Get dependent variables
+            myFault = myFault.getMaterialProperties(mySect, 'maxPerm', maxPerm, ...
+                'siltInClay', siltIt);
+            
+            % Generate smear object with T, Tap, L, Lmax
+            Tap = getApparentThick(mySect, myFault.Dip);
+            smear = Smear(mySect.Vcl, mySect.IsClayVcl, mySect.Thick, Tap, ...
+                mySect.DepthFaulting, myFault, 1, mySect);
+            
+            % Compute upscaled permeability distribution
+            myFault = myFault.upscaleSmearPerm(mySect, smear, U);
+            
+            % Save result
+            perm(n, :) = myFault.Perm;
+            
+            if mod(n, 250) == 0
+                disp([num2str(n) ' realizations out of ' num2str(nSimIt) ...
+                    '. Simulation ' num2str(k) ' / ' ...
+                     num2str(numel(nSim)) '. Stratigraphy ' num2str(j) ...
+                     ' / ' num2str(nStrat) '.'])
+            end
+        end
+        k_md{j, k} = perm ./ (milli*darcy);
+        
+        disp(['Simulation ' num2str(k) ' (' num2str(nSim(k)) ' realizations) done.'])
+        disp([num2str(numel(nSim) - k) ' simulations remaining.'])
+        disp([num2str(nStrat - j) ' stratigraphies remaining.'])
+    end
     
-    % Save result
-    perm(n, :) = myFault.Perm;
-end
-k_md{k} = perm ./ (milli*darcy);
-
-disp(['Simulation ' num2str(k) ' (' num2str(Nsim(k)) ' realizations) done.']) 
-disp([num2str(numel(Nsim) - k) ' simulations remaining.'])
+    disp('---------------------------------------------------------------')
+    disp(['Stratigraphy ' num2str(j) ' / ' num2str(nStrat) ' finished.'])
+    disp('---------------------------------------------------------------')
 end
 toc
+
+% Save data?
+if ~isempty(fname)
+    disp(['ATTENTION: data saved in: ' pwd ' with filename ' fname])    
+    save([fname '.mat']) %,'-v7.3') % larger than 2GB
+end
 
 
 %% Output analysis
@@ -92,33 +138,49 @@ toc
 sz = [14, 12];
 latx = {'Interpreter','latex'};
 
-% Hist params
-nbins = 25;
-lims = [floor(log10(min(min(k_md{end})))), ceil(log10(max(max(k_md{end}))))];
-edges = logspace(lims(1), lims(2), nbins);
-colrs = repmat(hsv(numel(Nsim)), 1, 1);
-
-f1 = figure(1);
-tiledlayout(1, 3, 'Padding', 'compact', 'TileSpacing', 'compact');
-for k=1:numel(Nsim)
-   nexttile(1)
-   hold on
-   histogram(k_md{k}(:, 1), edges, 'Normalization', 'probability', ...
-             'DisplayStyle', 'stairs', 'EdgeColor', colrs(k, :), ...
-             'DisplayName', ['$N_\mathrm{sim}$ = ' num2str(Nsim(k))])
-   xlabel('$k_{xx}$ [mD]', latx{:}, 'fontSize', sz(2))
-   ylabel('P [-]', latx{:}, 'fontSize', sz(2))
-   xlim([10^lims(1) 10^lims(2)])
-   ylim([0 1])
-   grid on
-   set(gca,'XScale','log')
-   leg = legend(latx{:}, 'fontSize', sz(2), 'location', 'northwest');
-   set(leg.BoxFace, 'ColorType','truecoloralpha', ...
-       'ColorData', uint8(255*[1;1;1;.6])); 
-   
-   %nexttile(2)
-   
-   
-   %nexttile(3)
+% Plot
+nbins = 50;
+colrs = [0.5 0.5 0.5; 1 0 0; 0 0 1];
+for j=1:nStrat
+    lims = [floor(log10(min(min(k_md{j, end})))), ...
+            ceil(log10(max(max(k_md{j, end}))))];
+    edges = logspace(lims(1), lims(2), nbins);
+    
+    fh = figure(j);
+    tiledlayout(2, 4, 'Padding', 'compact', 'TileSpacing', 'compact');
+    for k=1:numel(nSim)
+        nexttile(k)
+        hold on
+        histogram(k_md{j, k}(:, 1), edges, 'Normalization', 'probability', ...
+            'FaceColor', colrs(1, :), 'EdgeColor', colrs(1,:), ...
+            'FaceAlpha', 1, 'DisplayName', '$k_{xx}$')
+        histogram(k_md{j, k}(:, 2), edges, 'Normalization', 'probability', ...
+            'FaceColor', colrs(2, :), 'EdgeColor', 'none', ...
+            'FaceAlpha', .6, 'DisplayName', '$k_{yy}$')
+        histogram(k_md{j, k}(:, 3), edges, 'Normalization', 'probability', ...
+            'FaceColor', colrs(3, :), 'EdgeColor', 'none', ...
+            'FaceAlpha', .4, 'DisplayName', '$k_{zz}$')
+        if k == 1
+            xlabel('$k$ [mD]', latx{:}, 'fontSize', sz(2))
+            ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+            title([name{j} ', $N_\mathrm{sim}$ = ' num2str(nSim(k))], latx{:}, ...
+                   'fontSize', sz(2))
+            leg = legend(latx{:}, 'fontSize', sz(2), 'location', 'northwest');
+            set(leg.BoxFace, 'ColorType','truecoloralpha', ...
+                'ColorData', uint8(255*[1;1;1;.6]));
+        else
+            if nSim(k) < 10000
+                title(num2str(nSim(k)), latx{:}, 'fontSize', sz(2))
+            else
+                title(['$10^' num2str(log10(nSim(k))) '$'], latx{:}, 'fontSize', sz(2))
+            end
+        end
+        xlim([10^lims(1, 1) 10^lims(1, 2)])
+        xticks(10.^(lims(1, 1):2:lims(1, 2))); ...
+            ylim([0 1])
+        grid on
+        set(gca,'XScale','log')
+    end
+    hold off
+    set(fh, 'position', [200, 200, 700, 400]);
 end
-set(f1, 'position', [200, 200, 700, 350]);
