@@ -24,7 +24,7 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 
 %% Define model and upscale permeability
 name = {'A', 'B', 'C', 'D', 'E'};           % strati base names.
-fname = 'requiredNSim';                     % [] (empty) to not save data.
+fname = 'requiredNSim_5manualStrati_100k';  % [] (empty) to not save data.
 
 % Mandatory Input parameters
 thickness = {[repelem(10, 1, 10); repelem(10, 1, 10)], ...
@@ -62,10 +62,11 @@ U.ARcheck         = 0;          % check if Perm obtained with grid with
 
 % Prepare loop
 nStrat = numel(vcl);
-nSim = [10 100 500 1000 2000 5000 10000 20000];
+nSim = [10 100 500 1000 5000 1*10^4 5*10^4 10^5];
 k_md = cell(nStrat, numel(nSim));
 tic
 for j=1:nStrat           % For each stratigraphy
+    disp(['Stratigraphy ' num2str(j) ' / ' num2str(nStrat) '.'])
     fDipIt = faultDip(j);
     siltIt = siltInClay(j);
     
@@ -86,6 +87,8 @@ for j=1:nStrat           % For each stratigraphy
         nSimIt = nSim(k);
         perm = nan(nSimIt, 3);
         
+        disp(['Started simulation ' num2str(k) ' / ' num2str(numel(nSim)) ...
+              ' (' num2str(nSimIt) ' realizations)...'])
         parfor n=1:nSimIt    % loop for each realization in a given simulation
             myFault = Fault(mySect, fDipIt);
             
@@ -104,25 +107,22 @@ for j=1:nStrat           % For each stratigraphy
             % Save result
             perm(n, :) = myFault.Perm;
             
-            if mod(n, 250) == 0
-                disp([num2str(n) ' realizations out of ' num2str(nSimIt) ...
-                    '. Simulation ' num2str(k) ' / ' ...
-                     num2str(numel(nSim)) '. Stratigraphy ' num2str(j) ...
-                     ' / ' num2str(nStrat) '.'])
+            if mod(n, 5000) == 0
+                disp([num2str(n) ' realizations out of ' num2str(nSimIt), ...
+                      ' completed.'])
             end
         end
         k_md{j, k} = perm ./ (milli*darcy);
-        
-        disp(['Simulation ' num2str(k) ' (' num2str(nSim(k)) ' realizations) done.'])
-        disp([num2str(numel(nSim) - k) ' simulations remaining.'])
-        disp([num2str(nStrat - j) ' stratigraphies remaining.'])
+    
+        disp(['Simulation ' num2str(k) ' done. ' num2str(nStrat - j) ...
+              ' stratigraphies remaining.'])
+        disp('-----------------------------------------------------------')
     end
     
-    disp('---------------------------------------------------------------')
-    disp(['Stratigraphy ' num2str(j) ' / ' num2str(nStrat) ' finished.'])
-    disp('---------------------------------------------------------------')
+    disp(['Stratigraphy ' num2str(j) ' finished.'])
+    disp('***************************************************************')
 end
-toc
+telapsed = toc;
 
 % Save data?
 if ~isempty(fname)
@@ -142,10 +142,13 @@ latx = {'Interpreter','latex'};
 nbins = 50;
 colrs = [0.5 0.5 0.5; 1 0 0; 0 0 1];
 for j=1:nStrat
-    lims = [floor(log10(min(min(k_md{j, end})))), ...
+    limx = [floor(log10(min(min(k_md{j, end})))), ...
             ceil(log10(max(max(k_md{j, end}))))];
-    edges = logspace(lims(1), lims(2), nbins);
-    
+    edges = logspace(limx(1), limx(2), nbins);
+    probs = [histcounts(k_md{j, end}(:, 1), edges); ...
+             histcounts(k_md{j, end}(:, 2), edges); ...
+             histcounts(k_md{j, end}(:, 3), edges)]' ./ nSim(end);
+    limy = floor(log10(min(probs(probs > 0))));
     fh = figure(j);
     tiledlayout(2, 4, 'Padding', 'compact', 'TileSpacing', 'compact');
     for k=1:numel(nSim)
@@ -156,10 +159,10 @@ for j=1:nStrat
             'FaceAlpha', 1, 'DisplayName', '$k_{xx}$')
         histogram(k_md{j, k}(:, 2), edges, 'Normalization', 'probability', ...
             'FaceColor', colrs(2, :), 'EdgeColor', 'none', ...
-            'FaceAlpha', .6, 'DisplayName', '$k_{yy}$')
+            'FaceAlpha', .7, 'DisplayName', '$k_{yy}$')
         histogram(k_md{j, k}(:, 3), edges, 'Normalization', 'probability', ...
             'FaceColor', colrs(3, :), 'EdgeColor', 'none', ...
-            'FaceAlpha', .4, 'DisplayName', '$k_{zz}$')
+            'FaceAlpha', .5, 'DisplayName', '$k_{zz}$')
         if k == 1
             xlabel('$k$ [mD]', latx{:}, 'fontSize', sz(2))
             ylabel('P [-]', latx{:}, 'fontSize', sz(2))
@@ -172,14 +175,15 @@ for j=1:nStrat
             if nSim(k) < 10000
                 title(num2str(nSim(k)), latx{:}, 'fontSize', sz(2))
             else
-                title(['$10^' num2str(log10(nSim(k))) '$'], latx{:}, 'fontSize', sz(2))
+                title(num2str(nSim(k), 3), latx{:}, 'fontSize', sz(2))
             end
         end
-        xlim([10^lims(1, 1) 10^lims(1, 2)])
-        xticks(10.^(lims(1, 1):2:lims(1, 2))); ...
-            ylim([0 1])
+        xlim([10^limx(1, 1) 10^limx(1, 2)])
+        xticks(10.^(limx(1, 1):2:limx(1, 2)));
+        ylim([10^limy 1])
+        yticks(10.^(limy:0))
         grid on
-        set(gca,'XScale','log')
+        set(gca,'XScale','log','YScale','log')
     end
     hold off
     set(fh, 'position', [200, 200, 700, 400]);
