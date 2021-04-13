@@ -20,7 +20,7 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 %% Define model and upscale permeability
 % Mandatory Input parameters
 %           {[FW], [HW]}
-thickness = {[20 10 20 10 30 10], [20 10 20 10 30 10]};
+thickness = {[20 10 20 10 30 10], [10 30 10 20 10 20]};
 vcl       = {repmat([0.05 0.4 0.1 0.5 0.15 0.6], 1, 1), ...
              repmat([0.2, 0.7, 0.25, 0.8, 0.3, 0.9], 1, 1)};
 dip       = [0, 0];
@@ -49,11 +49,14 @@ hangingwall = Stratigraphy(thickness{2}, vcl{2}, dip(2), 'IsHW', 1, ...
 % Strati in Faulted Section
 mySect = FaultedSection(footwall, hangingwall);
 
+% Visualize Strati
+mySect.plotStrati(faultDip);
+
 % Generate fault object with properties for each realization
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
 tic
-for n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     myFault = Fault(mySect, faultDip);
     
     % Get dependent variables
@@ -78,15 +81,17 @@ toc
 
 %% Output analysis
 
+% Histograms for each MatProp (all sims, we select one stratigraphic layer)
+% This should plot for all realizations that contain the given id.
+layerId = 4;                                            
+plotMatPropsHist(faults, smears, mySect, layerId) 
+
+% MatProps correlations
+plotMatPropsCorr(faults, mySect)
+
 % General fault materials and perm view
 plotId = 1;                             % simulation index
 faults{plotId}.plotMaterials(mySect) 
-
-% Histograms for each MatProp (all sims, we select one stratigraphic layer)
-% This should plot for all realizations that contain the given id.
-layerId = 1;                                            
-plotMatPropsHist(faults, smears, mySect, layerId) 
-% TO ADD: Save figs automatically.
 
 % Plot upscaled Poro and Perm (all sims, 3 directions)
 plotUpscaledPerm(faults)
