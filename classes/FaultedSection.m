@@ -124,41 +124,68 @@ classdef FaultedSection
                 Tap = [FS.FW.Thickness, FS.HW.Thickness] ./ cosd(c);
             else               % dipping fault and layers
                 % FW
-                if g == c(1)
-                    TapFW = FS.FW.Thickness;
+                TapFW = zeros(1, numel(FS.FW.Id));
+                cFW = c(FS.FW.Id);
+                if any(-cFW == g)                   
+                    id = -cFW == g;
+                    TapFW(id) = FS.FW.Thickness(id);
+                    TapFW(~id) = FS.FW.Thickness(~id) ./ cosd(g + cFW(~id));
                 else
-                    TapFW = FS.FW.Thickness ./ cosd(g + c(1));                
+                    TapFW = FS.FW.Thickness ./ cosd(g + cFW);                
                 end
                 
                 % HW
-                if g == c(2)
-                    TapHW = FS.HW.Thickness;
+                TapHW = zeros(1, numel(FS.HW.Id));
+                cHW = c(FS.HW.Id);
+                if any(-cHW == g)                    
+                    id = -cHW == g;
+                    TapHW(id) = FS.HW.Thickness(id);
+                    TapHW(~id) = FS.HW.Thickness(~id) ./ cosd(g + cHW(~id));
                 else
-                    TapHW = FS.HW.Thickness ./ cosd(g + c(2));                
-                end    
+                    TapHW = FS.HW.Thickness ./ cosd(g + cHW);                
+                end  
                 
                 Tap = [TapFW, TapHW];
             end
             
         end
         
-        function plotStrati(obj, faultDip, layerDip, Tap)
+        function plotStrati(obj, faultDip, Tap)
            %
            %
-           %
+           % This plot considers that dip is constant for all layers in FW
+           % and same for the HW (FW and HW dips may be different).
            
            % Measures
-           throw = sum(obj.FW.Thickness);
            fT = 3;      % THIS IS JUST FOR THE PLOT
-           fcoord = [0, 0; fT, 0; 0 - throw/tand(faultDip), throw; ...
-                     fT - throw/tand(faultDip), throw];
-           limx = [min(fcoord(:, 1)) - 10; max(fcoord(:,1)) + 10];
-           zFWf = [0 cumsum(Tap(obj.FW.Id))];
-           zHWf = [0 cumsum(Tap(obj.HW.Id))];
+           dip = [obj.FW.Dip(1) obj.HW.Dip(1)];
+           g = 90 - faultDip;
+           if g == 0
+               zFWf = [0 cumsum(Tap(obj.FW.Id))];
+               zHWf = [0 cumsum(Tap(obj.HW.Id))];
+           elseif all(dip == 0)
+               zFWf = [0 cumsum(obj.FW.Thickness)];
+               zHWf = [0 cumsum(obj.HW.Thickness)];
+           elseif any(dip == 0)
+               id = find(dip == 0);
+               if id == 1
+                   zFWf = [0 cumsum(obj.FW.Thickness)];
+                   zHWf = [0 cumsum(Tap(obj.HW.Id)*cosd(g))];
+               elseif id == 2
+                   zFWf = [0 cumsum(Tap(obj.FW.Id)*cosd(g))];
+                   zHWf = [0 cumsum(obj.HW.Thickness)];
+               end
+           else
+               zFWf = [0 cumsum(Tap(obj.FW.Id)*cosd(g))];
+               zHWf = [0 cumsum(Tap(obj.HW.Id)*cosd(g))];
+           end
            xFWf = 0 - zFWf./tand(faultDip);
            xHWf = fT - zHWf./tand(faultDip);
-           zFW = zFWf - tand(layerDip(1))*(xFWf - limx(1));
-           zHW = zHWf - tand(layerDip(2))*(xHWf - limx(2));
+           fcoord = [0, 0; fT, 0; xFWf(end), zFWf(end); ...
+                     fT + xFWf(end), zFWf(end)];
+           limx = [min(fcoord(:, 1)) - 10; max(fcoord(:,1)) + 10];
+           zFW = zFWf + tand(dip(1))*(xFWf - limx(1));
+           zHW = zHWf + tand(dip(2))*(xHWf - limx(2));
            
            % Utils
            colrs = flipud(copper(16));
@@ -213,8 +240,8 @@ classdef FaultedSection
            hold off
            axis equal
            h = gca; h.XAxis.Visible = 'off';
-           xlim(limx)
-           ylim([0 max([zFW, zHW])])
+           xlim([min([limx', xFWf, xHWf]), max([limx', xFWf, xHWf])])
+           ylim([min([zFW, zHW, zFWf, zHWf]) max([zFW, zHW, zFWf, zHWf])])
            ylabel('$z$ [m]', 'fontSize', sz(2), latx{:})
            title(['$z_\mathrm{f} =$ ' num2str(unique(obj.DepthFaulting)) ...
                   ' m $\mid$ $z_\mathrm{max} =$ ' num2str(unique(obj.FW.DepthBurial)) ...
