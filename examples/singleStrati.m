@@ -23,8 +23,8 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 thickness = {[20 10 20 10 30 10], [10 30 10 20 10 20]};
 vcl       = {repmat([0.05 0.4 0.1 0.5 0.15 0.6], 1, 1), ...
              repmat([0.2, 0.7, 0.25, 0.8, 0.3, 0.9], 1, 1)};
-dip       = [0, 10];
-faultDip  = 70;
+dip       = [20, 0];
+faultDip  = 60;
 
 % Optional Input parameters
 zf   = [500, 500];              % m
@@ -48,9 +48,10 @@ hangingwall = Stratigraphy(thickness{2}, vcl{2}, dip(2), 'IsHW', 1, ...
 
 % Strati in Faulted Section
 mySect = FaultedSection(footwall, hangingwall);
+Tap = getApparentThick(mySect, faultDip);
 
 % Visualize Strati
-mySect.plotStrati(faultDip, dip);
+mySect.plotStrati(faultDip, dip, Tap);
 
 % Generate fault object with properties for each realization
 faults = cell(Nsim, 1);
@@ -64,7 +65,6 @@ parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
                                             'siltInClay', siltInClay);
     
     % Generate smear object with T, Tap, L, Lmax
-    Tap = getApparentThick(mySect, myFault.Dip);
     smear = Smear(mySect.Vcl, mySect.IsClayVcl, mySect.Thick, Tap, ...
                   mySect.DepthFaulting, myFault, 1, mySect);
     

@@ -99,12 +99,50 @@ classdef FaultedSection
             %
             % get apparent thickness of layers at fault cutoffs
             %
-            Tap = [FS.FW.Thickness ./ (cosd(FS.FW.Dip)*sind(faultDip)), ...
-                   FS.HW.Thickness ./ (cosd(FS.HW.Dip)*sind(faultDip))];
+            %Tap = [FS.FW.Thickness ./ (cosd(FS.FW.Dip)*sind(faultDip)), ...
+            %       FS.HW.Thickness ./ (cosd(FS.HW.Dip)*sind(faultDip
+            %
+            % For dipping layers:
+            % In the FW, dip angle (FS.FW.Dip) must be negative if it is
+            % dipping away from the fault (highest point is at the contact
+            % between the layer and the fault), and positive otherwise.
+            % In the HW, it has to be the opposite, i.e. the dip angle
+            % (FS.HW.Dip) must be negative if the layers are dipping
+            % towards the fault.
+            %
+            
+            c = [FS.FW.Dip FS.HW.Dip];
+            g = 90 - faultDip;
+            
+            if g == 0 && all(c == 0) % vertical fault, hzntal layers
+                Tap = [FS.FW.Thickness, FS.HW.Thickness];
+            elseif g == 90
+                error('Fault dip cannot be 0')
+            elseif all(c == 0) % hzntal layers
+                Tap = [FS.FW.Thickness, FS.HW.Thickness] ./ cosd(g);
+            elseif g == 0      % vertical fault
+                Tap = [FS.FW.Thickness, FS.HW.Thickness] ./ cosd(c);
+            else               % dipping fault and layers
+                % FW
+                if g == c(1)
+                    TapFW = FS.FW.Thickness;
+                else
+                    TapFW = FS.FW.Thickness ./ cosd(g + c(1));                
+                end
+                
+                % HW
+                if g == c(2)
+                    TapHW = FS.HW.Thickness;
+                else
+                    TapHW = FS.HW.Thickness ./ cosd(g + c(2));                
+                end    
+                
+                Tap = [TapFW, TapHW];
+            end
             
         end
         
-        function plotStrati(obj, faultDip, layerDip)
+        function plotStrati(obj, faultDip, layerDip, Tap)
            %
            %
            %
@@ -115,16 +153,8 @@ classdef FaultedSection
            fcoord = [0, 0; fT, 0; 0 - throw/tand(faultDip), throw; ...
                      fT - throw/tand(faultDip), throw];
            limx = [min(fcoord(:, 1)) - 10; max(fcoord(:,1)) + 10];
-           if layerDip(1) >= 0
-               zFWf = [0 cumsum(obj.FW.Thickness.*cosd(layerDip(1)))];
-           else
-               zFWf = [0 cumsum(obj.FW.Thickness./cosd(layerDip(1)))];
-           end
-           if layerDip(2) >= 0
-               zHWf = [0 cumsum(obj.HW.Thickness.*cosd(layerDip(2)))];
-           else
-               zHWf = [0 cumsum(obj.HW.Thickness./cosd(layerDip(2)))];
-           end
+           zFWf = [0 cumsum(Tap(obj.FW.Id))];
+           zHWf = [0 cumsum(Tap(obj.HW.Id))];
            xFWf = 0 - zFWf./tand(faultDip);
            xHWf = fT - zHWf./tand(faultDip);
            zFW = zFWf - tand(layerDip(1))*(xFWf - limx(1));
