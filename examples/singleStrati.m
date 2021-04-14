@@ -50,14 +50,11 @@ hangingwall = Stratigraphy(thickness{2}, vcl{2}, dip(2), 'IsHW', 1, ...
 mySect = FaultedSection(footwall, hangingwall);
 Tap = getApparentThick(mySect, faultDip);
 
-% Visualize Strati
-mySect.plotStrati(faultDip, Tap);
-
 % Generate fault object with properties for each realization
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
 tic
-parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+for n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     myFault = Fault(mySect, faultDip);
     
     % Get dependent variables
@@ -80,6 +77,8 @@ toc
 
 
 %% Output analysis
+% Visualize Strati, fault thickness of 1st realization
+mySect.plotStrati(faults{1}.MatProps.Thick, faultDip, Tap);  
 
 % Histograms for each MatProp (all sims, we select one stratigraphic layer)
 % This should plot for all realizations that contain the given id.

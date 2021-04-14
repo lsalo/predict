@@ -150,14 +150,13 @@ classdef FaultedSection
             
         end
         
-        function plotStrati(obj, faultDip, Tap)
+        function plotStrati(obj, faultThick, faultDip, Tap)
            %
            %
            % This plot considers that dip is constant for all layers in FW
            % and same for the HW (FW and HW dips may be different).
            
            % Measures
-           fT = 3;      % THIS IS JUST FOR THE PLOT
            dip = [obj.FW.Dip(1) obj.HW.Dip(1)];
            g = 90 - faultDip;
            if g == 0
@@ -180,9 +179,9 @@ classdef FaultedSection
                zHWf = [0 cumsum(Tap(obj.HW.Id)*cosd(g))];
            end
            xFWf = 0 - zFWf./tand(faultDip);
-           xHWf = fT - zHWf./tand(faultDip);
-           fcoord = [0, 0; fT, 0; xFWf(end), zFWf(end); ...
-                     fT + xFWf(end), zFWf(end)];
+           xHWf = faultThick - zHWf./tand(faultDip);
+           fcoord = [0, 0; faultThick, 0; xFWf(end), zFWf(end); ...
+                     faultThick + xFWf(end), zFWf(end)];
            limx = [min(fcoord(:, 1)) - 10; max(fcoord(:,1)) + 10];
            zFW = zFWf + tand(dip(1))*(xFWf - limx(1));
            zHW = zHWf + tand(dip(2))*(xHWf - limx(2));
