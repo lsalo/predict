@@ -47,7 +47,7 @@ sz = [14, 12];
 % Scatterhist
 mrk = '.';
 lst = {'-', '-.', ':', '--', '-', '-.'};
-colr = cmocean('haline', numel(clayId));
+colr = [0 0 0; 1 0 0; 0 0 1; 0.5 0.5 0.5; 1 0 1; 0 1 1];
 figure(36)
 sh = scatterhist(phi(id), SSFc(id), 'Group', layerIds(id), 'Marker', '.', ...
             'Kernel', 'on', 'location', 'southeast', 'Direction', 'out', ...
