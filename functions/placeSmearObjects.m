@@ -96,7 +96,7 @@ function M = placeSmearObjects(M, G, tolerance, smearLength, ...
 %_________________________________________________________________________
 
 % verbose
-if nargin < 9
+if nargin < 7
     verbose = 1;
 end
 
