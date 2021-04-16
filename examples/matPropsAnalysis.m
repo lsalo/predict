@@ -85,12 +85,13 @@ SSFcBounds = zeros(2, numel(id), N);
 zf_all = repelem(zf', numel(thick), 1);
 thick_all = repmat(thick', numel(zf), numel(vcl));
 throw = f.throw;
+fdisp = f.disp;
 parfor j=1:N
     [~, SSFcBounds(:, :, j)] = getSSFc(vcl, isClayVcl, zf_all(j), ...
-                                       thick_all(j, :), throw);
+                                       thick_all(j, :), fdisp);
     for n=1:Nsim
         SSFc(n, :, j) = getSSFc(vcl, isClayVcl, zf_all(j), ...
-                                thick_all(j, :), throw);
+                                thick_all(j, :), fdisp);
     end
 end
 

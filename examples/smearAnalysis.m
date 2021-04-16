@@ -33,14 +33,14 @@ Trat          = zeros(Nsim, numel(vcl), N);
 segLenFrac    = zeros(Nsim, numel(vcl), N);
 for j=1:N
     [~, f.MatProps.SSFcBounds] = getSSFc(vcl, isClayVcl, zf_all(j), ...
-                                         thick(j, :), f.Throw);
+                                         thick(j, :), f.Disp);
     for n=1:Nsim
         % Variable props
         f.MatProps.Thick = getFaultThickness(f.Disp, 1);
         [f.Alpha, f.Delta, f.Zeta] = getFaultAngles(f.Throw, f.Dip, ...
                                                     f.MatProps.Thick);
         f.MatProps.ResFric = getResidualFrictionAngle(vcl);
-        f.MatProps.SSFc = getSSFc(vcl, isClayVcl, zf_all(j), thick(j, :), f.Throw);
+        f.MatProps.SSFc = getSSFc(vcl, isClayVcl, zf_all(j), thick(j, :), f.Disp);
         
         % smear struct
         smear = Smear(vcl, isClayVcl, thick(j, :), thickap(j, :), ...
