@@ -1,6 +1,5 @@
 function M = placeSmearObjects(M, G, tolerance, smearLength, ...
-                               smearSegLenMax, smearDomainLen, ...
-                               faultDisp, faultThick, verbose)
+                               smearSegLenMax, smearDomainLen, verbose)
 %
 % -----------------------------SUMMARY------------------------------------
 % This function randomly places smear objects using object-based simulation, 
@@ -258,7 +257,7 @@ for j = 1:numel(cunits)
         % Divide segments of length > inL, which result from the
         % random placing of smears.
         if numel(smearCells) < DiagCellsNum
-            pathLength = sqrt(faultDisp^2+faultThick^2)*(DiagCellsNum/G.cartDims(1));
+            pathLength = smearDomainLen*(DiagCellsNum/G.cartDims(1));
             start1 = strfind([0, dvals'==1],[0 1]);
             end1 = strfind([dvals'==1, 0],[1 0]);
             segCells = end1 - start1 + 1;

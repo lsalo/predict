@@ -40,14 +40,14 @@ classdef Fault
     end
     
     properties (SetAccess = protected)
-       Throw                            % Fault throw [m]
+       Disp                             % Fault displacement [m]
        Poro                             % Final upscaled Poro (Nsim, 1)
        Perm                             % Final upscaled Perm (Nsim, 3)
        Grid                             % contains resolution, cell Poro and Perm (G.cells.num, Nsim)
     end
     
     properties (SetAccess = protected, Dependent)
-       Disp                             % Fault displacement [m]
+       Throw                            % Fault throw [m]
     end
     
     properties (SetAccess = protected, Hidden)
@@ -67,11 +67,11 @@ classdef Fault
             
             % Geometry
             obj.Dip    = dip;
-            obj.Throw  = sum(FS.FW.Thickness);    
+            obj.Disp   = sum(FS.Tap(FS.FW.Id));   
             
             % User can pass different grid resolution
             if nargin < 3
-                obj.Grid.TargetCellDim = [0.1, 1];     % [thickness, disp.]
+                obj.Grid.TargetCellDim = [0.1, 1];     % [m], [thick., disp.]
             else
                 assert(isa(targetCellDim, 'double') && numel(targetCellDim) == 2, ...
                        ['If grid resolution is passed, it must be a ', ...
@@ -81,12 +81,11 @@ classdef Fault
             end
         end
         
-        function disp = get.Disp(obj)
+        function throw = get.Throw(obj)
             %
-            % Get displacement
+            % Get vertical throw
             %
-            
-            disp  = obj.Throw/sind(obj.Dip);
+            throw = obj.Disp*sind(obj.Dip); 
         end
         
         function obj = getMaterialProperties(obj, FS, varargin)
@@ -101,7 +100,6 @@ classdef Fault
             opt.maxPerm = [];                   % mD
             opt.siltInClay = false;
             opt.isUndercompacted = false;
-            opt.cap = [];
             opt = merge_options_relaxed(opt, varargin{:});
             
             % Shorten input names
@@ -123,7 +121,7 @@ classdef Fault
             % SSFc and SSFc bounds
             [obj.MatProps.SSFc, obj.MatProps.SSFcBounds] = ...
                                 getSSFc(FS.Vcl, FS.IsClayVcl, zf, ...
-                                        FS.Thick, obj.Throw, FS.HW.Id);
+                                        FS.Thick, obj.Disp, FS.HW.Id);
                                               
             % Perm Anisotropy Ratio
             poroAtZf = getPorosity(FS.Vcl, FS.IsClayVcl, zf, zmax, ...
@@ -138,7 +136,7 @@ classdef Fault
                                             opt.isUndercompacted, FS.HW.Id);
             % Perm
             obj.MatProps.Perm = getPermeability(FS.Vcl, FS.IsClayVcl, ...
-                                                zf, zmax, opt.cap, ...
+                                                zf, zmax, opt.maxPerm, ...
                                                 obj.MatProps.Poro, FS);
         end
         
@@ -155,7 +153,7 @@ classdef Fault
             % Mapping matrix (material in each grid cell)
             % MatMap makes this somewhat heavy on RAM.
             obj.MatMap = faultMaterialMap(G, FS, obj.Disp, ...
-                                          obj.MatProps.Thick, obj.Dip, ...
+                                          obj.MatProps.Thick, ...
                                           smear.ThickInFault, ...
                                           smear.Psmear);
             
@@ -165,9 +163,7 @@ classdef Fault
                 obj.MatMap = placeSmearObjects(obj.MatMap, G, tol, ...
                                                 smear.Length, ...
                                                 smear.SegLenMax, ...
-                                                smear.DomainLength, ...
-                                                obj.Disp, ...
-                                                obj.MatProps.Thick, 0);
+                                                smear.DomainLength, 0);
             else
                 if isempty(obj.MatMap.Psmear)
                     disp('No smear: P(smear) = 0')
@@ -211,7 +207,7 @@ classdef Fault
            % utils
            M = obj.MatMap;
            latx = {'Interpreter', 'latex'};
-           ydim = max(G.faces.centroids(:,2));
+           %ydim = max(G.faces.centroids(:,2));
            rock.poro = obj.Grid.Poro;
            rock.perm = obj.Grid.Perm;
            idGrid = reshape(transpose(flipud(M.vals)), G.cells.num, 1);

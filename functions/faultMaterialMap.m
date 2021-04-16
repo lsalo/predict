@@ -1,4 +1,4 @@
-function M = faultMaterialMap(G, FS, faultDisp, faultThick, faultDip, ...
+function M = faultMaterialMap(G, FS, faultDisp, faultThick, ...
                               smearThickInFault, Psmear)
 %
 % -----------------------------SUMMARY------------------------------------
@@ -133,10 +133,9 @@ if sum(M.nDiag) > sum(M.nDiagTot)
 end
 
 % Position of stratigraphic layers with respect to diagonals in M
-Tap = getApparentThick(FS, faultDip);
-M.layerCenter = [cumsum(Tap(FS.FW.Id))-Tap(FS.FW.Id)/2 ...
-                 cumsum(Tap(FS.HW.Id))-Tap(FS.HW.Id)/2];
-M.layerTop    = [cumsum(Tap(FS.FW.Id)) cumsum(Tap(FS.HW.Id))];
+M.layerCenter = [cumsum(FS.Tap(FS.FW.Id))-FS.Tap(FS.FW.Id)/2 ...
+                 cumsum(FS.Tap(FS.HW.Id))-FS.Tap(FS.HW.Id)/2];
+M.layerTop    = [cumsum(FS.Tap(FS.FW.Id)) cumsum(FS.Tap(FS.HW.Id))];
 M.layerBot    = [0 M.layerTop(FS.FW.Id(1:end-1)) ...
                  0 M.layerTop(FS.HW.Id(1:end-1))];
 M.layerDiagCenter = round(M.layerCenter.*(G.cartDims(1)/faultDisp)) - ...

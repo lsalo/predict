@@ -1,5 +1,5 @@
-function [SSFc, SSFcBounds] = getSSFc(vcl, isClayVcl, zf, thick, throw, ...
-                                      idHW)
+function [SSFc, SSFcBounds] = getSSFc(vcl, isClayVcl, zf, thick, ...
+                                      faultDisp, idHW)
 % Get critical shale smear factor (SSFc), i.e. the value at which a given 
 % smear becomes discontinuous. Note that an object fault with field disp
 % must be passed as well.
@@ -93,11 +93,12 @@ if sum(id) > 0
     SSFcBounds = endpoints;
     
     % 3. Compute mode of triangular distribution to sample from.
-    thickMax = throw;
-    thickMin = throw/50;                % algorithm limit accounting for
+    thickMax = faultDisp;
+    thickMin = faultDisp/50;            % algorithm limit accounting for
                                         % resoultion when meshing fault.
-    peak = (1 - (thickMax - thickc)/(thickMax - thickMin)) .* ...
-           (endpoints(2, :) - endpoints(1, :)) + endpoints(1, :);
+    peak = (1 - min([repelem(1, numel(thickc)); ...
+                     ((thickMax - thickc)/(thickMax - thickMin))])) ...
+           .* (endpoints(2, :) - endpoints(1, :)) + endpoints(1, :);
     
     
     % 4. Generate samples

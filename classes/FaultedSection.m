@@ -36,32 +36,52 @@ classdef FaultedSection
     properties (SetAccess = protected)
         HW              % Hangingwall object from Stratigraphy class.
         FW              % Footwall object from Stratigraphy class.
+        Tap             % Apparent layer thickness on the fault
+        Thick           % True layer thickness
     end
     
     properties (Dependent, Hidden)
        ParentId 
        Vcl
        IsClayVcl
-       Thick
        DepthFaulting
     end
     
     methods
-        function obj = FaultedSection(footwall, hangingwall)
+        function obj = FaultedSection(footwall, hangingwall, faultDip)
             % We instantiate the object with the FW and HW objects required
             % to construct it.
             %
             % Example: mySect = FaultedSection(footwall, hangingwall)
             %
             
+            % Assign or compute apparent and true thicknesses
+            if footwall.IsThickApp == 1
+                TapFW = footwall.Thickness;
+                TFW = getThick(footwall, hangingwall, faultDip);
+            else
+                TapFW = getApparentThick(footwall, hangingwall, faultDip);
+                TFW = footwall.Thickness;
+            end
+            if hangingwall.IsThickApp == 1
+                TapHW = hangingwall.Thickness;
+                [~, THW] = getThick(footwall, hangingwall, faultDip);
+            else
+                [~, TapHW] = getApparentThick(footwall, hangingwall, ...
+                                              faultDip);
+                THW = hangingwall.Thickness;
+            end
+            
             % Checks
             assert(hangingwall.IsHW == 1)
-            assert(sum(footwall.Thickness) == sum(hangingwall.Thickness))
+            assert(sum(TapFW) == sum(TapHW))
             assert(footwall.IsClayVcl == hangingwall.IsClayVcl);  % assumed by MatProps
             
             % Assign
             obj.FW = footwall;
             obj.HW = hangingwall;
+            obj.Tap = [TapFW, TapHW];
+            obj.Thick = [TFW, THW];
         end
         
         function parentId = get.ParentId(obj)
@@ -71,86 +91,22 @@ classdef FaultedSection
         end
         
         function vcl = get.Vcl(obj)
-            % get parent Ids, ie the corresponding protolith Ids for our 
-            % fault materials.
+            % 
            vcl = [obj.FW.Vcl obj.HW.Vcl]; 
         end
         
         function isClayVcl = get.IsClayVcl(obj)
-            % get parent Ids, ie the corresponding protolith Ids for our 
-            % fault materials.
+            % 
            assert(obj.FW.IsClayVcl == obj.HW.IsClayVcl)
            isClayVcl = obj.FW.IsClayVcl; 
         end
         
-        function thick = get.Thick(obj)
-            % get parent Ids, ie the corresponding protolith Ids for our 
-            % fault materials.
-           thick = [obj.FW.Thickness obj.HW.Thickness]; 
-        end
-        
         function zf = get.DepthFaulting(obj)
-            % get parent Ids, ie the corresponding protolith Ids for our 
-            % fault materials.
+            % 
            zf = [obj.FW.DepthFaulting obj.HW.DepthFaulting]; 
         end
         
-        function Tap = getApparentThick(FS, faultDip)
-            %
-            % get apparent thickness of layers at fault cutoffs
-            %
-            %Tap = [FS.FW.Thickness ./ (cosd(FS.FW.Dip)*sind(faultDip)), ...
-            %       FS.HW.Thickness ./ (cosd(FS.HW.Dip)*sind(faultDip
-            %
-            % For dipping layers:
-            % In the FW, dip angle (FS.FW.Dip) must be negative if it is
-            % dipping away from the fault (highest point is at the contact
-            % between the layer and the fault), and positive otherwise.
-            % In the HW, it has to be the opposite, i.e. the dip angle
-            % (FS.HW.Dip) must be negative if the layers are dipping
-            % towards the fault.
-            %
-            
-            c = [FS.FW.Dip FS.HW.Dip];
-            g = 90 - faultDip;
-            
-            if g == 0 && all(c == 0) % vertical fault, hzntal layers
-                Tap = [FS.FW.Thickness, FS.HW.Thickness];
-            elseif g == 90
-                error('Fault dip cannot be 0')
-            elseif all(c == 0) % hzntal layers
-                Tap = [FS.FW.Thickness, FS.HW.Thickness] ./ cosd(g);
-            elseif g == 0      % vertical fault
-                Tap = [FS.FW.Thickness, FS.HW.Thickness] ./ cosd(c);
-            else               % dipping fault and layers
-                % FW
-                TapFW = zeros(1, numel(FS.FW.Id));
-                cFW = c(FS.FW.Id);
-                if any(-cFW == g)                   
-                    id = -cFW == g;
-                    TapFW(id) = FS.FW.Thickness(id);
-                    TapFW(~id) = FS.FW.Thickness(~id) ./ cosd(g + cFW(~id));
-                else
-                    TapFW = FS.FW.Thickness ./ cosd(g + cFW);                
-                end
-                
-                % HW
-                TapHW = zeros(1, numel(FS.HW.Id));
-                cHW = c(FS.HW.Id);
-                if any(-cHW == g)                    
-                    id = -cHW == g;
-                    TapHW(id) = FS.HW.Thickness(id);
-                    TapHW(~id) = FS.HW.Thickness(~id) ./ cosd(g + cHW(~id));
-                else
-                    TapHW = FS.HW.Thickness ./ cosd(g + cHW);                
-                end  
-                
-                Tap = [TapFW, TapHW];
-            end
-            
-        end
-        
-        function plotStrati(obj, faultThick, faultDip, Tap)
+        function plotStrati(obj, faultThick, faultDip)
            %
            %
            % This plot considers that dip is constant for all layers in FW
@@ -160,23 +116,23 @@ classdef FaultedSection
            dip = [obj.FW.Dip(1) obj.HW.Dip(1)];
            g = 90 - faultDip;
            if g == 0
-               zFWf = [0 cumsum(Tap(obj.FW.Id))];
-               zHWf = [0 cumsum(Tap(obj.HW.Id))];
+               zFWf = [0 cumsum(obj.Tap(obj.FW.Id))];
+               zHWf = [0 cumsum(obj.Tap(obj.HW.Id))];
            elseif all(dip == 0)
-               zFWf = [0 cumsum(obj.FW.Thickness)];
-               zHWf = [0 cumsum(obj.HW.Thickness)];
+               zFWf = [0 cumsum(obj.Thick(obj.FW.Id))];
+               zHWf = [0 cumsum(obj.Thick(obj.HW.Id))];
            elseif any(dip == 0)
                id = find(dip == 0);
                if id == 1
-                   zFWf = [0 cumsum(obj.FW.Thickness)];
-                   zHWf = [0 cumsum(Tap(obj.HW.Id)*cosd(g))];
+                   zFWf = [0 cumsum(obj.Thick(obj.FW.Id))];
+                   zHWf = [0 cumsum(obj.Tap(obj.HW.Id)*cosd(g))];
                elseif id == 2
-                   zFWf = [0 cumsum(Tap(obj.FW.Id)*cosd(g))];
-                   zHWf = [0 cumsum(obj.HW.Thickness)];
+                   zFWf = [0 cumsum(obj.Tap(obj.FW.Id)*cosd(g))];
+                   zHWf = [0 cumsum(obj.Thick(obj.HW.Id))];
                end
            else
-               zFWf = [0 cumsum(Tap(obj.FW.Id)*cosd(g))];
-               zHWf = [0 cumsum(Tap(obj.HW.Id)*cosd(g))];
+               zFWf = [0 cumsum(obj.Tap(obj.FW.Id)*cosd(g))];
+               zHWf = [0 cumsum(obj.Tap(obj.HW.Id)*cosd(g))];
            end
            xFWf = 0 - zFWf./tand(faultDip);
            xHWf = faultThick - zHWf./tand(faultDip);

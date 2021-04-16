@@ -40,15 +40,14 @@ U.ARcheck         = 0;          % check if Perm obtained with grid with
                                 % Aspect Ratio of only 3 gives same Perm
 
 % FW and HW
-footwall = Stratigraphy(thickness{1}, vcl{1}, dip(1), ...
+footwall = Stratigraphy(thickness{1}, vcl{1}, 'Dip', dip(1), ...
                         'DepthFaulting', zf(1));
-hangingwall = Stratigraphy(thickness{2}, vcl{2}, dip(2), 'IsHW', 1, ...
+hangingwall = Stratigraphy(thickness{2}, vcl{2}, 'Dip', dip(2), 'IsHW', 1, ...
                            'NumLayersFW', footwall.NumLayers, ...
                            'DepthFaulting', zf(2));
 
 % Strati in Faulted Section
-mySect = FaultedSection(footwall, hangingwall);
-Tap = getApparentThick(mySect, faultDip);
+mySect = FaultedSection(footwall, hangingwall, faultDip);
 
 % Generate fault object with properties for each realization
 faults = cell(Nsim, 1);
@@ -62,8 +61,8 @@ for n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
                                             'siltInClay', siltInClay);
     
     % Generate smear object with T, Tap, L, Lmax
-    smear = Smear(mySect.Vcl, mySect.IsClayVcl, mySect.Thick, Tap, ...
-                  mySect.DepthFaulting, myFault, 1, mySect);
+    smear = Smear(mySect.Vcl, mySect.IsClayVcl, mySect.Thick, ...
+                  mySect.Tap, mySect.DepthFaulting, myFault, 1, mySect);
     
     % Compute upscaled permeability distribution
     myFault = myFault.upscaleSmearPerm(mySect, smear, U);
@@ -78,7 +77,7 @@ toc
 
 %% Output analysis
 % Visualize Strati, fault thickness of 1st realization
-mySect.plotStrati(faults{1}.MatProps.Thick, faultDip, Tap);  
+mySect.plotStrati(faults{1}.MatProps.Thick, faultDip);  
 
 % Histograms for each MatProp (all sims, we select one stratigraphic layer)
 % This should plot for all realizations that contain the given id.

@@ -111,7 +111,7 @@ classdef Smear
                 % (1) Thickness
                 theta_c   = 45 + phi(n, idc);
                 if numel(ids) > 0
-                    theta_s = 45 + sum(phi(n, ids).*T(ids)./sum(T(ids)));
+                    theta_s = 45 + sum(phi(n, ids).*Tap(ids)./sum(Tap(ids)));
                 else
                     theta_s = 45 + 30;
                 end
