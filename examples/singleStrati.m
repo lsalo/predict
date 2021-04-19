@@ -20,7 +20,7 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 %% Define model and upscale permeability
 % Mandatory Input parameters
 %           {[FW], [HW]}
-thickness = {[20 10 20 10 30 10], [20 10 20 10 30 10]};
+thickness = {[20 10 20 10 30 10], [30 5 10 30 5 20]};
 vcl       = {repmat([0.05 0.4 0.1 0.5 0.15 0.6], 1, 1), ...
              repmat([0.2, 0.7, 0.25, 0.8, 0.3, 0.9], 1, 1)};
 dip       = [0, -20];
@@ -70,7 +70,7 @@ for n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     % Save result
     faults{n} = myFault;
     smears{n} = smear;
-    disp(['Simulation ' num2str(n) 'out of ' num2str(Nsim) ' completed.'])
+    disp(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])
 end
 toc
 
@@ -88,8 +88,9 @@ plotMatPropsHist(faults, smears, mySect, layerId)
 plotMatPropsCorr(faults, mySect)
 
 % General fault materials and perm view
-plotId = 1;                             % simulation index
+plotId = randi(Nsim, 1);              % simulation index
 faults{plotId}.plotMaterials(mySect) 
+% Add MatProps for this realization (table?)
 
 % Plot upscaled Poro and Perm (all sims, 3 directions)
 plotUpscaledPerm(faults)

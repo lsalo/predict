@@ -207,6 +207,7 @@ classdef Fault
            % utils
            M = obj.MatMap;
            latx = {'Interpreter', 'latex'};
+           sz = [14, 11];
            %ydim = max(G.faces.centroids(:,2));
            rock.poro = obj.Grid.Poro;
            rock.perm = obj.Grid.Perm;
@@ -215,15 +216,17 @@ classdef Fault
            % SUBPLOTS
            % 1. Parent Ids
            hh = figure(randi(1000, 1));
-           tiledlayout(1, 5, 'Padding', 'normal', 'TileSpacing', 'compact');
+           tiledlayout(1, 5, 'Padding', 'compact', 'TileSpacing', 'none');
            nexttile
-           set(gca, 'colormap', jet(max(M.unit)));
+           set(gca, 'colormap', hot(max(M.unit)));
            plotToolbar(G, reshape(transpose(flipud(M.units)), G.cells.num, 1), ...
                        'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0.1);
            xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); c = colorbar;
            set(c,'YTick', sort(unique(M.unit)));
            xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
-           title('Parent Id');
+           set(gca,'fontSize', 10)
+           title('Parent Id', latx{:}, 'fontSize', sz(2));
+           
            
            % 2. Smear vs sand
            nexttile
@@ -245,7 +248,7 @@ classdef Fault
            hold on
            for n=FS.FW.Id
                plot(0,layerTops(n), '+r', 'MarkerSize', 4, 'LineWidth', 1)
-               plot(0,layerCtrs(n), 'or', 'MarkerSize', 4, ...
+               plot(0,layerCtrs(n), 'or', 'MarkerSize', 3, ...
                     'LineWidth', 1, 'MarkerFaceColor', 'r')
            end
            plot(0, layerBots(1), '+r', 'MarkerSize', 4, 'LineWidth', 1)
@@ -253,12 +256,13 @@ classdef Fault
                plot(obj.MatProps.Thick, layerTops(n), '+r', ...
                     'MarkerSize', 4, 'LineWidth', 1)
                plot(obj.MatProps.Thick, layerCtrs(n), 'or', ...
-                    'MarkerSize', 4, 'LineWidth', 1, 'MarkerFaceColor', 'r')
+                    'MarkerSize', 3, 'LineWidth', 1, 'MarkerFaceColor', 'r')
            end
            plot(obj.MatProps.Thick, layerBots(1), '+r', 'MarkerSize', ...
                 4, 'LineWidth', 1)
            hold off
            xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); ...
+           axis off
            c = colorbar;
            set(c,'YTick', [0 1]);
            if unique(idGrid) == 0
@@ -267,27 +271,34 @@ classdef Fault
                caxis([0.9 1]);
            end
            %xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
-           title('Smear vs sand');
+           set(gca,'fontSize', 10)
+           title('Material', latx{:}, 'fontSize', sz(2));
+           
            
            % 3. Cell and upscaled porosity
            nexttile
            set(gca, 'colormap', copper)
            plotToolbar(G, rock.poro, 'EdgeColor', [0.2 0.2 0.2], ...
                        'EdgeAlpha', 0);
-           xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); c = colorbar;
+           xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); 
+           axis off
+           c = colorbar;
            caxis([0 max([max(rock.poro), 0.35])]);
+           set(gca,'fontSize', 10)
            %c.Label.Interpreter = 'latex'; 
            %c.Label.String = '$n$ [-]';
            %c.Label.FontSize = 12;
            %xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
-           title(['Porosity = ' num2str(obj.Poro, ' %1.2f')]);
+           title(['$n =$ ' num2str(obj.Poro, ' %1.2f') ' [-]'], latx{:}, ...
+                 'fontSize', sz(2));
            
            % 4. Cell and upscaled permeability
            nexttile
            set(gca, 'colormap', copper)
            plotToolbar(G, log10(rock.perm(:,1)/(milli*darcy)), ...
                        'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0);
-           xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); c = colorbar;
+           xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); axis off
+           c = colorbar;
            if ~any(obj.MatMap.isclay)
                 caxis([min(log10(rock.perm(:,1)/(milli*darcy))) ...
                        max(log10(rock.perm(:,1)/(milli*darcy)))]);
@@ -295,13 +306,14 @@ classdef Fault
                caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 1]);
            end
            c.Label.Interpreter = 'latex'; 
-           c.Label.String = '$\log_{10} k_\mathrm{xx}$ [mD]';
+           c.Label.String = '$\log_{10} k_{xx}$ [mD]';
            c.Label.FontSize = 12;
+           set(gca,'fontSize', 10)
            %xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
            val = obj.Perm(1)/(milli*darcy);
            if val < 1e-3
                val = val*1000;
-               units = ' [\muD]';
+               units = ' [$\mu$D]';
                form = ' %1.3f';
            elseif val > 999
                val = val/1000;
@@ -311,30 +323,32 @@ classdef Fault
                units = ' [mD]';
                form = ' %3.3f';
            end
-           title(['k_{xx} = ' num2str(val, form) units]);
+           title(['$k_{xx} =$ ' num2str(val, form) units], latx{:}, ...
+                 'fontSize', sz(2));
            
            nexttile
            set(gca, 'colormap', copper)
            plotToolbar(G, log10(rock.perm(:,3)/(milli*darcy)), ...
                        'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0);
            xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); 
+           axis off
            c = colorbar;
            if ~any(obj.MatMap.isclay) % if there is sand
-                caxis([min(log10(rock.perm(:,1)/(milli*darcy))) ...
-                       max(log10(rock.perm(:,3)/(milli*darcy)))]);
+               caxis([min(log10(rock.perm(:,1)/(milli*darcy))) ...
+                      max(log10(rock.perm(:,3)/(milli*darcy)))]);
            else
-               caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 1]);
+              caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 1]);
            end
            c.Label.Interpreter = 'latex'; 
-           c.Label.String = '$\log_{10} k_\mathrm{zz}$ [mD]';
+           c.Label.String = '$\log_{10} k_{zz}$ [mD]';
            c.Label.FontSize = 12;
-           set(gca,'fontSize', 13)
+           set(gca,'fontSize', 10)
            %xlabel('$x$ [m]', latx{:}, 'fontSize', 14); 
            %ylabel('$z$ [m]', latx{:}, 'fontSize', 14)
            val = obj.Perm(3)/(milli*darcy);
            if val < 1e-3
                val = val*1000;
-               units = ' [\muD]';
+               units = ' [$\mu$D]';
                form = ' %1.3f';
            elseif val > 999
                val = val/1000;
@@ -344,8 +358,37 @@ classdef Fault
                units = ' [mD]';
                form = ' %3.3f';
            end
-           title(['k_{zz} = ' num2str(val, form) units], 'fontsize', 12);
-           set(hh, 'position', [200, 0, 725, 850]);       
+           title(['$k_{zz} =$ ' num2str(val, form) units], latx{:}, ...
+                 'fontSize', sz(2));
+           set(hh, 'position', [200, 0, 600, 350]);       
+           
+           % MatProps 
+           %Thick = repelem(obj.MatProps.Thick, numel(obj.MatProps.ResFric));
+           SSFcMin = obj.MatProps.SSFcBounds(1, :);
+           SSFcMax = obj.MatProps.SSFcBounds(2, :);
+           PoroMin = obj.MatProps.Poro(:, 1);
+           PoroMax = obj.MatProps.Poro(:, 2);
+           N = max(FS.HW.Id);
+           PermMin = zeros(N, 1);
+           PermMax = zeros(N, 1);
+           for n = 1:N
+              samples = obj.MatProps.Perm{n}(5000);
+              PermMin(n) = min(samples)/(milli*darcy);
+              PermMax(n) = max(samples)/(milli*darcy);
+           end
+           tdata = table(obj.MatProps.ResFric', obj.MatProps.SSFc', ...
+                         PoroMin, PoroMax, PermMin, PermMax, ...
+                         obj.MatProps.PermAnisoRatio');
+           tdata.Properties.VariableNames = {'ResFric', 'SSFc', ...
+                                             'PoroMin', 'PoroMax', ...
+                                             'PermMin', 'PermMax', ...
+                                             'PermAniso'}; 
+           fig = uifigure(randi(1000, 1), 'Position', [500 500 600 30*N]);
+           uit = uitable(fig);
+           uit.Position = [20 20 550 30*N-40];
+           uit.Data = tdata;
+           uit.RowName = 'numbered';
+                     
            
         end
         
