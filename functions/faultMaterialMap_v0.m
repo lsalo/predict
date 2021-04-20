@@ -1,5 +1,5 @@
-function M = faultMaterialMap(G, FS, smearDomainLength, ...
-                              smearThickInFault, Psmear)
+function M = faultMaterialMap_v0(G, FS, faultDisp, faultThick, ...
+                                 smearThickInFault, Psmear)
 %
 % -----------------------------SUMMARY------------------------------------
 % This function takes as inputs the Grid structure (G), footwall,
@@ -103,42 +103,70 @@ M.unitIn      = M.unit;                         % For reference (unchanged)
 M.isclayIn    = M.isclay;                       % "
         
 
-% 1. Calculate number of diagonals with potential smear
+% 1. Diagonals with potential smear
+fDiagL = sqrt(faultDisp^2 + faultThick^2);
 layerLs = zeros(1, max(FS.ParentId));
 layerLs(M.isclay) = smearThickInFault;
-M.nDiag = round((layerLs./smearDomainLength)*M.nDiagTot);
+M.nDiag = round((layerLs./fDiagL)*M.nDiagTot);
 
+% fix number of diagonals if already out of bounds (smears "too thick")
+c = find(M.isclay);
+smearThickAsFault = 0;
+if sum(M.nDiag) > sum(M.nDiagTot)
+    smearThickAsFault = 1;
+    M.nDiag = fix(M.nDiag ./ sum(M.nDiag).*M.nDiagTot);
+    c1 = find(M.nDiag > 1);
+    if any(M.nDiag == 1)
+       M.nDiag(M.nDiag == 1) = 0;
+    end
+    toadd = M.nDiagTot - sum(M.nDiag);
+    % ----- starting here, instead of commented if block at the end. ----- 
+    % We add one at a time.
+    idta = repmat(c1, 1, toadd);
+    idta = idta(1:toadd);
+    ii = 0;
+    while toadd > 0  
+        ii = ii + 1;
+        M.nDiag(idta(ii)) = M.nDiag(idta(ii)) + 1;
+        
+        % prepare next
+        toadd = toadd - 1;
+    end
+    % ---------------------------------------------------------------------
+%     if toadd > 0
+%         toaddEach = fix(M.nDiag(c1).*toadd/sum(M.nDiag));
+%         M.nDiag(c1) = M.nDiag(c1) + toaddEach;
+%         idx = randi(numel(c1),1);
+%         if M.nDiagTot > sum(M.nDiag)
+%             M.nDiag(c1(idx)) = M.nDiag(c1(idx)) + ...
+%                                (M.nDiagTot - sum(M.nDiag));          
+%         end
+%         %M.nDiag(c1(idx)) = M.nDiag(c1(idx)) + toadd;
+%     end
+end
 
-% 2. Position of stratigraphic layers with respect to diagonals in M
-faultDisp = sum(FS.Tap(FS.FW.Id));
+% Position of stratigraphic layers with respect to diagonals in M
 M.layerCenter = [cumsum(FS.Tap(FS.FW.Id))-FS.Tap(FS.FW.Id)/2 ...
                  cumsum(FS.Tap(FS.HW.Id))-FS.Tap(FS.HW.Id)/2];
 M.layerTop    = [cumsum(FS.Tap(FS.FW.Id)) cumsum(FS.Tap(FS.HW.Id))];
 M.layerBot    = [0 M.layerTop(FS.FW.Id(1:end-1)) ...
                  0 M.layerTop(FS.HW.Id(1:end-1))];
 M.layerDiagCenter = round(M.layerCenter.*(G.cartDims(1)/faultDisp)) - ...
-                          G.cartDims(1);
+                    G.cartDims(1);
 M.layerDiagCenter(FS.HW.Id) = M.layerDiagCenter(FS.HW.Id) + G.cartDims(1);
-
-% Assign initial DiagTop and DiagBot
-M.DiagTop = M.layerDiagCenter + fix((M.nDiag-1)/2);
-M.DiagBot = M.layerDiagCenter - round((M.nDiag-1)/2);
-
-% Just for convenience in plotting, etc.
 M.layerDiagTop = round(M.layerTop.*(G.cartDims(1)/faultDisp)) - ...
-                       G.cartDims(1);
+                 G.cartDims(1);
 M.layerDiagTop(FS.HW.Id) = M.layerDiagTop(FS.HW.Id) + G.cartDims(1);
 M.layerDiagTop(M.layerDiagTop>0) = M.layerDiagTop(M.layerDiagTop>0)-1;
 M.layerDiagBot = round(M.layerBot.*(G.cartDims(1)/faultDisp)) - ...
-                       G.cartDims(1);
+                 G.cartDims(1);
 M.layerDiagBot(FS.HW.Id) = M.layerDiagBot(FS.HW.Id) + G.cartDims(1)+1;
 M.layerDiagBot(M.layerDiagBot==0) = 1;
 M.layerDiagBot(1) = -(G.cartDims(1)-1);
 M.nDiagLayer = (M.layerDiagTop - M.layerDiagBot)+1;
 
-
-% 3. Adjust nDiag to withing -G.cartDims and +G.cartDims
-
+M.DiagTop = M.layerDiagCenter + fix((M.nDiag-1)/2); % fix to be conservative, and both fix for symmetry.
+M.DiagBot = M.layerDiagCenter - fix((M.nDiag-1)/2);
 
 % If any M.nDiag is 2 we consider 3 diagonals; if any M.nDiag is 1 we neglect it.
 if any(all([M.nDiag(M.isclay) < 3; M.nDiag(M.isclay) > 1])) 
