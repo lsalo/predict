@@ -120,16 +120,29 @@ if sum(M.nDiag) > sum(M.nDiagTot)
        M.nDiag(M.nDiag == 1) = 0;
     end
     toadd = M.nDiagTot - sum(M.nDiag);
-    if toadd > 0
-        toaddEach = fix(M.nDiag(c1).*toadd/sum(M.nDiag));
-        M.nDiag(c1) = M.nDiag(c1) + toaddEach;
-        idx = randi(numel(c1),1);
-        if M.nDiagTot > sum(M.nDiag)
-            M.nDiag(c1(idx)) = M.nDiag(c1(idx)) + ...
-                               (M.nDiagTot - sum(M.nDiag));          
-        end
-        %M.nDiag(c1(idx)) = M.nDiag(c1(idx)) + toadd;
+    % ----- starting here, instead of commented if block at the end. ----- 
+    % We add one at a time.
+    idta = repmat(c1, 1, toadd);
+    idta = idta(1:toadd);
+    ii = 0;
+    while toadd > 0  
+        ii = ii + 1;
+        M.nDiag(idta(ii)) = M.nDiag(idta(ii)) + 1;
+        
+        % prepare next
+        toadd = toadd - 1;
     end
+    % ---------------------------------------------------------------------
+%     if toadd > 0
+%         toaddEach = fix(M.nDiag(c1).*toadd/sum(M.nDiag));
+%         M.nDiag(c1) = M.nDiag(c1) + toaddEach;
+%         idx = randi(numel(c1),1);
+%         if M.nDiagTot > sum(M.nDiag)
+%             M.nDiag(c1(idx)) = M.nDiag(c1(idx)) + ...
+%                                (M.nDiagTot - sum(M.nDiag));          
+%         end
+%         %M.nDiag(c1(idx)) = M.nDiag(c1(idx)) + toadd;
+%     end
 end
 
 % Position of stratigraphic layers with respect to diagonals in M

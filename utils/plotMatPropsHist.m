@@ -160,11 +160,11 @@ if faults{1}.MatMap.isclayIn(id)
     grid on
     xticks(0:2:12)
 end
-if faults{1}.MatMap.isclayIn(id)
-    set(fh2, 'position', [500, 200, 1100, 250]);
-else
-    set(fh2, 'position', [500, 200, 660, 250]);
-end
+%if faults{1}.MatMap.isclayIn(id)
+%    set(fh2, 'position', [500, 200, 1100, 250]);
+%else
+set(fh2, 'position', [500, 200, 660, 250]);
+%end
 
 
 %% Plot Smears

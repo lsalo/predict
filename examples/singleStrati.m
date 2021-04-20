@@ -30,7 +30,7 @@ faultDip  = 60;
 zf   = [500, 500];              % m
 maxPerm = [];                   % mD
 siltInClay = true;              % consider 25% of silt fraction in clay
-Nsim = 10;                      % Number of simulations/realizations
+Nsim = 500;                     % Number of simulations/realizations
 
 % Flow upscaling options
 U.useAcceleration = 1;          % requires MEX and AMGCL setup
@@ -53,7 +53,7 @@ mySect = FaultedSection(footwall, hangingwall, faultDip);
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
 tic
-for n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     myFault = Fault(mySect, faultDip);
     
     % Get dependent variables
@@ -81,14 +81,14 @@ mySect.plotStrati(faults{1}.MatProps.Thick, faultDip);
 
 % Histograms for each MatProp (all sims, we select one stratigraphic layer)
 % This should plot for all realizations that contain the given id.
-layerId = 4;                                            
+layerId = 10;                                            
 plotMatPropsHist(faults, smears, mySect, layerId) 
 
 % MatProps correlations
 plotMatPropsCorr(faults, mySect)
 
 % General fault materials and perm view
-plotId = randi(Nsim, 1);              % simulation index
+plotId = selectSimId('maxZ', faults);                % simulation index
 faults{plotId}.plotMaterials(mySect) 
 % Add MatProps for this realization (table?)
 

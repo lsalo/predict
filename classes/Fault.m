@@ -223,6 +223,8 @@ classdef Fault
                        'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0.1);
            xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); c = colorbar;
            set(c,'YTick', sort(unique(M.unit)));
+           xticks([0 obj.MatProps.Thick])
+           xticklabels([0 round(obj.MatProps.Thick, 2)])
            xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
            set(gca,'fontSize', 10)
            title('Parent Id', latx{:}, 'fontSize', sz(2));
@@ -360,7 +362,7 @@ classdef Fault
            end
            title(['$k_{zz} =$ ' num2str(val, form) units], latx{:}, ...
                  'fontSize', sz(2));
-           set(hh, 'position', [200, 0, 600, 350]);       
+           set(hh, 'position', [200, 0, 650, 350]);       
            
            % MatProps 
            %Thick = repelem(obj.MatProps.Thick, numel(obj.MatProps.ResFric));
@@ -383,7 +385,7 @@ classdef Fault
                                              'PoroMin', 'PoroMax', ...
                                              'PermMin', 'PermMax', ...
                                              'PermAniso'}; 
-           fig = uifigure(randi(1000, 1), 'Position', [500 500 600 30*N]);
+           fig = uifigure(randi(1000, 1), 'Position', [500 500 620 30*N]);
            uit = uitable(fig);
            uit.Position = [20 20 550 30*N-40];
            uit.Data = tdata;
