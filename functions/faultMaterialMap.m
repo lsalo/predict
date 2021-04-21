@@ -103,13 +103,15 @@ M.unitIn      = M.unit;                         % For reference (unchanged)
 M.isclayIn    = M.isclay;                       % "
         
 
-% 1. Calculate number of diagonals with potential smear
+%% 1. Place clay smears
+
+% 1.1 Calculate number of diagonals with potential smear
 layerLs = zeros(1, max(FS.ParentId));
 layerLs(M.isclay) = smearThickInFault;
 M.nDiag = round((layerLs./smearDomainLength)*M.nDiagTot);
 
 
-% 2. Position of stratigraphic layers with respect to diagonals in M
+% 1.2 Position of stratigraphic layers with respect to diags in M
 faultDisp = sum(FS.Tap(FS.FW.Id));
 M.layerCenter = [cumsum(FS.Tap(FS.FW.Id))-FS.Tap(FS.FW.Id)/2 ...
                  cumsum(FS.Tap(FS.HW.Id))-FS.Tap(FS.HW.Id)/2];
@@ -137,10 +139,54 @@ M.layerDiagBot(1) = -(G.cartDims(1)-1);
 M.nDiagLayer = (M.layerDiagTop - M.layerDiagBot)+1;
 
 
-% 3. Adjust nDiag to withing -G.cartDims and +G.cartDims
+% 1.3. Adjust nDiag to within -G.cartDims and +G.cartDims
+diagEnd = G.cartDims(1) - 1;
+M.DiagBot(M.DiagBot < -diagEnd) = -diagEnd;
+M.DiagTop(M.DiagTop > diagEnd) = diagEnd;
+M.nDiag = abs(M.DiagTop - M.DiagBot) + 1;
+
+smearThickAsFault = 0;
+if sum(M.nDiag) >= sum(M.nDiagTot)
+    smearThickAsFault = 1;
+end
 
 
-% If any M.nDiag is 2 we consider 3 diagonals; if any M.nDiag is 1 we neglect it.
+% 1.4 Overlaps: Randomly select unit in overlapping areas
+% Find all units potentially present in each diagonal
+nDiag = sum(G.cartDims) - 1;
+nc = sum(M.isclay);
+Omap = zeros(nDiag, nc);
+idc = find(M.isclay);
+for n = 1:nc
+   id0 = [M.DiagBot(idc(n)) + G.cartDims(1), ...
+          M.DiagTop(idc(n)) + G.cartDims(1)]; 
+   Omap(id0(1):id0(2), n) = idc(n);
+end
+
+% Find diagonal groups with same potentially present units
+idChange = find(any(diff(Omap) ~= 0, 2));
+idGroup = [[1; idChange + 1], [idChange; size(Omap, 1)]];
+
+% Select final unit randomly, and assign unit to each diagonal group 
+unitGroup = zeros(size(idGroup, 1), 1);
+M.DiagBot(:) = 0;
+M.DiagTop(:) = 0;
+for n = 1:size(idGroup, 1)
+    vals = unique(Omap(idGroup(n, 1), :));  
+    vals(vals == 0) = [];
+    idr = randi(numel(vals), 1);
+    unitGroup(n) = vals(idr);
+    % REPEATED unitGroups must be accounted for in M.DiagBot, Top, so only
+    % one entry for each unique unitGroup.
+    M.DiagBot(unitGroup(n)) = idGroup(n, 1) - G.cartDims(1);
+    M.DiagTop(unitGroup(n)) = idGroup(n, 2) - G.cartDims(1);
+end
+M.nDiag = (M.DiagTop - M.DiagBot) + 1;
+
+
+
+% 1.5. If any M.nDiag is 2 we consider 3 diagonals; 
+%      if any M.nDiag is 1 we neglect it.
 if any(all([M.nDiag(M.isclay) < 3; M.nDiag(M.isclay) > 1])) 
     nid = find(all([M.nDiag < 3; M.nDiag > 1]));
     M.DiagTop(nid) = M.layerDiagCenter(nid) + 1;
@@ -148,122 +194,8 @@ if any(all([M.nDiag(M.isclay) < 3; M.nDiag(M.isclay) > 1]))
     M.nDiag(nid) = 3;
 end
 
-% Indicate if the fault material is all smear
-% -> This block needed because in case of thick smears not near center, they
-%    would likely have part outside of this fault throw interval, hence
-%    this throw interval should not necessarily be all smear.
-if smearThickAsFault == 1
-    if ~any(M.DiagBot(c1) <= -(G.cartDims(1) - 1)) || ...
-       ~any(M.DiagTop(c1) >= (G.cartDims(1) - 1))
-        smearThickAsFault = 0;
-    end
-end
 
-% Here we may need to adjust nDiag for top and bottom smears, since they were
-% centered around the source layer and may no longer cover all diagonals and/or
-% be out of bounds (if smearThickAsFault == 1).
-if smearThickAsFault == 1
-   M.DiagBot(c(1)) = -(G.cartDims(1) - 1);
-   M.nDiag(c(1)) = M.DiagTop(c(1)) - M.DiagBot(c(1)) + 1;
-   M.DiagTop(c(end)) = G.cartDims(1) - 1;
-   M.nDiag(c(end)) = M.DiagTop(c(end)) - M.DiagBot(c(end)) + 1;
-end
-
-% Check and remove potential smear overlaps (we don't consider this here).
-if sum(M.isclay)>1        
-    for n=1:numel(c)-1
-        if M.DiagTop(c(n)) >= M.DiagBot(c(n+1)) && ...
-                M.DiagTop(c(n)) <= M.DiagTop(c(n+1))
-            M.DiagTop(c(n)) = M.DiagBot(c(n+1))-1;
-            
-        elseif M.DiagTop(c(n)) >= M.DiagBot(c(n+1))
-            M.DiagBot(c(n+1)) = M.DiagTop(c(n))+1;
-            M.DiagTop(c(n+1)) = M.DiagTop(c(n))+1;
-        end
-    end
-end
-if any(M.DiagTop < M.DiagBot)
-    itnum = 0;
-    while (any(M.DiagTop < M.DiagBot))
-        itnum = itnum + 1;
-        idc = find(M.DiagTop(c) < M.DiagBot(c));
-        if idc > 1
-            M.DiagTop(c(idc-1)) = M.DiagTop(c(idc));
-            M.DiagBot(c(idc)) = M.DiagTop(c(idc));
-        else
-            M.DiagTop(c(idc)) = M.DiagBot(c(idc));
-        end
-        if itnum > 50
-           error('Maximum number of iterations surpassed.')
-        end
-    end
-end
-
-% Make sure no values out of bounds
-M.DiagBot(M.DiagBot<-(G.cartDims(1)-1)) = -(G.cartDims(1)-1); 
-M.DiagBot(M.DiagBot>(G.cartDims(1)-1)) = G.cartDims(1)-1;
-M.DiagTop(M.DiagTop<-(G.cartDims(1)-1)) = -(G.cartDims(1)-1);
-M.DiagTop(M.DiagTop>(G.cartDims(1)-1)) = G.cartDims(1)-1;
-M.nDiag = abs(M.DiagTop - M.DiagBot) + 1;
-if any((M.DiagTop - M.DiagBot) >= M.nDiagTot-1)
-    idmx = M.nDiag > M.nDiagTot;
-    if sum(idmx) == 1
-        M.DiagBot(~idmx) = M.DiagTop(~idmx);
-    elseif sum(idmx) > 1
-        idmxc = idmx;
-        idmxc(idmxc==0) = [];
-        idmxc = min(c(idmxc));
-        idmx2 = false(1,numel(idmx));
-        idmx2(idmxc) = true;
-        M.DiagBot(~idmx2) = M.DiagTop(~idmx2);
-    end
-    if M.DiagBot(idmx) < -(G.cartDims(1) - 1)
-        M.DiagBot(idmx) = -(G.cartDims(1) - 1);
-    end
-    if M.DiagTop(idmx) > G.cartDims(1)
-        M.DiagTop(idmx) = G.cartDims(1);
-    end
-end
-M.nDiag(c) = abs(M.DiagBot(c)-M.DiagTop(c)) + 1;
-M.nDiag(M.DiagBot == M.DiagTop) = 0;
-
-% Make sure no layers with 1 diag at top and bottom
-if M.DiagBot(c(1))+(G.cartDims(1)-1) == 1 
-   M.DiagBot(c(1)) = -(G.cartDims(1)-1);
-   M.nDiag(c(1)) = M.nDiag(c(1))+1;
-end
-if (G.cartDims(1)-1)-M.DiagTop(c(end)) == 1 
-   M.DiagTop(c(end)) = (G.cartDims(1)-1);
-   M.nDiag(c(end)) = M.nDiag(c(end))+1;
-end
-if any(M.DiagBot(c) == M.DiagTop(c))
-   ideq =  M.DiagBot(c) == M.DiagTop(c);
-   M.DiagBot(c(ideq)) = 0;
-   M.DiagTop(c(ideq)) = 0;
-end
-
-% Make sure no single diagonals without smear are left
-if smearThickAsFault == 1 && sum(M.nDiag) ~= M.nDiagTot
-    isClayWithDiag = all([M.isclay; M.nDiag > 0]); 
-    cWDiag = M.unit(isClayWithDiag);     % only those with nDiag > 0
-    if M.DiagBot(cWDiag(1)) ~= -(G.cartDims(1) - 1)
-        M.DiagBot(cWDiag(1)) = -(G.cartDims(1) - 1);
-        M.nDiag(cWDiag(1)) = (M.DiagTop(cWDiag(1)) - M.DiagBot(cWDiag(1))) + 1;
-    end
-    if M.DiagTop(cWDiag(end)) ~= G.cartDims(1) - 1
-        M.DiagTop(cWDiag(end)) = G.cartDims(1) - 1;
-        M.nDiag(cWDiag(end)) = (M.DiagTop(cWDiag(end)) - M.DiagBot(cWDiag(end))) + 1;
-    end
-    for n=1:numel(cWDiag)-1
-        gap = abs(M.DiagTop(cWDiag(n))-M.DiagBot(cWDiag(n+1)));
-       if gap > 1 && M.nDiag(cWDiag(n)) ~= 0 && M.nDiag(cWDiag(n+1)) ~= 0
-           M.DiagTop(cWDiag(n)) = M.DiagTop(cWDiag(n)) + (gap-1);
-           M.nDiag(cWDiag(n)) = M.nDiag(cWDiag(n)) + (gap-1);
-       end
-    end
-end
-
-% Track which smear domains will be removed (if 0 diag)
+% 1.6 Track which smear domains were removed (if 0 diag)
 M.Psmear = Psmear;
 if any(M.nDiag(c) == 0)
     M.idSmearInRemoved = find(M.nDiag(c) == 0);
@@ -275,7 +207,9 @@ if any(M.nDiag(c) == 0)
     M.DiagBot(idr) = []; M.DiagTop(idr) = [];
 end
 
-% 2. Diagonals with sand
+
+
+%% 2. Diagonals with sand
 diagIds = -G.cartDims(1)+1:G.cartDims(1)-1;
 idc = find(M.isclay);
 vals = zeros(1,numel(diagIds));
