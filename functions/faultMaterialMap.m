@@ -178,15 +178,18 @@ for n = 1:nc
           M.DiagTop(idc(n)) + G.cartDims(1)]; 
    Omap(id0(1):id0(2), n) = idc(n);
 end
+%Omap(~any(Omap, 2), : ) = [];
 
 % Find diagonal groups with same potentially present units
 idChange = find(any(diff(Omap) ~= 0, 2));
 diagsGroup = [[1; idChange + 1], [idChange; size(Omap, 1)]];
+diagsGroup(~any(Omap(diagsGroup(:, 1), :), 2), :) = []; % remove diags w/o clay
+
 
 % Select final unit randomly, and assign unit to each diagonal group 
 unitGroup = zeros(size(diagsGroup, 1), 1);
-M.DiagBot(:) = 0;
-M.DiagTop(:) = 0;
+DiagBot = zeros(1, numel(M.DiagBot));
+DiagTop = zeros(1, numel(M.DiagBot));
 len = numel(M.DiagBot);
 for n = 1:size(diagsGroup, 1)
     repeatedUnitNonConsec = false;
@@ -194,35 +197,37 @@ for n = 1:size(diagsGroup, 1)
     vals(vals == 0) = [];
     idSelectedUnit = randi(numel(vals), 1);
     unitGroup(n) = vals(idSelectedUnit);
-    if M.DiagBot(unitGroup(n)) == 0 % unit did not appear before
-        assert(M.DiagTop(unitGroup(n)) == 0)
-        M.DiagBot(unitGroup(n)) = diagsGroup(n, 1) - G.cartDims(1);
-        M.DiagTop(unitGroup(n)) = diagsGroup(n, 2) - G.cartDims(1);
+    if DiagBot(unitGroup(n)) == 0 && DiagTop(unitGroup(n)) == 0 % new unit
+        DiagBot(unitGroup(n)) = diagsGroup(n, 1) - G.cartDims(1);
+        DiagTop(unitGroup(n)) = diagsGroup(n, 2) - G.cartDims(1);
         
     else  % Unit was already assigned to a group of diags, so we need to
           % check what limits (DiagBot and/or DiagTop) we need to extend.
         itBot = diagsGroup(n, 1) - G.cartDims(1);
         itTop = diagsGroup(n, 2) - G.cartDims(1);
         idsThisUnit = unitGroup == unitGroup(n);
-        assert(itBot > M.DiagBot(unitGroup(n))) 
+        assert(itBot > DiagBot(unitGroup(n))) 
             %error('Check what is going on.')
-            %M.DiagBot(unitGroup(n)) = itBot;     
-        if idsThisUnit(n-1) == false    % non consecutive unit appearance
+            %DiagBot(unitGroup(n)) = itBot;     
+        if idsThisUnit(n-1) == false    % non consecutive unit appearance NOT CORRECT YET
             repeatedUnitNonConsec = true;
             len = len + 1;
-            M.DiagBot(len) = itBot; 
+            DiagBot(len) = itBot; 
             M.unit(len) = unitGroup(n);
             M.isclay(len) = true;
         end
-        if idsThisUnit(n-1) == true && itTop > M.DiagTop(unitGroup(n))
-            M.DiagTop(unitGroup(n)) = itTop;
+        if idsThisUnit(n-1) == true && itTop > DiagTop(unitGroup(n))
+            DiagTop(unitGroup(n)) = itTop;
         elseif idsThisUnit(n-1) == false
             assert(repeatedUnitNonConsec == true)
-            M.DiagTop(len) = itTop;
+            DiagTop(len) = itTop;
         end
     end
 end
+M.DiagBot = DiagBot;
+M.DiagTop = DiagTop;
 M.nDiag = (M.DiagTop - M.DiagBot) + 1;
+M.nDiag(M.DiagBot == 0) = 0; % removes sand intervals and non-appearing clays
 assert(sum(M.nDiag) <= M.nDiagTot);
 
 
