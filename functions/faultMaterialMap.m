@@ -164,11 +164,12 @@ if sum(M.nDiag) >= sum(M.nDiagTot) % smear may occupy the full fault area
 end
 
 
-% 1.5 Account for potential overlaps: Randomly select unit in overlapping 
-% areas. Note that, in case of overlaps, this may lead to the same unit 
-% appearing more than once and non-consecutively. Moreover, units may no 
-% longer be centered with respect to source layer in HW or FW (also only 
-% in case of overlaps).
+% 1.5 Unit selection in each diagonal group, accounting for potential 
+%     overlaps: Randomly select unit in overlapping areas. Note that, in 
+%     case of overlaps, this may lead to the same unit appearing more than 
+%     once and non-consecutively. Moreover, units may no longer be centered 
+%     with respect to source layer in HW or FW (only in case of overlaps).
+
 % Find all units potentially present in each diagonal
 nDiag = sum(G.cartDims) - 1;
 nc = sum(M.isclay);
@@ -216,8 +217,9 @@ for n = 1:size(diagsGroup, 1)
             M.unit(len) = unitGroup(n);
             M.isclay(len) = true;
         end
-        if idsThisUnit(n-1) == true && itTop > DiagTop(unitGroup(n))
-            DiagTop(unitGroup(n)) = itTop;
+        lastIdThisUnit = find(M.unit == unitGroup(n), 1, 'last');
+        if idsThisUnit(n-1) == true && itTop > DiagTop(lastIdThisUnit)
+            DiagTop(lastIdThisUnit) = itTop;
         elseif idsThisUnit(n-1) == false
             assert(repeatedUnitNonConsec == true)
             DiagTop(len) = itTop;
@@ -227,12 +229,15 @@ end
 M.DiagBot = DiagBot;
 M.DiagTop = DiagTop;
 M.nDiag = (M.DiagTop - M.DiagBot) + 1;
-M.nDiag(M.DiagBot == 0) = 0; % removes sand intervals and non-appearing clays
+M.nDiag(~M.isclay) = 0;                     % 0 diags for sand intervals
+clayUnitsAssigned = unique(unitGroup);      
+idNotPresent = ~ismember(idc, clayUnitsAssigned);
+M.nDiag(idc(idNotPresent)) = 0;             % 0 diags for non-appearing c
 assert(sum(M.nDiag) <= M.nDiagTot);
 
 
-% 1.5  If any M.nDiag is 1 we neglect it
-%      (For now, we don't)
+% 1.5  If any M.nDiag is 1 we neglect it (For now, we don't)
+%      THIS MAY NEED SOME WORK.
 if any(M.nDiag == 1) 
     nid = find(M.nDiag(M.isclay) == 1);
     assert(M.DiagTop(nid) == M.DiagBot(nid))
@@ -264,60 +269,47 @@ if any(M.nDiag(idc) == 0)
     M.DiagBot(idSelectedUnit) = []; M.DiagTop(idSelectedUnit) = [];
 end
 
+% 1.8 Sort based on appearing diagonal group, and finalize this stage with
+%     only clays in the following fields.
+idToSort = find(M.nDiag > 0);
+[~, pos] = sort(M.DiagBot(idToSort));
+M.DiagBot = M.DiagBot(idToSort(pos));
+M.DiagTop = M.DiagTop(idToSort(pos));
+M.nDiag   = M.nDiag(idToSort(pos));
+M.unit    = M.unit(idToSort(pos));
+M.isclay  = M.isclay(idToSort(pos));
+
 
 
 %% 2. Diagonals with sand
+idc     = find(M.isclay);
 diagIds = -G.cartDims(1)+1:G.cartDims(1)-1;
-idc = find(M.isclay);
-vals = zeros(1,numel(diagIds));
-%nOverlap = [0 0];
-for n=1:sum(M.isclay)
-   clayDiag = M.DiagBot(idc(n)):M.DiagTop(idc(n));
-   if clayDiag(1) < 0
-       vals = [zeros(1,(G.cartDims(1)-1)-abs(clayDiag(1))) clayDiag ...
-               zeros(1,(G.cartDims(1)-1)-clayDiag(end))] + vals;
-   elseif clayDiag(1) == 0 && numel(clayDiag) == 1
-       vals = zeros(1, M.nDiagTot) + vals;
-   elseif clayDiag(1) == 0
-       vals = [zeros(1,G.cartDims(1)-1) clayDiag ...
-               zeros(1,(G.cartDims(1)-1)-clayDiag(end))] + vals;
-   else
-       vals = [zeros(1,G.cartDims(1)) zeros(1,clayDiag(1)-1) clayDiag ...
-               zeros(1,(G.cartDims(1)-1)-clayDiag(end))] + vals;
-   end
-end
-idRem = abs(vals-diagIds) == 0;
-diagIds(idRem) = [];
-flag = 0;
+clayDiag = cell2mat(arrayfun(@(x,y) x:y, M.DiagBot(idc), ...
+                             M.DiagTop(idc),'uniformoutput',false));
+clayDiag = unique(clayDiag);
+diagIds(ismember(diagIds, clayDiag)) = [];
+%flag = 0;
 if numel(diagIds)>1
-        if ~any(all([M.DiagBot(M.isclay)<=0; M.DiagTop(M.isclay)>=0]))
-            diagIds = [diagIds(diagIds<0) 0 diagIds(diagIds>0)];    
-        end
         diffsf = diff(diagIds)>1;
         diffsi = [false diffsf(1:end-1)];
-        if diffsf(end) == 1
-            flag   = 1;
-            valRem = diagIds(end);
-            diffsf(end)  = [];
-            diagIds(end) = [];
+        if diffsf(end) == 1                 % MAY NEED WORK
+            diffsi(end) = 1;
+            %flag   = 1;
+            %valRem = diagIds(end);
+            %diffsf(end)  = [];
+            %diagIds(end) = [];
         end
         sandIds = [diagIds(1) diagIds(diffsi); diagIds(diffsf) diagIds(end)];
-        M.DiagBot = M.DiagBot(M.isclay);
-        M.DiagTop = M.DiagTop(M.isclay);
         M.clayDiagBot = M.DiagBot;
         M.DiagBot = sort([M.DiagBot sandIds(1,:)]);
         M.DiagTop = sort([M.DiagTop sandIds(2,:)]);
         [~, ids] = intersect(M.DiagBot, sandIds(1,:));
-        idSandInFault = M.unit(~M.isclay);
+        idSandAll = M.unitIn(~M.isclayIn);
         sandParent = zeros(1, numel(ids));
-        if numel(ids) ~= numel(idSandInFault)
-            for n=1:numel(ids)
-                [~, idClosestSand] = min(abs(ids(n) - idSandInFault));
-                sandParent(n) = idSandInFault(idClosestSand);
-            end
-        else
-            sandParent = idSandInFault;
-        end 
+        for n=1:numel(ids)
+            [~, idClosestSand] = min(abs(ids(n) - idSandAll));
+            sandParent(n) = idSandAll(idClosestSand);
+        end
         nunits = sum([sum(M.isclay), numel(ids)]);
         unitAll = zeros(1, nunits);
         unitAll(ids) = sandParent;
@@ -326,45 +318,38 @@ if numel(diagIds)>1
         M.unit = unitAll;
         M.isclay = false(1, numel(M.unit));
         M.isclay(idclay) = true;
-        if any(M.DiagTop(M.DiagBot == 0) == 0)      % remove clay smear domain with 0 diags.
-            %error('To code.')
-            idTopZ = find(M.DiagTop == 0);
-            idBotZ = find(M.DiagBot == 0);
-            idTopBotZ = idTopZ(idTopZ == idBotZ);
-            M.DiagTop(idTopBotZ) = [];
-            M.DiagBot(idTopBotZ) = [];
-            M.unit(idTopBotZ) = [];
-            M.isclay(idTopBotZ) = [];
-        end
-        if any(M.DiagBot == 0) && any(M.DiagTop == 0) %&& ~all(M.DiagTop(M.DiagBot==0)==0)
-            error('To code.')
-            %M.DiagTop(M.DiagTop == 0) = [];
-            %M.DiagBot(M.DiagBot == 0) = [];
-        end
+%         if any(M.DiagTop(M.DiagBot == 0) == 0)      % remove clay smear domain with 0 diags.
+%             %error('To code.')
+%             idTopZ = find(M.DiagTop == 0);
+%             idBotZ = find(M.DiagBot == 0);
+%             idTopBotZ = idTopZ(idTopZ == idBotZ);
+%             M.DiagTop(idTopBotZ) = [];
+%             M.DiagBot(idTopBotZ) = [];
+%             M.unit(idTopBotZ) = [];
+%             M.isclay(idTopBotZ) = [];
+%         end
+%         if any(M.DiagBot == 0) && any(M.DiagTop == 0) %&& ~all(M.DiagTop(M.DiagBot==0)==0)
+%             error('To code.')
+%             %M.DiagTop(M.DiagTop == 0) = [];
+%             %M.DiagBot(M.DiagBot == 0) = [];
+%         end
         M.nDiag = abs(M.DiagBot - M.DiagTop)+1;
-        %M.unitIn = M.unit;
-        %M.unit   = 1:numel(M.DiagBot);
-        %M.isclayIn = M.isclay;
-        %M.isclay = false(1,M.unit(end));
-        %for n=1:numel(M.clayDiagBot)
-        %    M.isclay(M.DiagBot==M.clayDiagBot(n)) = true;
-        %end
 end
 
-if flag == 1
-   if any(M.DiagBot == valRem+1)
-       ij = M.DiagBot == valRem+1;
-       M.DiagBot(ij) = valRem;
-       M.nDiag(ij) = M.nDiag(ij) + 1;
-   else
-       ij = M.DiagTop == valRem+1;
-       M.DiagTop(ij) = valRem;
-       M.nDiag(ij) = M.nDiag(ij) + 1;
-   end
-end
-M.nDiag(M.DiagBot == M.DiagTop) = 0;
-M.DiagTop(M.nDiag==0) = 0;
-M.DiagBot(M.nDiag==0) = 0;
+% if flag == 1                      % MAY NEED WORK RELATED TO if diffsf(end) BLOCK
+%    if any(M.DiagBot == valRem+1)
+%        ij = M.DiagBot == valRem+1;
+%        M.DiagBot(ij) = valRem;
+%        M.nDiag(ij) = M.nDiag(ij) + 1;
+%    else
+%        ij = M.DiagTop == valRem+1;
+%        M.DiagTop(ij) = valRem;
+%        M.nDiag(ij) = M.nDiag(ij) + 1;
+%    end
+% end
+%M.nDiag(M.DiagBot == M.DiagTop) = 0;
+%M.DiagTop(M.nDiag==0) = 0;
+%M.DiagBot(M.nDiag==0) = 0;
 
 % 3. Add field divLayerDiag for layer with lower and upper diags
 if any(all([M.DiagBot<0; M.DiagTop>0]))
