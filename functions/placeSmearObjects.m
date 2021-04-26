@@ -100,11 +100,12 @@ if nargin < 7
     verbose = 1;
 end
 
-% Add Psmear and check if  removed smears
-if isfield(M, 'idSmearInRemoved')
-    smearLength(M.idSmearInRemoved) = []; 
-    smearSegLenMax(M.idSmearInRemoved) = [];
-end
+% Add Psmear and check if  removed/repeated smears
+sL = zeros(1, max(M.unitIn));   segLMax = zeros(1, max(M.unitIn)); 
+sL(M.isclayIn) = smearLength;   segLMax(M.isclayIn) = smearSegLenMax;
+sL = sL(M.unit);                segLMax = segLMax(M.unit);
+sL(sL == 0) = [];               segLMax(segLMax == 0) = [];
+
 
 % Initial variables for easy access
 Psm = M.Psmear(M.Psmear<1);
@@ -112,7 +113,7 @@ P = zeros(1,numel(M.Psmear));
 P(M.Psmear==1) = 1;
 cunitsAll = find(M.isclay);
 cunits = cunitsAll(M.Psmear<1);              % Clay units with Psmear < 1
-Lsmear = smearLength(M.Psmear<1);
+Lsmear = sL(M.Psmear<1);
 cDiagBound = [M.DiagBot(cunits);M.DiagTop(cunits)];
 cDiagMain  = min(abs(cDiagBound));           % Number of diagonals to subtract from G.cartDims(1)
 if any(all([cDiagBound(1,:)<0; cDiagBound(2,:)>0]))
@@ -120,7 +121,7 @@ if any(all([cDiagBound(1,:)<0; cDiagBound(2,:)>0]))
     cDiagMain(idLay) = 0;
 end
 cnDiag = M.nDiag(cunits);                    % N of diags of each cunit (Psmear < 1)
-maxLSmearSeg = smearSegLenMax(M.Psmear<1);         
+maxLSmearSeg = segLMax(M.Psmear<1);         
 
 % Tolerances 
 tolP = tolerance;              % tolerance in deviation from P(smear)
@@ -135,7 +136,7 @@ end
 % We need to do the process for each smear with Psmear < 1.
 Pdisc = zeros(1,numel(cunits));
 for j = 1:numel(cunits)
-    if verbose == 1, disp(['Smear from source unit ' num2str(cunits(j)) ' is discontinuous.']), end
+    if verbose == 1, disp(['Material subdomain ' num2str(cunits(j)) ' is discontinuous smear.']), end
     
     % 2.1 Initial parameters to place smear segments in each subdomain
     smearL = min([maxLSmearSeg(j), Lsmear(j)]);

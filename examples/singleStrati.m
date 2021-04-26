@@ -20,9 +20,9 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 %% Define model and upscale permeability
 % Mandatory Input parameters
 %           {[FW], [HW]}
-thickness = {[20 10 20 10 30 10], [30 5 10 30 5 20]};
-vcl       = {repmat([0.05 0.4 0.1 0.5 0.15 0.6], 1, 1), ...
-             repmat([0.2, 0.7, 0.25, 0.8, 0.3, 0.9], 1, 1)};
+thickness = {[20 10 20 10 40], [30 5 10 30 5 20]};
+vcl       = {repmat([0.05 0.4 0.1 0.5 0.15], 1, 1), ...
+             repmat([0.2, 0.6, 0.25, 0.4, 0.3, 0.5], 1, 1)};
 dip       = [0, -20];
 faultDip  = 60;
 
@@ -30,7 +30,7 @@ faultDip  = 60;
 zf   = [500, 500];              % m
 maxPerm = [];                   % mD
 siltInClay = true;              % consider 25% of silt fraction in clay
-Nsim = 10;                      % Number of simulations/realizations
+Nsim = 50;                      % Number of simulations/realizations
 
 % Flow upscaling options
 U.useAcceleration = 1;          % requires MEX and AMGCL setup
@@ -88,7 +88,7 @@ plotMatPropsHist(faults, smears, mySect, layerId)
 plotMatPropsCorr(faults, mySect)
 
 % General fault materials and perm view
-plotId = selectSimId('maxZ', faults);                % simulation index
+plotId = selectSimId('maxZ', faults, Nsim);                % simulation index
 faults{plotId}.plotMaterials(mySect) 
 % Add MatProps for this realization (table?)
 

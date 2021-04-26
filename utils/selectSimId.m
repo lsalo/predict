@@ -1,4 +1,4 @@
-function plotId = selectSimId(arg, data)    
+function plotId = selectSimId(arg, data, Nsim)    
 %
 %
 %

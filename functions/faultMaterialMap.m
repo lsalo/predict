@@ -210,7 +210,7 @@ for n = 1:size(diagsGroup, 1)
         assert(itBot > DiagBot(unitGroup(n))) 
             %error('Check what is going on.')
             %DiagBot(unitGroup(n)) = itBot;     
-        if idsThisUnit(n-1) == false    % non consecutive unit appearance NOT CORRECT YET
+        if idsThisUnit(n-1) == false    % non consecutive unit appearance
             repeatedUnitNonConsec = true;
             len = len + 1;
             DiagBot(len) = itBot; 
@@ -237,10 +237,9 @@ assert(sum(M.nDiag) <= M.nDiagTot);
 
 
 % 1.5  If any M.nDiag is 1 we neglect it (For now, we don't)
-%      THIS MAY NEED SOME WORK.
 if any(M.nDiag == 1) 
-    nid = find(M.nDiag(M.isclay) == 1);
-    assert(M.DiagTop(nid) == M.DiagBot(nid))
+    nid = find(M.nDiag == 1);
+    assert(all(M.DiagTop(nid) == M.DiagBot(nid)))
     %M.DiagTop(nid) = 0;
     %M.DiagBot(nid) = 0;
     %M.nDiag(nid) = 0;
@@ -257,11 +256,15 @@ if smearThickAsFault
     assert(sum(M.nDiag) == M.nDiagTot)
 end
 
-% 1.7 Track which smear domains were removed (if 0 diag)
-M.Psmear = Psmear;
+% 1.7 Track which smear domains were removed (if 0 diag) or repeated (for
+%     Psmear)
+M.Psmear = zeros(1, max(M.unitIn));
+M.Psmear(M.isclayIn) = Psmear;
+M.Psmear = M.Psmear(M.unit);       % repeat Psmear for repeated units
+M.Psmear(M.Psmear == 0) = [];      % remove 0s (sands)
 if any(M.nDiag(idc) == 0)
-    M.idSmearInRemoved = find(M.nDiag(idc) == 0);
-    M.Psmear(M.idSmearInRemoved) = [];
+    M.idSmearInRemoved = find(M.nDiag(idc) == 0);  
+    M.Psmear(M.idSmearInRemoved) = [];      % remove non-appearing smear domains
     idSelectedUnit = idc(M.idSmearInRemoved);
     M.unit(idSelectedUnit) = [];
     M.isclay(idSelectedUnit) = [];
@@ -278,6 +281,7 @@ M.DiagTop = M.DiagTop(idToSort(pos));
 M.nDiag   = M.nDiag(idToSort(pos));
 M.unit    = M.unit(idToSort(pos));
 M.isclay  = M.isclay(idToSort(pos));
+M.Psmear = M.Psmear(pos);
 
 
 
@@ -292,12 +296,8 @@ diagIds(ismember(diagIds, clayDiag)) = [];
 if numel(diagIds)>1
         diffsf = diff(diagIds)>1;
         diffsi = [false diffsf(1:end-1)];
-        if diffsf(end) == 1                 % MAY NEED WORK
-            diffsi(end) = 1;
-            %flag   = 1;
-            %valRem = diagIds(end);
-            %diffsf(end)  = [];
-            %diagIds(end) = [];
+        if diffsf(end) == 1                 
+            diffsi(end+1) = 1;
         end
         sandIds = [diagIds(1) diagIds(diffsi); diagIds(diffsf) diagIds(end)];
         M.clayDiagBot = M.DiagBot;
@@ -336,140 +336,112 @@ if numel(diagIds)>1
         M.nDiag = abs(M.DiagBot - M.DiagTop)+1;
 end
 
-% if flag == 1                      % MAY NEED WORK RELATED TO if diffsf(end) BLOCK
-%    if any(M.DiagBot == valRem+1)
-%        ij = M.DiagBot == valRem+1;
-%        M.DiagBot(ij) = valRem;
-%        M.nDiag(ij) = M.nDiag(ij) + 1;
-%    else
-%        ij = M.DiagTop == valRem+1;
-%        M.DiagTop(ij) = valRem;
-%        M.nDiag(ij) = M.nDiag(ij) + 1;
-%    end
-% end
-%M.nDiag(M.DiagBot == M.DiagTop) = 0;
-%M.DiagTop(M.nDiag==0) = 0;
-%M.DiagBot(M.nDiag==0) = 0;
 
-% 3. Add field divLayerDiag for layer with lower and upper diags
+
+%% 3. Add field divLayerDiag for layer with lower and upper diags
 if any(all([M.DiagBot<0; M.DiagTop>0]))
     idLay = all([M.DiagBot<0; M.DiagTop>0]);
     %M.DiagBot(idLay) = M.DiagBot(idLay)+1;
     M.divLayerDiag = [abs(M.DiagBot(idLay))+1 M.DiagTop(idLay)];
 else
-    %if (any(M.DiagTop == -1) && ~any(M.DiagBot==0)) || ...
-    %   (any(M.DiagTop == -1) && ~isempty(M.DiagBot(M.DiagTop==0)==0) ...
-    %   && sum(M.DiagBot(M.DiagTop==0)==0)==1 && M.DiagBot(M.DiagTop==0)==0)
-    idbt = 1:numel(M.DiagBot);
-    if sum(M.DiagBot(M.DiagTop == 0) == 0 > 0)
-        idbt(all([M.DiagBot == 0; M.DiagTop == 0])) = [];
+    if M.DiagBot(M.DiagTop == 0) == 0
+        idLay = M.DiagBot(M.DiagTop == 0) == 0;
+        assert(M.nDiag(idLay) == 0)
+        M.divLayerDiag = [1 0];
+    elseif any(M.DiagBot == 0)
+        idLay = M.DiagBot == 0;
+        M.divLayerDiag = [0 M.nDiag(idLay)];
+    elseif any(M.DiagTop == 0)
+        idLay = M.DiagTop == 0;
+        M.divLayerDiag = [M.nDiag(idLay) 0];
     end
-    id = M.DiagTop == -1;
-    if ~any(M.DiagTop(idbt) == 0) && ~any(M.DiagBot(idbt) == 0)
-        if ~isempty(id)
-            M.DiagTop(id) = 0;
-        else
-            id = M.DiagBot == 1;
-            M.DiagBot(id) = 0;
-        end
-        M.nDiag(id) = M.nDiag(id)+1;
-    end
-    [v, id] = min(abs(M.DiagBot(idbt)));
-    [v(2), id(2)] = min(abs(M.DiagTop(idbt)));
-    [~, idLay] = min(v);
-    idLay = idbt(id(idLay));
-    if M.DiagBot(idLay) < 0
-        M.divLayerDiag = [abs(M.DiagBot(idLay))+1 M.DiagTop(idLay)];
-    elseif M.DiagBot(idLay) > 0
-        M.divLayerDiag = [0 abs(M.DiagTop(idLay))];
-    else
-        M.divLayerDiag = [0 abs(M.DiagTop(idLay))+1];
-    end
+%     idbt = 1:numel(M.DiagBot);
+%     if sum(M.DiagBot(M.DiagTop == 0) == 0 > 0)
+%         idbt(all([M.DiagBot == 0; M.DiagTop == 0])) = [];
+%     end
+%     id = M.DiagTop == -1;
+%     if ~any(M.DiagTop(idbt) == 0) && ~any(M.DiagBot(idbt) == 0)
+%         if ~isempty(id)
+%             M.DiagTop(id) = 0;
+%         else
+%             id = M.DiagBot == 1;
+%             M.DiagBot(id) = 0;
+%         end
+%         M.nDiag(id) = M.nDiag(id)+1;
+%     end
+%     [v, id] = min(abs(M.DiagBot(idbt)));
+%     [v(2), id(2)] = min(abs(M.DiagTop(idbt)));
+%     [~, idLay] = min(v);
+%     idLay = idbt(id(idLay));
+%     if M.DiagBot(idLay) < 0
+%         M.divLayerDiag = [abs(M.DiagBot(idLay))+1 M.DiagTop(idLay)];
+%     elseif M.DiagBot(idLay) > 0
+%         M.divLayerDiag = [0 abs(M.DiagTop(idLay))];
+%     else
+%         M.divLayerDiag = [0 abs(M.DiagTop(idLay))+1];
+%     end
 end
 
-idc = find(M.isclay);
-if any(M.nDiag(idc)==0)
-   ij = M.nDiag(idc) == 0;
-   M.nDiag(idc(ij)) = [];
-   M.DiagTop(idc(ij)) = [];
-   M.DiagBot(idc(ij)) = [];
-   M.isclay(idc(ij)) = [];
-   M.unit(idc(ij)) = [];
-end
+% idc = find(M.isclay);
+% if any(M.nDiag(idc)==0)
+%    ij = M.nDiag(idc) == 0;
+%    M.nDiag(idc(ij)) = [];
+%    M.DiagTop(idc(ij)) = [];
+%    M.DiagBot(idc(ij)) = [];
+%    M.isclay(idc(ij)) = [];
+%    M.unit(idc(ij)) = [];
+% end
 
 % In case of multiple, very thin smears we may need to adjust and add 1
 % diagonal to some entries.
-if sum(M.nDiag) ~= M.nDiagTot
-   zerBotTop = find(all([M.DiagBot == 0; M.DiagTop == 0]));
-   zerBotTop(zerBotTop == 1) = [];
-   zerBotTop(zerBotTop == numel(M.isclay)) = [];
-   assert(all(M.isclay(zerBotTop) == 0))
-   diagPerLyr = (M.nDiagTot - sum(M.nDiag)) / numel(zerBotTop);
-   if mod(diagPerLyr, 1) ~= 0
-      nDiagMis = M.nDiagTot - sum(M.nDiag);
-      diagPerLyr = 1;
-      if nDiagMis < numel(zerBotTop)
-          zerBotTop = zerBotTop(1:nDiagMis);
-%      else
-%           diagPerLyr = repelem(fix(nDiagMis / numel(zerBotTop)), numel(zerBotTop));
-%           maxIts = 20;
-%           nits = 0;
-%           idLyrs = repmat(1:numel(diagPerLyr), 1, 50);
-%           k = 1;
-%           if sum(diagPerLyr) < nDiagMis
-%               modifier = 1;
-%           elseif sum(diagPerLyr) > nDiagMis
-%               modifier = -1;
-%           end
-%           while sum(diagPerLyr) ~= nDiagMis && nits < maxIts
-%               diagPerLyr(idLyrs(k)) = diagPerLyr(k) + modifier;
-%               nits = nits + 1;
-%               if nits == maxIts
-%                   error('Loop did not converge within maxIts')
-%               end
-%           end
-      end
-   end
-   M.nDiag(zerBotTop) = diagPerLyr;
-   M.DiagBot(zerBotTop) = M.DiagTop(zerBotTop - 1) + 1;
-   M.DiagTop(zerBotTop) = M.DiagBot(zerBotTop + 1) - 1;
-end
+% if sum(M.nDiag) ~= M.nDiagTot
+%    zerBotTop = find(all([M.DiagBot == 0; M.DiagTop == 0]));
+%    zerBotTop(zerBotTop == 1) = [];
+%    zerBotTop(zerBotTop == numel(M.isclay)) = [];
+%    assert(all(M.isclay(zerBotTop) == 0))
+%    diagPerLyr = (M.nDiagTot - sum(M.nDiag)) / numel(zerBotTop);
+%    if mod(diagPerLyr, 1) ~= 0
+%       nDiagMis = M.nDiagTot - sum(M.nDiag);
+%       diagPerLyr = 1;
+%       if nDiagMis < numel(zerBotTop)
+%           zerBotTop = zerBotTop(1:nDiagMis);
+%       end
+%    end
+%    M.nDiag(zerBotTop) = diagPerLyr;
+%    M.DiagBot(zerBotTop) = M.DiagTop(zerBotTop - 1) + 1;
+%    M.DiagTop(zerBotTop) = M.DiagBot(zerBotTop + 1) - 1;
+% end
 
 % Remove any sand entries with 0 diagonals
-if any(M.nDiag==0)
-   id = M.nDiag == 0;
-   M.nDiag(id) = [];
-   M.DiagTop(id) = [];
-   M.DiagBot(id) = [];
-   M.isclay(id) = [];
-   M.unit(id) = [];
-end
+% if any(M.nDiag==0)
+%    id = M.nDiag == 0;
+%    M.nDiag(id) = [];
+%    M.DiagTop(id) = [];
+%    M.DiagBot(id) = [];
+%    M.isclay(id) = [];
+%    M.unit(id) = [];
+% end
 
 % Adjust DiagBot and DiagTop if needed (very coarse grids, few nDiag)
-if sum((abs(M.DiagBot - M.DiagTop) + 1) - M.nDiag) ~= 0
-    id1 = -(G.cartDims(1)-1);
-    M.DiagBot = [id1 id1+cumsum(M.nDiag(1:end-1))];
-    M.DiagTop = [M.DiagBot(2:end)-1 G.cartDims(1)-1];
-end
-
-% Final check if we are missing a 0 in either DiagBot or DiagTop;
-% [~, idb] = min(abs(M.DiagBot));
-% [~, idt] = min(abs(M.DiagTop));
-% if ~any([M.DiagBot(idb), M.DiagBot(idt), M.DiagTop(idt), ...
-%          M.DiagTop(idb)] == 0) && 
+% if sum((abs(M.DiagBot - M.DiagTop) + 1) - M.nDiag) ~= 0
+%     id1 = -(G.cartDims(1)-1);
+%     M.DiagBot = [id1 id1+cumsum(M.nDiag(1:end-1))];
+%     M.DiagTop = [M.DiagBot(2:end)-1 G.cartDims(1)-1];
+% end
 
 % Check that we have the correct number of diagonals for each layer.
+assert(all(M.nDiag > 0))
 try
     assert(sum(M.nDiag) == M.nDiagTot)
 catch
     error('Material mapping was unsuccessful.') 
 end
-%assert(sum(M.nDiag(1:fw.n-1))+M.divLayerDiag(1) == G.cartDims(1))
-%assert(sum(M.nDiag(hw.id))+M.divLayerDiag(2) == G.cartDims(1)-1)
 
-% 4. Populate mapping matrix with all potential 1s and sure 0s
+
+
+%% 4. Populate mapping matrix with all potential 1s and sure 0s
 for n = 1:numel(M.nDiag)
-    if M.DiagTop(n) < M.DiagBot(n), M.DiagTop(n) = M.DiagBot(n); end    
+    assert(M.DiagTop(n) >= M.DiagBot(n))    
     if M.isclay(n) == 1
         M.vals = full(spdiags(true(G.cartDims(1), M.nDiag(n)), ...
                               -M.DiagTop(n):-M.DiagBot(n), M.vals));   
@@ -481,6 +453,6 @@ for n = 1:numel(M.nDiag)
                            -M.DiagTop(n):-M.DiagBot(n), M.units));
 end
 M.units = transpose(M.units); 
-% M.vals is also transposed later.
+% M.vals also needs to be transposed. We do it later in placeSmearObjects.
 
 end
