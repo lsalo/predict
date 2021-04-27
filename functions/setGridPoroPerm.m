@@ -155,25 +155,27 @@ for n=1:numel(M.unit)
         
         % Permeability
         cellNum = sum(cellNum);
-        %kx_loc = zeros(10,1); kz_loc = zeros(10, 1);
         kx_loc(cellIds(:, 1)) = kx_loc_c; kx_loc(cellIds(:, 2)) = kx_loc_s;
         kz_loc(cellIds(:, 1)) = kz_loc_c; kz_loc(cellIds(:, 2)) = kz_loc_s;
-        %kx_loc(kx_loc == 0) = []; kz_loc(kz_loc == 0) = [];
         cellIds = sort([find(cellIds(:, 1)); find(cellIds(:, 2))]);
         
         sz = [2, 2];
         nels = sum(sz);
         S = zeros(sz(1), sz(2), numel(kx_loc(cellIds)));
         idDiag = [1, 4];               % [kxx, kzz] of smear (diag perm)
-        idS = [idDiag; idDiag + ...
-                       cumsum(repmat(repelem(nels, 2), cellNum-1, 1))]';
+        id = [1,2,4];                  % [kxx, kxz, kzz] of fault
+        if cellNum == 2
+            idS = [idDiag; idDiag + repelem(nels, 2)]';
+            idk = [id; id + repelem(nels, 3)]';
+        else
+            idS = [idDiag; idDiag + ...
+                          cumsum(repmat(repelem(nels, 2), cellNum-1, 1))]';
+            idk = [id; id + cumsum(repmat(repelem(nels, 3), cellNum-1, 1))]';
+        end
         S(reshape(idS, numel(idS), 1)) = [kx_loc(cellIds), kz_loc(cellIds)]';
         kmat = transformTensor(S, T, 'posDef');
-        id = [1,2,4];                  % [kxx, kxz, kzz] of fault
-        idk = [id; id + cumsum(repmat(repelem(nels, 3), cellNum-1, 1))]';
         idk = reshape(idk, numel(idk), 1);
-        permG(cellIds, :) = reshape(kmat(idk), 3, cellNum)';
-        
+        permG(cellIds, :) = reshape(kmat(idk), 3, cellNum)';  
     end
 end
 

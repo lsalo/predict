@@ -303,7 +303,7 @@ classdef Fault
                 caxis([min(log10(rock.perm(:,1)/(milli*darcy))) ...
                        max(log10(rock.perm(:,1)/(milli*darcy)))]);
            else
-               caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 1]);
+               caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 2]);
            end
            c.Label.Interpreter = 'latex'; 
            c.Label.String = '$\log_{10} k_{xx}$ [mD]';
@@ -337,7 +337,7 @@ classdef Fault
                caxis([min(log10(rock.perm(:,1)/(milli*darcy))) ...
                       max(log10(rock.perm(:,3)/(milli*darcy)))]);
            else
-              caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 1]);
+              caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 2]);
            end
            c.Label.Interpreter = 'latex'; 
            c.Label.String = '$\log_{10} k_{zz}$ [mD]';

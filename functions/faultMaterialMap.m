@@ -148,6 +148,7 @@ M.DiagBot(M.DiagBot < -diagEnd) = -diagEnd;
 M.DiagTop(M.DiagTop > diagEnd) = diagEnd;
 M.nDiag(idc) = abs(M.DiagTop(idc) - M.DiagBot(idc)) + 1;
 
+
 % 1.4 Determine whether the total smear area occupies the full fault (do
 %     not add overlapping areas)
 smearThickAsFault = 0;
@@ -236,7 +237,7 @@ M.nDiag(idc(idNotPresent)) = 0;             % 0 diags for non-appearing c
 assert(sum(M.nDiag) <= M.nDiagTot);
 
 
-% 1.5  If any M.nDiag is 1 we neglect it (For now, we don't)
+% 1.6  If any M.nDiag is 1 we neglect it (For now, we don't)
 if any(M.nDiag == 1) 
     nid = find(M.nDiag == 1);
     assert(all(M.DiagTop(nid) == M.DiagBot(nid)))
@@ -251,12 +252,14 @@ if any(M.nDiag == 1)
     %end
 end
 
-% 1.6 Check smearThickAsFault
+
+% 1.7 Check smearThickAsFault
 if smearThickAsFault
     assert(sum(M.nDiag) == M.nDiagTot)
 end
 
-% 1.7 Track which smear domains were removed (if 0 diag) or repeated (for
+
+% 1.8 Track which smear domains were removed (if 0 diag) or repeated (for
 %     Psmear)
 M.Psmear = zeros(1, max(M.unitIn));
 M.Psmear(M.isclayIn) = Psmear;
@@ -272,7 +275,8 @@ if any(M.nDiag(idc) == 0)
     M.DiagBot(idSelectedUnit) = []; M.DiagTop(idSelectedUnit) = [];
 end
 
-% 1.8 Sort based on appearing diagonal group, and finalize this stage with
+
+% 1.9 Sort based on appearing diagonal group, and finalize this stage with
 %     only clays in the following fields.
 idToSort = find(M.nDiag > 0);
 [~, pos] = sort(M.DiagBot(idToSort));
@@ -293,13 +297,17 @@ clayDiag = cell2mat(arrayfun(@(x,y) x:y, M.DiagBot(idc), ...
 clayDiag = unique(clayDiag);
 diagIds(ismember(diagIds, clayDiag)) = [];
 %flag = 0;
-if numel(diagIds)>1
-        diffsf = diff(diagIds)>1;
-        diffsi = [false diffsf(1:end-1)];
-        if diffsf(end) == 1                 
-            diffsi(end+1) = 1;
+if numel(diagIds) > 0
+        if numel(diagIds) > 1
+            diffsf = diff(diagIds)>1;
+            diffsi = [false diffsf(1:end-1)];
+            if diffsf(end) == 1                 
+                diffsi(end+1) = 1;
+            end
+            sandIds = [diagIds(1) diagIds(diffsi); diagIds(diffsf) diagIds(end)];
+        else
+            sandIds = [diagIds; diagIds];
         end
-        sandIds = [diagIds(1) diagIds(diffsi); diagIds(diffsf) diagIds(end)];
         M.clayDiagBot = M.DiagBot;
         M.DiagBot = sort([M.DiagBot sandIds(1,:)]);
         M.DiagTop = sort([M.DiagTop sandIds(2,:)]);
@@ -345,8 +353,8 @@ if any(all([M.DiagBot<0; M.DiagTop>0]))
     M.divLayerDiag = [abs(M.DiagBot(idLay))+1 M.DiagTop(idLay)];
 else
     if M.DiagBot(M.DiagTop == 0) == 0
-        idLay = M.DiagBot(M.DiagTop == 0) == 0;
-        assert(M.nDiag(idLay) == 0)
+        idLay = M.DiagBot == 0;
+        assert(M.nDiag(idLay) == 1)
         M.divLayerDiag = [1 0];
     elseif any(M.DiagBot == 0)
         idLay = M.DiagBot == 0;

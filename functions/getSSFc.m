@@ -82,12 +82,19 @@ if sum(id) > 0
     % for sediments faulted at very shallow depths (<500m) vs
     % mid depth (1-1.5km). Deeper, the changes become less
     % pronounced with depth.
-    endpoints(:, zf<=500) = endpoints(:, zf<=500) - (500 - zf(zf<=500))/250;
-    endpoints(:, all([zf>500; zf<=1500])) = ...
+    if any(zf <= 500)
+        endpoints(:, zf<=500) = endpoints(:, zf<=500) - ...
+                                (500 - zf(zf<=500))/250;
+    end
+    if any(zf(zf > 500) <= 1500)
+        endpoints(:, all([zf>500; zf<=1500])) = ...
                             endpoints(:, all([zf>500; zf<=1500])) + ...
                             (zf(all([zf>500; zf<=1500])) - 500)/250;
-    endpoints(:, zf>1500) = endpoints(:, zf>1500) + 4 + ...
-                            (zf(zf>1500) - 1500)/1000;
+    end
+    if any(zf > 1500)
+        endpoints(:, zf>1500) = endpoints(:, zf>1500) + 4 + ...
+                                (zf(zf>1500) - 1500)/1000;
+    end
     
     % Assign to output
     SSFcBounds = endpoints;
