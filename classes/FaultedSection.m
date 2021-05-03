@@ -109,7 +109,7 @@ classdef FaultedSection
         
         function obj = getMatPropDistr(obj, varargin)
            %
-           %
+           % TBD
            %
            
            % Optional inputs
