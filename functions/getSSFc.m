@@ -1,5 +1,4 @@
-function [SSFc, SSFcBounds] = getSSFc(vcl, isClayVcl, zf, thick, ...
-                                      faultDisp, idHW)
+function SSFc = getSSFc(vcl, isClayVcl, zf, thick, faultDisp, idHW)
 % Get critical shale smear factor (SSFc), i.e. the value at which a given 
 % smear becomes discontinuous. Note that an object fault with field disp
 % must be passed as well.
@@ -52,68 +51,68 @@ function [SSFc, SSFcBounds] = getSSFc(vcl, isClayVcl, zf, thick, ...
 %--------------------------------------------------------------
 
 % Initialize
-SSFc = nan(1, numel(vcl));
-id = find(vcl >= isClayVcl);
+N = numel(vcl);
+SSFc.type  = cell(1, N);
+SSFc.param = cell(1, N);
+SSFc.range = cell(1, N);
+SSFc.fcn   = cell(1, N);
 
-% If smearing clays are present:
-if sum(id) > 0
-    vclc   = vcl(id);
-    thickc = thick(id);
-    if nargin > 5
-        zf = [repelem(zf(1), sum(id < idHW(1))), ...
-              repelem(zf(2), sum(id >= idHW(1)))];
-    else
-       zf = repelem(zf, numel(id)); 
+% Expand faulting depths
+if nargin > 5
+    zf = [repelem(zf(1), idHW(1)-1), repelem(zf(2), numel(idHW))];
+else
+    zf = repelem(zf, numel(vcl));
+end
+assert(numel(zf) == numel(vcl));
+
+% Maximum and minimum available thickness for triangular mode placement
+thickMax = faultDisp;
+thickMin = faultDisp/50;            % algorithm limit accounting for
+                                    % resoultion when meshing fault. 
+
+for n = 1:N
+    if vcl(n) >= isClayVcl    
+        % 1. SSFc_min and SSFc_max (endpoints) for each layer
+        %    Values from Grant (2017), representative for shallow
+        %    faulting at around 500m (see Fig. 3b and Giger et al.,
+        %    2013).
+        if vcl(n) <= 0.5
+            endpoints = [2, 5];
+        elseif all([vcl(n)>0.5; vcl(n)<=0.6])
+            endpoints = [3, 7];
+        elseif all([vcl(n)>0.6; vcl(n)<=0.7])
+            endpoints = [5, 10];
+        else
+            endpoints = [7, 12];
+        end
+
+        % 2. Modify endpoints to account for zf. Strong changes
+        % for sediments faulted at very shallow depths (<500m) vs
+        % mid depth (1-1.5km). Deeper, the changes become less
+        % pronounced with depth.
+        if zf(n) <= 500
+            endpoints = endpoints - (500 - zf(n))/250;
+        elseif all([zf(n) > 500; zf(n) <= 1500])
+            endpoints = endpoints + (zf(n) - 500)/250;
+        else 
+            endpoints = endpoints + ((zf(n) - 1500)/1000 + 4);
+        end
+
+        % Assign to output
+        SSFc.range{n} = endpoints;
+
+        % 3. Compute mode of triangular distribution to sample from.
+        assert(thick(n) <= thickMax)
+        peak = (1 - min([1; ((thickMax - thick(n))/(thickMax - thickMin))])) ...
+               .* (endpoints(2) - endpoints(1)) + endpoints(1);
+        SSFc.param{n} = peak;
+
+        % 4. Generate fcn
+        SSFc.type{n} = 'tri';
+        triDist = makedist('Triangular', 'a', endpoints(1), 'b', peak, ...
+                           'c', endpoints(2));
+        SSFc.fcn{n} = @(x) random(triDist, x, 1);
     end
-    
-    % 1. SSFc_min and SSFc_max (endpoints) for each layer
-    %    Values from Grant (2017), representative for shallow
-    %    faulting at around 500m (see Fig. 3b and Giger et al.,
-    %    2013).
-    endpoints = zeros(2, numel(vclc));
-    endpoints(:, vclc<=0.5) = repmat([2; 5], 1, sum(vclc<=0.5));
-    endpoints(:, all([vclc>0.5; vclc<=0.6])) = repmat([3; 7], 1, ...
-                                            sum(all([vclc>0.5; vclc<=0.6])));
-    endpoints(:, all([vclc>0.6; vclc<=0.7])) = repmat([5; 10], 1, ...
-                                            sum(all([vclc>0.6; vclc<=0.7])));
-    endpoints(:, vclc>0.7) = repmat([7; 12], 1, sum(vclc>0.7));
-    
-    % 2. Modify endpoints to account for zf. Strong changes
-    % for sediments faulted at very shallow depths (<500m) vs
-    % mid depth (1-1.5km). Deeper, the changes become less
-    % pronounced with depth.
-    if any(zf <= 500)
-        endpoints(:, zf<=500) = endpoints(:, zf<=500) - ...
-                                (500 - zf(zf<=500))/250;
-    end
-    if any(zf(zf > 500) <= 1500)
-        endpoints(:, all([zf>500; zf<=1500])) = ...
-                            endpoints(:, all([zf>500; zf<=1500])) + ...
-                            (zf(all([zf>500; zf<=1500])) - 500)/250;
-    end
-    if any(zf > 1500)
-        endpoints(:, zf>1500) = endpoints(:, zf>1500) + 4 + ...
-                                (zf(zf>1500) - 1500)/1000;
-    end
-    
-    % Assign to output
-    SSFcBounds = endpoints;
-    
-    % 3. Compute mode of triangular distribution to sample from.
-    thickMax = faultDisp;
-    thickMin = faultDisp/50;            % algorithm limit accounting for
-                                        % resoultion when meshing fault.
-    peak = (1 - min([repelem(1, numel(thickc)); ...
-                     ((thickMax - thickc)/(thickMax - thickMin))])) ...
-           .* (endpoints(2, :) - endpoints(1, :)) + endpoints(1, :);
-    
-    
-    % 4. Generate samples
-    for k = 1:numel(vclc)
-        triDist = makedist('Triangular', 'a', endpoints(1, k), ...
-                           'b', peak(1, k), 'c', endpoints(2, k));
-        SSFc(id(k)) = random(triDist, 1, 1);
-    end   
 end
 
 end

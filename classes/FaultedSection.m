@@ -34,10 +34,11 @@ classdef FaultedSection
     
     
     properties (SetAccess = protected)
-        HW              % Hangingwall object from Stratigraphy class.
-        FW              % Footwall object from Stratigraphy class.
+        HW              % Hangingwall object from Stratigraphy class
+        FW              % Footwall object from Stratigraphy class
         Tap             % Apparent layer thickness on the fault
         Thick           % True layer thickness
+        MatPropDistr    % Distros of material properties to sample from
     end
     
     properties (Dependent, Hidden)
@@ -104,6 +105,36 @@ classdef FaultedSection
         function zf = get.DepthFaulting(obj)
             % 
            zf = [obj.FW.DepthFaulting obj.HW.DepthFaulting]; 
+        end
+        
+        function obj = getMatPropDistr(obj, varargin)
+           %
+           %
+           %
+           
+           % Optional inputs
+           opt.maxPerm = [];                   % mD
+           opt.siltInClay = false;
+           opt.isUndercompacted = false;
+           opt = merge_options_relaxed(opt, varargin{:});
+            
+           % Shorten input names
+           zf   = obj.DepthFaulting;
+           zmax = [obj.FW.DepthBurial, obj.HW.DepthBurial];
+           clayMine = {obj.FW.ClayMine, obj.HW.ClayMine};
+           Disp = sum(obj.Tap(obj.FW.Id));
+           
+           % Fault thickness
+           obj.MatPropDistr.thick = getFaultThickness();
+           
+           % ResFric
+           obj.MatProps.ResFric = getResidualFrictionAngle(obj.Vcl, FS);
+           
+           % SSFc and SSFc bounds
+           obj.MatProps.SSFc = getSSFc(obj.Vcl, obj.IsClayVcl, zf, ...
+                                       obj.Thick, Disp, obj.HW.Id);
+            
+            
         end
         
         function plotStrati(obj, faultThick, faultDip)

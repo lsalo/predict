@@ -1,4 +1,4 @@
-function thick = getFaultThickness(D, Nsim)
+function thick = getFaultThickness()
 % Get fault core thickness.
 %
 % Key references:
@@ -26,15 +26,19 @@ function thick = getFaultThickness(D, Nsim)
 %   [log10(10), log10(1000)].
 %
 % OUTPUT:
-%  obj.Thick: Fault core thickness
+%  fcn:  Fault core thickness anonymous fcn
+%  type: distribution type (beta)
 %
 % EXAMPLE:
 %       myFault = myFault.getFaultThickness
 %
 %--------------------------------------------------------------
 
+thick.rangeDT = [10, 1000];
 limLog = log10([10, 1000]);
 [a, b] = deal(5);
-randRatio = 10.^(limLog(1) + betarnd(a, b, Nsim, 1).*diff(limLog));
-thick = D ./ randRatio;
+thick.fcn = @(D) D ./ ( 10.^(limLog(1) + ...
+                        betarnd(a, b, numel(D), 1).*diff(limLog)) );
+thick.type = 'beta';
+thick.param = [a, b];
 end
