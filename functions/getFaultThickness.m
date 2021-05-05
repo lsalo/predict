@@ -35,10 +35,11 @@ function thick = getFaultThickness()
 %--------------------------------------------------------------
 
 thick.rangeDT = [10, 1000];
-limLog = log10([10, 1000]);
+limLog = log10(thick.rangeDT);
 [a, b] = deal(5);
-thick.fcn = @(D) D ./ ( 10.^(limLog(1) + ...
-                        betarnd(a, b, numel(D), 1).*diff(limLog)) );
 thick.type = 'beta';
 thick.param = [a, b];
+thick.range = @(D) [D./thick.rangeDT(2) D./thick.rangeDT(1)];
+thick.fcn = @(D) D ./ ( 10.^(limLog(1) + ...
+                        betarnd(a, b, numel(D), 1).*diff(limLog)) );
 end

@@ -13,7 +13,11 @@ classdef Fault
     % DESCRIPTION:
     % 
     %   TBD
-    %
+    %  
+    %   Decreasing porosity and perm with increased shear strain is
+    %   consistent with literature, though more pronounced for
+    %   low-clay content and measured at high confinement (Crawford
+    %   et al., JGR, 2008).
     % 
     % REQUIRED PARAMETERS:
     %   footwall:       Stratigraphy object with corresponding property 
@@ -98,23 +102,84 @@ classdef Fault
             
             % Optional inputs
             opt.corrCoef = 0.8;                   % correlation coefficient
+            opt.isUndercompacted = false;
             opt = merge_options_relaxed(opt, varargin{:});
             
             % Convenience
-            idc = FS.Vcl >= FS.IsClayVcl;
+            idc  = FS.Vcl >= FS.IsClayVcl;
+            zf   = FS.DepthFaulting;
+            zmax = [FS.FW.DepthBurial, FS.HW.DepthBurial];
             
             
-            % ------- Fault thickness and Perm across (correlated) --------
-            obj.MatProps.thick = FS.MatPropDistr.thick.fcn(obj.Disp);
+            % -------------------------------------------------------------
+            % Fault thickness and Perm across (correlated)
+            % -------------------------------------------------------------
+            %obj.MatProps.thick = FS.MatPropDistr.thick.fcn(obj.Disp);
+            n = 1;
+            if opt.corrCoef > 0
+                U = copularnd('Gaussian', [1 opt.corrCoef; ...
+                                           opt.corrCoef 1], n);                
+            else 
+                U = copularnd('Gaussian', [1 -opt.corrCoef; ...
+                                           -opt.corrCoef 1], n); 
+            end
+            
+            % Assert that resFric marginal distros are all beta/unif
+            assert(strcmp(FS.MatPropDistr.thick.type, 'beta'));
+            assert(all(cellfun(@(x) strcmp(x, 'unif'), ...
+                               FS.MatPropDistr.perm.type)));
+                           
+            % Transform bivariate samples to marginals and ranges
+            % Fault thickness
+            X1 = betainv(U(1), FS.MatPropDistr.thick.param(1), ...
+                         FS.MatPropDistr.thick.param(2));
+            thickRangeLog = log10(FS.MatPropDistr.thick.range(obj.Disp));
+            obj.MatProps.thick = 10^(thickRangeLog(1) + ...
+                                     diff(thickRangeLog) .* X1);
+            
+            % Sand Perm and Poro (constant, deterministic)
+            sandPermRange = cell2mat(FS.MatPropDistr.perm.range(~idc)');
+            obj.MatProps.perm(~idc) = (sandPermRange(:, 1) + ...
+                                       diff(sandPermRange, [], 2) .* U(2))';
+            sandPoroRange = cell2mat(FS.MatPropDistr.poro.range(~idc)');
+            obj.MatProps.poro(~idc) = sandPoroRange(:, 1);
+            
+            % Clay perm depends on poro, so we correlate poro first.
+            clayPoroRange = cell2mat(FS.MatPropDistr.poro.range(idc)');
+            obj.MatProps.poro(idc) = (clayPoroRange(:, 1) + ...
+                                     diff(clayPoroRange, [], 2) .* U(2))';
+            clayPermRange = cellfun(@(x, id) x(clayPoroRange(id,1), ...
+                                               clayPoroRange(id,2)), ...
+                                    FS.MatPropDistr.perm.range(idc), ...
+                                    num2cell((1:sum(idc))), ...
+                                    'UniformOutput', false);
+            clayPermRangeLog = log10(cell2mat(clayPermRange'));
+            obj.MatProps.perm(idc) = 10.^(clayPermRangeLog(:, 1) + ...
+                                   diff(clayPermRangeLog, [], 2) .* U(2))';
             
             
-            % ---------------------- Angles -----------------------------
-            [obj.Alpha, obj.Delta, obj.Zeta] = ...
-                                    getFaultAngles(obj.Throw, obj.Dip, ...
-                                                   obj.MatProps.thick);
+            % ------------------------------------------------------------
+            % Perm Anisotropy Ratio
+            % ------------------------------------------------------------
+            % poro at zf
+            poroDist = getPorosity(FS.Vcl, FS.IsClayVcl, zf, zmax, ...
+                                   'zf', opt.isUndercompacted, FS.HW.Id);
+            sandPoroRange  = cell2mat(poroDist.range(~idc)');
+            poroAtZf(~idc) = sandPoroRange(:, 1);
+            clayPoroRange  = cell2mat(poroDist.range(idc)');
+            poroAtZf(idc)  = clayPoroRange(:, 1) + ...
+                             rand(sum(idc), 1).*diff(clayPoroRange, [], 2);
             
+            % Perm anisotropy ratio
+            gamma = obj.Disp / obj.MatProps.thick;
+            obj.MatProps.PermAnisoRatio = ...
+                            cellfun(@(x, id) x(gamma, poroAtZf(id)), ...
+                                    FS.MatPropDistr.permAnisoRatio.fcn, ...
+                                    num2cell((1:FS.HW.Id(end))));
             
-            % ------------- ResFric and SSFc (correlated) ----------------
+            % ------------------------------------------------------------
+            % ResFric and SSFc (correlated)
+            % ------------------------------------------------------------
             n = sum(idc);
             
             % 1. Sands (independent since SSFc only for smearing sources)
@@ -143,31 +208,19 @@ classdef Fault
             resFricRange = cell2mat(FS.MatPropDistr.resFric.range(idc)');
             obj.MatProps.resFric(idc) = (resFricRange(:, 1) + ...
                                         diff(resFricRange, [], 2) .* X1)'; 
+            
             % SSFc (this should work directly, even if the distributions
             % for each layer were different!)
             obj.MatProps.ssfc(idc) = cellfun(@(x, id) icdf(x, U(id, 2)), ...
                                      FS.MatPropDistr.ssfc.dist(idc), ...
                                      num2cell((1:sum(idc)))); 
-            
-            
-            % ------------------ Perm Anisotropy Ratio -------------------
-            
-                                              
-%             % Perm Anisotropy Ratio
-%             poroAtZf = getPorosity(FS.Vcl, FS.IsClayVcl, zf, zmax, ...
-%                                    'zf', opt.isUndercompacted, FS.HW.Id);
-%             gamma = obj.Disp / obj.MatProps.Thick;
-%             obj.MatProps.PermAnisoRatio = ...
-%                 getAnisotropyRatio(FS.Vcl, FS.IsClayVcl, zf, clayMine, ...
-%                                    gamma, opt.siltInClay, poroAtZf, FS.HW.Id);
-%             % Porosity
-%             obj.MatProps.Poro = getPorosity(FS.Vcl, FS.IsClayVcl, ...         
-%                                             zf, zmax, 'zmax', ...
-%                                             opt.isUndercompacted, FS.HW.Id);
-%             % Perm
-%             obj.MatProps.Perm = getPermeability(FS.Vcl, FS.IsClayVcl, ...
-%                                                 zf, zmax, opt.maxPerm, ...
-%                                                 obj.MatProps.Poro, FS);
+
+           % ------------------------------------------------------------
+           % Angles
+           % ------------------------------------------------------------
+            [obj.Alpha, obj.Delta, obj.Zeta] = ...
+                                    getFaultAngles(obj.Throw, obj.Dip, ...
+                                                   obj.MatProps.thick);
         end
         
         function obj = upscaleSmearPerm(obj, FS, smear, U)
