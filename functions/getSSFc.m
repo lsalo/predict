@@ -55,6 +55,7 @@ N = numel(vcl);
 SSFc.type  = cell(1, N);
 SSFc.param = cell(1, N);
 SSFc.range = cell(1, N);
+SSFc.dist = cell(1, N);
 SSFc.fcn   = cell(1, N);
 
 % Expand faulting depths
@@ -109,9 +110,9 @@ for n = 1:N
 
         % 4. Generate fcn
         SSFc.type{n} = 'tri';
-        triDist = makedist('Triangular', 'a', endpoints(1), 'b', peak, ...
-                           'c', endpoints(2));
-        SSFc.fcn{n} = @(x) random(triDist, x, 1);
+        SSFc.dist{n} = makedist('Triangular', 'a', endpoints(1), 'b', peak, ...
+                                'c', endpoints(2));
+        SSFc.fcn{n} = @(x) random(SSFc.triDist{n}, x, 1);
     end
 end
 

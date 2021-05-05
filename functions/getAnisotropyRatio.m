@@ -1,5 +1,4 @@
-function permAniso = getAnisotropyRatio(vcl, isClayVcl, zf, clayMine, ...
-                                        gamma, silt, porozf, idHW)
+function permAniso = getAnisotropyRatio(vcl, zf, clayMine, idHW)
 % Get permeability anisotropy [m^2] for smear fault materials. Note that an 
 % object fault with fields disp (displacement in meters) and thick 
 % (thickness in meters) must be passed as well.
@@ -43,6 +42,7 @@ function permAniso = getAnisotropyRatio(vcl, isClayVcl, zf, clayMine, ...
 % OUTPUT:
 %  permAniso: Permeability anisotropy of each fault material derived from 
 %             each layer in the footwall and hangingwall.
+%  for fcn, gamma must be a scalar, poro can be a 1xN array or a scalar. 
 %
 % EXAMPLE:
 %   Compute permeability anisotropy for material derived from each layer, 
@@ -51,70 +51,72 @@ function permAniso = getAnisotropyRatio(vcl, isClayVcl, zf, clayMine, ...
 %       permAniso = getAnisotropyRatio(myFaultedSection, fault, silt)
 %
 %--------------------------------------------------------------
-permAniso = ones(1, numel(vcl));
-id = find(vcl >= isClayVcl);
-if nargin > 7
-    assert(numel(zf) == 2)
-    zf = [repelem(zf(1), sum(id < idHW(1))), ...
-          repelem(zf(2), sum(id >= idHW(1)))];
-elseif numel(zf) == 1
-    zf = repelem(zf, numel(id));
-end
 
-if ~isempty(id)
+% Initialize
+N = numel(vcl);
+permAniso.type  = cell(1, N);
+permAniso.param = cell(1, N);
+permAniso.range = cell(1, N);
+permAniso.fcn   = cell(1, N);
+
+if nargin > 3
+    % Expand faulting depths
+    zf = [repelem(zf(1), idHW(1)-1), repelem(zf(2), numel(idHW))];
+    
     % (1) Grain aspect ratio
-    if nargin > 7
-        assert(numel(clayMine) == 2);           % predominant in FW and HW
-        m = zeros(2, 1);
-        if strcmp(clayMine{1}, 'kao') || ...
-           strcmp(clayMine{1}, 'Ill')           % kaolinite, illite
-            m(1) = 10;                          % Daigle & Dugan
-        elseif strcmp(clayMine{1}, 'sme')       % smectite group
-            m(1) = 300;                         % can get to 100-500
-        elseif strcmp(clayMine{1}, 'mic')       % micas, chlorite
-            m(1) = 100;                         % can get to 50-200
+    assert(numel(clayMine) == 2);           % predominant in FW and HW
+    m = zeros(2, 1);
+    if strcmp(clayMine{1}, 'kao') || ...
+            strcmp(clayMine{1}, 'Ill')           % kaolinite, illite
+        m(1) = 10;                          % Daigle & Dugan
+    elseif strcmp(clayMine{1}, 'sme')       % smectite group
+        m(1) = 300;                         % can get to 100-500
+    elseif strcmp(clayMine{1}, 'mic')       % micas, chlorite
+        m(1) = 100;                         % can get to 50-200
+    end
+    
+    if strcmp(clayMine{2}, 'kao') || strcmp(clayMine{2}, 'Ill')
+        m(2) = 10;
+    elseif strcmp(clayMine{2}, 'sme')
+        m(2) = 300;
+    elseif strcmp(clayMine{2}, 'mic')
+        m(2) = 100;
+    end
+    
+else
+    zf = repelem(zf, numel(vcl));
+    
+    if strcmp(clayMine, 'kao') || strcmp(clayMine, 'Ill')
+        m = repelem(10, 2, 1);
+    elseif strcmp(clayMine, 'sme')
+        m = repelem(300, 2, 1);
+    elseif strcmp(clayMine, 'mic')
+        m = repelem(100, 2, 1);
+    end
+    
+end
+assert(numel(zf) == numel(vcl));
+ 
+for n=1:N     
+    if vcl(n) > 0.95
+        warning(['Vcl of layer(s) with vcl > 0.98 set to 0.95 for ' ...
+                 'perm anisotropy calculation.']);
+       vcl(n) = 0.95;
+    end
+    
+    % Grain aspect ratio
+    f = [vcl(n), 1-vcl(n)];
+    if nargin > 3
+        if n < idHW(1)
+            meq = sqrt(1/(f(1)/m(1)^2 + f(2)/1));   % m equivalent. Eq. (13) in
+                                                    % Daigle & Dugan (2011).
+        else
+            meq = sqrt(1/(f(1)/m(2)^2 + f(2)/1));
         end
+    else
+        meq = sqrt(1/(f(1)/m(1)^2 + f(2)/1));
+    end
 
-        if strcmp(clayMine{2}, 'kao') || strcmp(clayMine{2}, 'Ill')
-            m(2) = 10;
-        elseif strcmp(clayMine{2}, 'sme')
-            m(2) = 300;
-        elseif strcmp(clayMine{2}, 'mic')
-            m(2) = 100;
-        end
-  
-    else
-        if strcmp(clayMine, 'kao') || strcmp(clayMine, 'Ill')
-            m = repelem(10, 2, 1);
-        elseif strcmp(clayMine, 'sme')
-            m = repelem(300, 2, 1);
-        elseif strcmp(clayMine, 'mic')
-            m = repelem(100, 2, 1);
-        end
-    end
-    
-    if ~isempty(silt) && silt == 1
-        f = [0.9 0.1];
-        m = [sqrt(1/(f(1)/m(1)^2 + f(2)/1)); ...
-             sqrt(1/(f(1)/m(2)^2 + f(2)/1))];  % m equivalent. Eq. (13) in
-                                               % Daigle & Dugan (2011).
-    end
-    
-    if nargin > 7
-       m = [repelem(m(1), sum(id < idHW(1))), ...
-             repelem(m(2), sum(id >= idHW(1)))]; 
-    else
-       m = repelem(m(1), numel(id));
-    end
-    
-    
-    % (2) Porosity at faulting depth
-    if size(porozf, 2) == 2
-        poro = porozf(id, 1) + rand(numel(id), 1).*(porozf(id, 2) - porozf(id, 1));
-    elseif size(porozf, 2) == 1
-        poro = porozf(id);
-    end
-    
     % Clay grain orientation after compaction and shearing (i.e. 45 degrees 
     % is totally random, 0 degrees is completely flat leading to max 
     % anisotropy).
@@ -126,19 +128,23 @@ if ~isempty(id)
     % at least 10). Even if that were not the case, if the clay contains
     % some silt (very likely) it  also does not matter much in terms of the 
     % final  anisotropy. So, we provide a very rough approximation only.
-    epsv   = 0.3149*exp(0.0002304*zf) -0.3117*exp(-0.001417*zf);
-    theta0 = 45;                            % [deg]
-    theta1 = atand((1-epsv)*tand(theta0));  % after compaction
-    theta  = acotd(gamma + cotd(theta1));   % after shearing
+    epsv   = 0.3149*exp(0.0002304*zf(n)) -0.3117*exp(-0.001417*zf(n));
+    theta0 = 45;                             % [deg]
+    theta1 = atand((1-epsv)*tand(theta0));   % after compaction
+    theta  = @(g) acotd(g + cotd(theta1));   % after shearing, g = gamma
     
     
     % Permeability anisotropy ratio (k_along / k_across)
-    num = 1 + ((8*m./9).*cosd(theta) + ...
-          (2/pi)*sind(theta))./(3*pi./(8*(1-poro')) - 0.5);
-    den = 1 + ((8*m./9).*sind(theta) + ...
-          (2/pi)*cosd(theta))./(3*pi./(8*(1-poro')) - 0.5);
-    permAniso(id)  = (num./den).^2;
+    permAniso.type = 'det';         % deterministic (assuming known poro)
     
+    num = @(g, porov) 1 + ((8*meq/9)*cosd(theta(g)) + ...
+                              (2/pi)*sind(theta(g))) ./ ...
+                             (3*pi./(8*(1-porov)) - 0.5);
+    den = @(g, porov) 1 + ((8*meq/9)*sind(theta(g)) + ...
+                              (2/pi)*cosd(theta(g))) ./ ...
+                             (3*pi./(8*(1-porov)) - 0.5);
+    permAniso.fcn{n}  = @(gamma, porovals) (num(gamma, porovals) ./ ...
+                                            den(gamma, porovals)).^2;    
 end
 
 end

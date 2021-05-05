@@ -1,4 +1,4 @@
-function perm = getPermeability(vcl, isclayVcl, zf, zmax, cap, poro, FS)
+function perm = getPermeability(vcl, isclayVcl, zf, zmax, cap, idHW)
 % Get permeability [m^2] across each faulted material.
 %
 % INPUT:
@@ -56,82 +56,80 @@ function perm = getPermeability(vcl, isclayVcl, zf, zmax, cap, poro, FS)
 
 % Utilities, initialize and check if values are passed
 md_to_m2 = 9.869232667160129e-16;
-perm = cell(numel(vcl), 1);
+N = numel(vcl);
+
+perm.type  = cell(1, N);
+perm.param = cell(1, N);
+perm.range = cell(1, N);
+perm.fcn   = cell(N, 1);
 
 % (I) Vcl < threshold for smearing
-ids = find(vcl < isclayVcl);
-if nargin < 7
-    zfs = repelem(zf, numel(ids));
+if nargin < 6
+    zf = repelem(zf(1), N);
 else
-    zfs  = [repelem(zf(1), sum(ids < FS.HW.Id(1))), ...
-            repelem(zf(2), sum(ids >= FS.HW.Id(1)))];
+    zf = [repelem(zf(1), idHW(1)-1), repelem(zf(2), numel(idHW))];
 end
 
-if numel(ids) > 0    
-    % Sand Perm (Sperrevik et al., 2002)
-    a    = [8*10^4, 19.4, 0.00403, 0.0055, 12.5];
-    permSand  = (a(1)*exp(-(a(2)*vcl(ids) + a(3)*zmax(ids) + ...
-                (a(4)*zfs - a(5)).*(1-vcl(ids)).^7)));    % [mD]
-    permSand = [0.5.*permSand; 5.*permSand];        % min & max
-    % Cap values
-    if ~isempty(cap) && cap ~= 0
-        permSand(permSand > cap) = cap;
-    end
-    permSand = log10(permSand*md_to_m2);
+for n=1:N
+    if vcl(n) < isclayVcl    
+        % Sand Perm (Sperrevik et al., 2002)
+        a    = [8*10^4, 19.4, 0.00403, 0.0055, 12.5];
+        permSand  = (a(1)*exp(-(a(2)*vcl(n) + a(3)*zmax(n) + ...
+                    (a(4)*zf(n) - a(5)).*(1-vcl(n)).^7)));    % [mD]
+        permSand = [0.5.*permSand, 5.*permSand];              % min & max
+        perm.type{n} = 'unif';
+
+        % Cap values
+        if ~isempty(cap) && cap ~= 0
+            permSand(permSand > cap) = cap;
+        end
+        permSand = log10(permSand*md_to_m2);
+        perm.range{n} = 10.^permSand;
+        
+        % Fcn
+        perm.fcn{n} = @(x) 10.^(permSand(1) + rand(x, 1) * ...
+                                (permSand(2) - permSand(1)));   % [m^2]
     
-    % Fcn
-    for k=1:numel(ids)
-        perm{ids(k)} = @(N) 10.^(permSand(1, k) + ...
-            rand(N, 1)*(permSand(2, k) - ...
-            permSand(1, k)));           % [m^2]
-    end
-end
-
-
-% (II) Vcl >= threshold for smearing
-idc  = find(vcl >= isclayVcl);
-vclc = vcl(idc);
-z    = zmax(idc);
-if numel(idc) > 0
-    for k=1:numel(idc)        
+    else                % (II) Vcl >= threshold for smearing
         % Clay volume fraction to mass fraction
         % Unless the mineralogy of the sand and clay is very diff,
         % the density of sand and clay is dependent on their poro
         % difference only. This porosity difference will rarely be
         % larger than ~0.2, hence the clay volume fraction and mass
         % volume fraction are similar.
-        sandPoro = 0.49 / (exp(z(k)/(3.7*1000)));
-        rho_s = 2650;               % "avg" density of solid part.
-        rho_w = 1040;               % "avg" formation water density
-        rho_clay = mean(poro(idc(k), :))*rho_w + (1-mean(poro(idc(k), :)))*rho_s;
-        rho_mat = (1-vclc(k))*(sandPoro*rho_w + ...
-                  (1-sandPoro)*rho_s) + vclc(k)*(rho_clay);
-        mcl = vclc(k)*rho_clay/rho_mat;
+        sandPoro = 0.49 / (exp(zmax(n)/(3.7*1000)));
+        rho_s = 2650;                           % "avg" density of solid part.
+        rho_w = 1040;                           % "avg" formation water density
+        rho_clay = @(p) p*rho_w + (1-p)*rho_s;  % p = poro
+        rho_mat  = @(p) (1-vcl(n))*(sandPoro*rho_w + (1-sandPoro)*rho_s) + ...
+                        vcl(n)*(rho_clay(p));
+        mcl = @(p) vcl(n) * rho_clay(p) ./ rho_mat(p);
         
         % Get permeability fcns
-        e = poro(idc(k), :) ./ (1 - poro(idc(k), :));
-        f1 = -69.59 -26.79*mcl + 44.07*mcl^0.5;
-        f2 = (-53.61 -80.03*mcl + 132.78*mcl^0.5).*e.^1;
-        f3 = (86.61 + 81.91*mcl -163.61*mcl^0.5).*e.^0.5;
-        permc = f1 + f2 + f3;      % ln(perm [m^2])
-        if diff(poro(idc(k), :)) > 1e-5
-            perm{idc(k)} = @(N) exp(permc(1) + ...
-                                rand(N, 1)*(permc(2) - permc(1)));
-        else                       % give 1 OM variation
-            perm{idc(k)} = @(N) exp(0.5*permc(1) + ...
-                                rand(N, 1)*(5*permc(2) - 0.5*permc(1)));
-        end
+        e = @(plim) plim ./ (1 - plim);         % plim = upper or lower bound              
+        f1 = @(p) -69.59 -26.79*mcl(p) + 44.07*mcl(p).^0.5;
+        f2 = @(p, plim) (-53.61 -80.03*mcl(p) + 132.78*mcl(p).^0.5)*e(plim).^1;
+        f3 = @(p, plim) (86.61 + 81.91*mcl(p) -163.61*mcl(p).^0.5)*e(plim).^0.5;
+        permc = @(p, plim) f1(p) + f2(p, plim) + f3(p, plim); % ln(perm [m^2])
+        
+        perm.type{n} = 'unif';
+        perm.fcn{n} = @(p, pmin, pmax) exp(permc(p, pmin) + ...
+                                           rand(numel(p), 1) .* ...
+                                           (permc(p, pmax) - permc(p, pmin)));
+        perm.range{n} = @(pmin, pmax) exp([permc(pmin, pmin) ...
+                                           permc(pmax, pmax)]);
+                                       
     end
-end
 
-% Overwrite perm for layers with passed perm
-if nargin == 7
-    idPassed = find([~isnan(FS.FW.Perm) ~isnan(FS.HW.Perm)]);
-    permPassed = [FS.FW.Perm(~isnan(FS.FW.Perm)), ...
-                  FS.HW.Perm(~isnan(FS.HW.Perm))];
-    for k = 1:numel(idPassed)
-        perm{idPassed(k)} = @(N) (permPassed(k) * md_to_m2) * ones(N, 1);
-    end
 end
+% Overwrite perm for layers with passed perm
+% if nargin == 7
+%     idPassed = find([~isnan(FS.FW.Perm) ~isnan(FS.HW.Perm)]);
+%     permPassed = [FS.FW.Perm(~isnan(FS.FW.Perm)), ...
+%                   FS.HW.Perm(~isnan(FS.HW.Perm))];
+%     for k = 1:numel(idPassed)
+%         perm{idPassed(k)} = @(N) (permPassed(k) * md_to_m2) * ones(N, 1);
+%     end
+% end
 
 end

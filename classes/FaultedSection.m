@@ -114,7 +114,6 @@ classdef FaultedSection
            
            % Optional inputs
            opt.maxPerm = [];                   % mD
-           opt.siltInClay = false;
            opt.isUndercompacted = false;
            opt = merge_options_relaxed(opt, varargin{:});
             
@@ -128,12 +127,27 @@ classdef FaultedSection
            obj.MatPropDistr.thick = getFaultThickness();
            
            % ResFric
-           obj.MatProps.ResFric = getResidualFrictionAngle(obj.Vcl, FS);
+           obj.MatPropDistr.resFric = getResidualFrictionAngle(obj.Vcl);
            
            % SSFc and SSFc bounds
-           obj.MatProps.SSFc = getSSFc(obj.Vcl, obj.IsClayVcl, zf, ...
-                                       obj.Thick, Disp, obj.HW.Id);
-            
+           obj.MatPropDistr.ssfc = getSSFc(obj.Vcl, obj.IsClayVcl, zf, ...
+                                           obj.Thick, Disp, obj.HW.Id);
+                                   
+           % Perm Anisotropy Ratio
+           %poroAtZf = getPorosity(obj.Vcl, obj.IsClayVcl, zf, zmax, ...
+           %                       'zf', opt.isUndercompacted, obj.HW.Id);
+           obj.MatPropDistr.permAnisoRatio = ...
+                    getAnisotropyRatio(obj.Vcl, zf, clayMine, obj.HW.Id);
+                
+           % Porosity at current depth
+           obj.MatPropDistr.poro = getPorosity(obj.Vcl, obj.IsClayVcl, ...         
+                                               zf, zmax, 'zmax', ...
+                                               opt.isUndercompacted, obj.HW.Id);
+                                       
+           % Perm
+            obj.MatPropDistr.perm = getPermeability(obj.Vcl, obj.IsClayVcl, ...
+                                                    zf, zmax, opt.maxPerm, ...
+                                                    obj.HW.Id);
             
         end
         
