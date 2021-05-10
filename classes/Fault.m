@@ -75,13 +75,13 @@ classdef Fault
             
             % User can pass different grid resolution
             if nargin < 3
-                obj.Grid.TargetCellDim = [0.1, 1];     % [m], [thick., disp.]
+                obj.Grid.targetCellDim = [0.1, 1];     % [m], [thick., disp.]
             else
                 assert(isa(targetCellDim, 'double') && numel(targetCellDim) == 2, ...
                        ['If grid resolution is passed, it must be a ', ...
                        'double array with 2 elements: ', ...
                        '[res. in thick. dir. (x), res. in displ. dir (y)]'])
-                obj.Grid.TargetCellDim = targetCellDim;
+                obj.Grid.targetCellDim = targetCellDim;
             end
         end
         
@@ -139,21 +139,25 @@ classdef Fault
             
             % Sand Perm and Poro (constant, deterministic)
             sandPermRange = cell2mat(FS.MatPropDistr.perm.range(~idc)');
+            obj.MatProps.permRange(:, ~idc) = sandPermRange';
             obj.MatProps.perm(~idc) = (sandPermRange(:, 1) + ...
                                        diff(sandPermRange, [], 2) .* U(2))';
             sandPoroRange = cell2mat(FS.MatPropDistr.poro.range(~idc)');
+            obj.MatProps.poroRange(:, ~idc) = sandPoroRange';
             obj.MatProps.poro(~idc) = sandPoroRange(:, 1);
             
             % Clay perm depends on poro, so we correlate poro first.
             clayPoroRange = cell2mat(FS.MatPropDistr.poro.range(idc)');
+            obj.MatProps.poroRange(:, idc) = clayPoroRange';
             obj.MatProps.poro(idc) = (clayPoroRange(:, 1) + ...
                                      diff(clayPoroRange, [], 2) .* U(2))';
-            clayPermRange = cellfun(@(x, id) x(clayPoroRange(id,1), ...
-                                               clayPoroRange(id,2)), ...
-                                    FS.MatPropDistr.perm.range(idc), ...
-                                    num2cell((1:sum(idc))), ...
-                                    'UniformOutput', false);
-            clayPermRangeLog = log10(cell2mat(clayPermRange'));
+            clayPermRange = cell2mat(cellfun(@(x, id) x(clayPoroRange(id,1), ...
+                                        clayPoroRange(id,2)), ...
+                                        FS.MatPropDistr.perm.range(idc), ...
+                                        num2cell((1:sum(idc))), ...
+                                        'UniformOutput', false)');
+            obj.MatProps.permRange(:, idc) = clayPermRange';
+            clayPermRangeLog = log10(clayPermRange);
             obj.MatProps.perm(idc) = 10.^(clayPermRangeLog(:, 1) + ...
                                    diff(clayPermRangeLog, [], 2) .* U(2))';
             
@@ -172,7 +176,7 @@ classdef Fault
             
             % Perm anisotropy ratio
             gamma = obj.Disp / obj.MatProps.thick;
-            obj.MatProps.PermAnisoRatio = ...
+            obj.MatProps.permAnisoRatio = ...
                             cellfun(@(x, id) x(gamma, poroAtZf(id)), ...
                                     FS.MatPropDistr.permAnisoRatio.fcn, ...
                                     num2cell((1:FS.HW.Id(end))));
@@ -229,9 +233,9 @@ classdef Fault
             %
             
             % Generate Grid
-            G = makeFaultGrid(obj.MatProps.Thick, obj.Disp, ...
-                              obj.Grid.TargetCellDim);
-            obj.Grid.CellDim = G.CellDim;
+            G = makeFaultGrid(obj.MatProps.thick, obj.Disp, ...
+                              obj.Grid.targetCellDim);
+            obj.Grid.cellDim = G.CellDim;
             
             % Mapping matrix (material in each grid cell)
             % MatMap makes this somewhat heavy on RAM.
@@ -257,7 +261,7 @@ classdef Fault
             end
             
             % Assign porosity and permeability
-            [obj.Grid.Poro, obj.Grid.Perm, kz_loc] = ...
+            [obj.Grid.poro, obj.Grid.perm, kz_loc] = ...
                                                setGridPoroPerm(obj, G, FS);
             
             % Upscale Porosity (additive)
@@ -269,11 +273,11 @@ classdef Fault
             %     Poro = accumarray(p, poroG)./accumarray(p,1);
             % Since it only has one cell:
             % --------------------------------------------------------
-            obj.Poro = mean(obj.Grid.Poro);
+            obj.Poro = mean(obj.Grid.poro);
             
             % Upscale Permeability (not an additive property)
-            obj.Perm = computeCoarsePerm(G, obj.Grid.Perm, kz_loc, U, ...
-                                         obj.Disp, obj.MatProps.Thick);
+            obj.Perm = computeCoarsePerm(G, obj.Grid.perm, kz_loc, U, ...
+                                         obj.Disp, obj.MatProps.thick);
         end
         
         function plotMaterials(obj, FS)
@@ -282,16 +286,16 @@ classdef Fault
            %
            
            % Generate Grid (Must be same as grid used within Fault)
-            G = makeFaultGrid(obj.MatProps.Thick, obj.Disp, ...
-                              obj.Grid.TargetCellDim);
+            G = makeFaultGrid(obj.MatProps.thick, obj.Disp, ...
+                              obj.Grid.targetCellDim);
            
            % utils
            M = obj.MatMap;
            latx = {'Interpreter', 'latex'};
            sz = [14, 11];
            %ydim = max(G.faces.centroids(:,2));
-           rock.poro = obj.Grid.Poro;
-           rock.perm = obj.Grid.Perm;
+           rock.poro = obj.Grid.poro;
+           rock.perm = obj.Grid.perm;
            idGrid = reshape(transpose(flipud(M.vals)), G.cells.num, 1);
            
            % SUBPLOTS
@@ -302,10 +306,10 @@ classdef Fault
            set(gca, 'colormap', hot(max(M.unit)));
            plotToolbar(G, reshape(transpose(flipud(M.units)), G.cells.num, 1), ...
                        'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0.1);
-           xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); c = colorbar;
+           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); c = colorbar;
            set(c,'YTick', sort(unique(M.unit)));
-           xticks([0 obj.MatProps.Thick])
-           xticklabels([0 round(obj.MatProps.Thick, 2)])
+           xticks([0 obj.MatProps.thick])
+           xticklabels([0 round(obj.MatProps.thick, 2)])
            xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
            set(gca,'fontSize', 10)
            title('Parent Id', latx{:}, 'fontSize', sz(2));
@@ -336,15 +340,15 @@ classdef Fault
            end
            plot(0, layerBots(1), '+r', 'MarkerSize', 4, 'LineWidth', 1)
            for n=FS.HW.Id
-               plot(obj.MatProps.Thick, layerTops(n), '+r', ...
+               plot(obj.MatProps.thick, layerTops(n), '+r', ...
                     'MarkerSize', 4, 'LineWidth', 1)
-               plot(obj.MatProps.Thick, layerCtrs(n), 'or', ...
+               plot(obj.MatProps.thick, layerCtrs(n), 'or', ...
                     'MarkerSize', 3, 'LineWidth', 1, 'MarkerFaceColor', 'r')
            end
-           plot(obj.MatProps.Thick, layerBots(1), '+r', 'MarkerSize', ...
+           plot(obj.MatProps.thick, layerBots(1), '+r', 'MarkerSize', ...
                 4, 'LineWidth', 1)
            hold off
-           xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); ...
+           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); ...
            axis off
            c = colorbar;
            set(c,'YTick', [0 1]);
@@ -363,7 +367,7 @@ classdef Fault
            set(gca, 'colormap', copper)
            plotToolbar(G, rock.poro, 'EdgeColor', [0.2 0.2 0.2], ...
                        'EdgeAlpha', 0);
-           xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); 
+           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); 
            axis off
            c = colorbar;
            caxis([0 max([max(rock.poro), 0.35])]);
@@ -380,7 +384,7 @@ classdef Fault
            set(gca, 'colormap', copper)
            plotToolbar(G, log10(rock.perm(:,1)/(milli*darcy)), ...
                        'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0);
-           xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); axis off
+           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); axis off
            c = colorbar;
            if ~any(obj.MatMap.isclay)
                 caxis([min(log10(rock.perm(:,1)/(milli*darcy))) ...
@@ -413,7 +417,7 @@ classdef Fault
            set(gca, 'colormap', copper)
            plotToolbar(G, log10(rock.perm(:,3)/(milli*darcy)), ...
                        'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0);
-           xlim([0 obj.MatProps.Thick]); ylim([0 obj.Disp]); 
+           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); 
            axis off
            c = colorbar;
            if ~any(obj.MatMap.isclay) % if there is sand
@@ -446,22 +450,18 @@ classdef Fault
            set(hh, 'position', [200, 0, 650, 350]);       
            
            % MatProps 
-           %Thick = repelem(obj.MatProps.Thick, numel(obj.MatProps.ResFric));
-           SSFcMin = obj.MatProps.SSFcBounds(1, :);
-           SSFcMax = obj.MatProps.SSFcBounds(2, :);
-           PoroMin = obj.MatProps.Poro(:, 1);
-           PoroMax = obj.MatProps.Poro(:, 2);
+           %Thick = repelem(obj.MatProps.thick, numel(obj.MatProps.resFric));
+           %bounds = cell2mat(FS.MatPropDistr.ssfc.range(idc)');
+           %SSFcMin = bounds(:, 1);
+           %SSFcMax = bounds(:, 2);
+           PoroMin = obj.MatProps.poroRange(1, :);
+           PoroMax = obj.MatProps.poroRange(2, :);
            N = max(FS.HW.Id);
-           PermMin = zeros(N, 1);
-           PermMax = zeros(N, 1);
-           for n = 1:N
-              samples = obj.MatProps.Perm{n}(5000);
-              PermMin(n) = min(samples)/(milli*darcy);
-              PermMax(n) = max(samples)/(milli*darcy);
-           end
-           tdata = table(obj.MatProps.ResFric', obj.MatProps.SSFc', ...
+           PermMin = obj.MatProps.permRange(1, :);
+           PermMax = obj.MatProps.permRange(2, :);
+           tdata = table(obj.MatProps.resFric', obj.MatProps.ssfc', ...
                          PoroMin, PoroMax, PermMin, PermMax, ...
-                         obj.MatProps.PermAnisoRatio');
+                         obj.MatProps.permAnisoRatio');
            tdata.Properties.VariableNames = {'ResFric', 'SSFc', ...
                                              'PoroMin', 'PoroMax', ...
                                              'PermMin', 'PermMax', ...

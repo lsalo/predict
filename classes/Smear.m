@@ -99,9 +99,9 @@ classdef Smear
              smear.SegLenMax, smear.Psmear, smear.DomainLength] = ...
                         deal(nan(Nsim, N), nan(Nsim, N), nan(Nsim, N), ...
                         nan(Nsim, N), nan(Nsim, N), nan(Nsim, 1));
-            SSFc  = fault.MatProps.SSFc(:, idc);
-            phi   = fault.MatProps.ResFric;
-            epoin = fault.MatProps.SSFcBounds;
+            SSFc  = fault.MatProps.ssfc(:, idc);
+            phi   = fault.MatProps.resFric;
+            epoin = cell2mat(FS.MatPropDistr.ssfc.range(idc)')';
             Lf = Tap(idc) + fault.Disp;     % Current Lf
             % Egholm et al. (2008) Lf (after fault formation):
             %Lf_eg  = (fault.throw + thick) ./ sind(theta_s);
@@ -124,7 +124,7 @@ classdef Smear
                                            cosd(fault.Zeta(n));
                 % if z is very close to 90, ThickInFault is > than true.
                 TapMax  = sqrt(fault.Disp^2 + ...
-                               fault.MatProps.Thick(n)^2);
+                               fault.MatProps.thick(n)^2);
                 smear.ThickInFault(n, smear.ThickInFault(n, :) > TapMax) = TapMax;
                 
                 
@@ -147,9 +147,9 @@ classdef Smear
                 % length or 2 times the grid resolution in the length
                 % dimension, whichever is larger.
                 minVal(zf > 50) = max(0.1*smear.Length(n, zf>50), ...
-                                      3*fault.Grid.TargetCellDim(2));
+                                      3*fault.Grid.targetCellDim(2));
                 minVal(zf <= 50) = max(0.05*smear.Length(n, zf<=50), ...
-                                       2*fault.Grid.TargetCellDim(2));
+                                       2*fault.Grid.targetCellDim(2));
                 idBelowLim = smear.SegLenMax(n, :) < minVal;
                 smear.SegLenMax(n, idBelowLim) = minVal(idBelowLim);
                 

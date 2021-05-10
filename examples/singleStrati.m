@@ -25,11 +25,11 @@ vcl       = {repmat([0 0.4 0.3 0.6 0.4 0.15 0.7 0.3 0.8 0.2 0.4 0.6 0 0.4], 1, 1
              repmat([0 0.4 0.3 0.6 0.4 0.15 0.7 0.3 0.8 0.2 0.4 0.6 0 0.4], 1, 1)};
 dip       = [0, 20];
 faultDip  = 60;
-Nsim      = 500;                % Number of simulations/realizations
+Nsim      = 10;                 % Number of simulations/realizations
 
 % Optional Input parameters
 zf      = [500, 500];           % [m]
-maxPerm = [];                   % [mD]
+maxPerm = 1000;                 % [mD]
 rho     = 0.7;                  % Corr. coeff. for multivariate distributions
 
 % Flow upscaling options
@@ -56,7 +56,7 @@ mySect = mySect.getMatPropDistr('maxPerm', maxPerm);
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
 tic
-parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+for n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     myFault = Fault(mySect, faultDip);
     
     % Get material property samples
@@ -79,7 +79,7 @@ toc
 
 %% Output analysis
 % Visualize Strati, fault thickness of 1st realization
-mySect.plotStrati(faults{1}.MatProps.Thick, faultDip);  
+mySect.plotStrati(faults{1}.MatProps.thick, faultDip);  
 
 % Histograms for each MatProp (all sims, we select one stratigraphic layer)
 % This should plot for all realizations that contain the given id.

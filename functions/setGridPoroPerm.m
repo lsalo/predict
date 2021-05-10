@@ -6,9 +6,9 @@ function [poroG, permG, kz_loc] = setGridPoroPerm(obj, G, FS)
 % Rename
 M = obj.MatMap;
 alpha = obj.Alpha;
-unitPoro = obj.MatProps.Poro;
-unitPerm = obj.MatProps.Perm;
-permAnisoRatio = obj.MatProps.PermAnisoRatio;
+unitPoro = obj.MatProps.poro;
+unitPerm = obj.MatProps.perm;
+permAnisoRatio = obj.MatProps.permAnisoRatio;
 
 
 % 1) Map diagonals to Grid indexing: Grid indexing starts at bottom left,
@@ -40,6 +40,8 @@ permG = nan(G.cells.num, 3);                            % [kxx, kxz, kzz]
 kx_loc = nan(G.cells.num, 1);
 kz_loc = nan(G.cells.num, 1);
 T = [cosd(alpha) sind(alpha); -sind(alpha) cosd(alpha)];% Transform. mat
+fn = 0.015;                                             % porosity var factor
+fk = 1.75;                                              % perm var factor
 
 for n=1:numel(M.unit)
     cellIds = [all([isSmear, whichUnit == M.unit(n)], 2), ...
@@ -55,17 +57,18 @@ for n=1:numel(M.unit)
         cellNum = cellNum(2);
     end
     
-    if numel(cellNum) == 1
-        % Get MatProps values/fcns
-        phi = unitPoro(M.unit(n), :);     % M.unit can differ from M.unitIn
-        kx_loc(cellIds) = unitPerm{M.unit(n)}(cellNum);
-
-        % Porosity
-        if abs(diff(phi)) > 0.01
-            poroG(cellIds) = phi(1) + rand(cellNum, 1) .* abs(diff(phi));
-        else
-            poroG(cellIds) = phi(1);
-        end
+    if numel(cellNum) == 1        
+        % Give a factor of about 3 max variation in permeability (already
+        % correlated to fault thickness through shear strain), and 0.03 to
+        % porosity.
+        unitPoroCorrRange = [unitPoro(M.unit(n))-fn unitPoro(M.unit(n))+fn];
+        assert(all(unitPoroCorrRange > 0))
+        unitPermCorrRange = [unitPerm(M.unit(n))/fk unitPerm(M.unit(n))*fk];
+        % Variable value each cell
+        poroG(cellIds) = unitPoroCorrRange(1) + ...
+                         rand(cellNum, 1)*diff(unitPoroCorrRange);    
+        kx_loc(cellIds) = unitPermCorrRange(1) + ...
+                          rand(cellNum, 1)*diff(unitPermCorrRange);
         
         % Permeability
         %kx_loc = unitPerm{n}(cellNum);
@@ -84,12 +87,19 @@ for n=1:numel(M.unit)
         permG(cellIds, :) = reshape(kmat(idk), 3, cellNum)';
     
     else                                % clay domain, disc. smear
-        % Get sand/clay values
-        phi_c = unitPoro(M.unit(n), :);     
-        kx_loc_c = unitPerm{M.unit(n)}(cellNum(1));
-        kz_loc_c = kx_loc_c * permAnisoRatio(M.unit(n));
+        % Get sand/clay values        
+        % Clay porosity
+        unitPoroCorrRange = [unitPoro(M.unit(n))-fn unitPoro(M.unit(n))+fn];
+        assert(all(unitPoroCorrRange > 0))
+        poroG(cellIds(:, 1)) = unitPoroCorrRange(1) + ...
+                               rand(cellNum(1), 1)*diff(unitPoroCorrRange);
+        % Clay permeability
+        unitPermCorrRange = [unitPerm(M.unit(n))/fk unitPerm(M.unit(n))*fk];
+        kx_loc(cellIds(:, 1)) = unitPermCorrRange(1) + ...
+                                rand(cellNum(1), 1)*diff(unitPermCorrRange);
+        kz_loc(cellIds(:, 1)) = kx_loc(cellIds(:, 1))*permAnisoRatio(M.unit(n));
         
-        if any(~M.isclayIn)
+        if any(~M.isclayIn)     % if sand in stratigraphy
             if any(~M.isclay)
                 [~, sid] = min(abs(M.unit(~M.isclay) - M.unit(n)));
                 sandIds = M.unit(~M.isclay);
@@ -98,11 +108,11 @@ for n=1:numel(M.unit)
                 sandIds = M.unitIn(~M.isclayIn);
             end
             closestSandId = sandIds(sid);
-            phi_s = unitPoro(closestSandId, :);
-            kx_loc_s = unitPerm{closestSandId}(cellNum(2));
-            kz_loc_s = kx_loc_s * permAnisoRatio(closestSandId);
+            phi_s = unitPoro(closestSandId);
+            permx_s = unitPerm(closestSandId);
+            kprime = permAnisoRatio(closestSandId);
             
-        else
+        else                    % no sand in stratigraphy
             disp('_______________________________________________________')
             warning('No sand in stratigraphy.')
             disp(['Properties for sand material between discontinuous ' ...
@@ -114,56 +124,36 @@ for n=1:numel(M.unit)
             disp('_______________________________________________________')
             
             % create dummy section, we will just use the FW;
-            thicks = [25, 25];
-            vcls   = [0.15, 0.5];
-            dips   = [0, 0];
             zf     = FS.FW.DepthFaulting;
             zmax   = FS.FW.DepthBurial;
             
-            % FW and HW
-            fw = Stratigraphy(thicks(1), vcls(1), dips(1), ...
-                              'DepthFaulting', zf(1), ...
-                              'DepthBurial', zmax(1));
-            hw = Stratigraphy(thicks(2), vcls(2), dips(2), 'IsHW', 1, ...
-                              'NumLayersFW', fw.NumLayers);
-            
-            % Strati in Faulted Section
-            mysect = FaultedSection(fw, hw);
-            
             % Compute sand poro and perm
-            sandPermUpperBound = 1000;          % [mD]
-            [perm, poro] = getPermeability(mysect, sandPermUpperBound);
-            
-            % Assign;
-            phi_s = poro(1, :);
-            kx_loc_s = perm{1}(cellNum(2));
-            kz_loc_s = kx_loc_s;
+            cap = 1000;          % [mD]
+            phi_s = getPorosity(0.15, 0.4, zf, zmax, 'zmax', 0);
+            permx_s = getPermeability(0.15, 0.4, zf, zmax, cap);
+            kprime = 1;
         end
         
+        % Sand porosity
+        poroSandRange = [phi_s-fn phi_s+fn];
+        assert(all(poroSandRange > 0))
+        poroG(cellIds(:, 2)) = poroSandRange(1) + ...
+                               rand(cellNum(2), 1)*diff(poroSandRange); 
         
-        % Porosity
-        if abs(diff(phi_c)) > 0.01
-            poroG(cellIds(:, 1)) = phi_c(1) + rand(cellNum(1), 1) .* abs(diff(phi_c));
-        else
-            poroG(cellIds(:, 1)) = phi_c(1);
-        end
-        if abs(diff(phi_s)) > 0.01
-            poroG(cellIds(:, 2)) = phi_s(1) + rand(cellNum(2), 1) .* abs(diff(phi_s));
-        else
-            poroG(cellIds(:, 2)) = phi_s(1);
-        end
+        % Sand Permeability
+        permxSandRange = [permx_s/fk permx_s*fk];
+        kx_loc(cellIds(:, 2)) = permxSandRange(1) + ...
+                                rand(cellNum(2), 1)*diff(permxSandRange);
+        kz_loc(cellIds(:, 2)) = kx_loc(cellIds(:, 2)) * kprime;
         
-        % Permeability
-        cellNum = sum(cellNum);
-        kx_loc(cellIds(:, 1)) = kx_loc_c; kx_loc(cellIds(:, 2)) = kx_loc_s;
-        kz_loc(cellIds(:, 1)) = kz_loc_c; kz_loc(cellIds(:, 2)) = kz_loc_s;
-        cellIds = sort([find(cellIds(:, 1)); find(cellIds(:, 2))]);
-        
+        % Transform
+        cellIds = sort([find(cellIds(:, 1)); find(cellIds(:, 2))]);        
         sz = [2, 2];
         nels = sum(sz);
         S = zeros(sz(1), sz(2), numel(kx_loc(cellIds)));
         idDiag = [1, 4];               % [kxx, kzz] of smear (diag perm)
         id = [1,2,4];                  % [kxx, kxz, kzz] of fault
+        cellNum = sum(cellNum);
         if cellNum == 2
             idS = [idDiag; idDiag + repelem(nels, 2)]';
             idk = [id; id + repelem(nels, 3)]';
