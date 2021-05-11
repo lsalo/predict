@@ -20,10 +20,10 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 %% Define model and upscale permeability
 % Mandatory Input parameters
 %           {[FW], [HW]}
-thickness = {[5 5 10 5 15 5 5 10 5 5 5 10 10 5], [5 10 10 5 5 5 10 5 5 15 5 10 5 5]};
-vcl       = {repmat([0 0.4 0.3 0.6 0.4 0.15 0.7 0.3 0.8 0.2 0.4 0.6 0 0.4], 1, 1), ...
-             repmat([0 0.4 0.3 0.6 0.4 0.15 0.7 0.3 0.8 0.2 0.4 0.6 0 0.4], 1, 1)};
-dip       = [0, 20];
+thickness = {[25 25 25 25], [10 40 10 40]};
+vcl       = {repmat([0 0.4 0.2 0.7], 1, 1), ...
+             repmat([0.4 0.2 0.7 0], 1, 1)};
+dip       = [0, 0];
 faultDip  = 60;
 Nsim      = 10;                 % Number of simulations/realizations
 
@@ -83,14 +83,14 @@ mySect.plotStrati(faults{1}.MatProps.thick, faultDip);
 
 % Histograms for each MatProp (all sims, we select one stratigraphic layer)
 % This should plot for all realizations that contain the given id.
-layerId = 2;                                            
+layerId = 4;                                            
 plotMatPropsHist(faults, smears, mySect, layerId) 
 
 % MatProps correlations
 plotMatPropsCorr(faults, mySect)
 
 % General fault materials and perm view
-plotId = selectSimId('maxX', faults, Nsim);                % simulation index
+plotId = selectSimId('maxZ', faults, Nsim);                % simulation index
 faults{plotId}.plotMaterials(mySect) 
 % Add MatProps for this realization (table?)
 

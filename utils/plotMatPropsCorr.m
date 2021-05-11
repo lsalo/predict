@@ -6,7 +6,7 @@ function plotMatPropsCorr(faults, FS)
 %% Preparations
 % Fault MatProps
 layerId = FS.ParentId;
-thick = cell2mat(cellfun(@(x) x.MatProps.Thick, faults, ...
+thick = cell2mat(cellfun(@(x) x.MatProps.thick, faults, ...
                  'UniformOutput', false));
 %DTratios = faults{1}.Disp ./ thick;
 N = numel(thick);
@@ -16,19 +16,16 @@ kprime = zeros(N, numel(layerId));
 perm = zeros(N, numel(layerId));
 poro = zeros(N, numel(layerId));
 for n = 1:numel(layerId)
-    phi(:, n) = cell2mat(cellfun(@(x) x.MatProps.ResFric(n), faults, ...
+    phi(:, n) = cell2mat(cellfun(@(x) x.MatProps.resFric(n), faults, ...
                          'UniformOutput', false));
-    SSFc(:, n) = cell2mat(cellfun(@(x) x.MatProps.SSFc(n), faults, ...
+    SSFc(:, n) = cell2mat(cellfun(@(x) x.MatProps.ssfc(n), faults, ...
                     'UniformOutput', false));
-    kprime(:, n) = cell2mat(cellfun(@(x) x.MatProps.PermAnisoRatio(n), faults, ...
+    kprime(:, n) = cell2mat(cellfun(@(x) x.MatProps.permAnisoRatio(n), faults, ...
                             'UniformOutput', false));
-    perm(:, n) = faults{1}.MatProps.Perm{n}(N)/(milli*darcy);
-    poror = faults{1}.MatProps.Poro(n, :);
-    if diff(poror) == 0
-        poro(:, n) = poror(1)*ones(N, 1);
-    else
-        poro(:, n) = poror(1) + rand(N, 1) .* abs(diff(poror));
-    end
+    perm(:, n) = cell2mat(cellfun(@(x) x.MatProps.perm(n), faults, ...
+                            'UniformOutput', false))/(milli*darcy);
+    poro(:, n) = cell2mat(cellfun(@(x) x.MatProps.poro(n), faults, ...
+                            'UniformOutput', false))/(milli*darcy);
 end
 phi = reshape(phi, N*numel(layerId), 1);
 SSFc = reshape(SSFc, N*numel(layerId), 1);

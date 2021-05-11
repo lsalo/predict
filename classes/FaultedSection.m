@@ -215,7 +215,7 @@ classdef FaultedSection
               else
                   str = num2str(obj.FW.Vcl(n));
               end
-              text(limx(1) + 3, zFW(n) + (zFW(n+1) - zFW(n))/2, str, latx{:}, ...
+              text(limx(1) + 2, zFW(n) + (zFW(n+1) - zFW(n))/2, str, latx{:}, ...
                    'fontSize', 11, 'color', colrtx)
            end
            for n=1:numel(obj.HW.Thickness)
@@ -233,7 +233,7 @@ classdef FaultedSection
                   colrtx = 'k';
               end
               fill(x, z, colr); 
-              text(limx(2) - 10, zHW(n) + (zHW(n+1) - zHW(n))/2, ...
+              text(limx(2) - 6, zHW(n) + (zHW(n+1) - zHW(n))/2, ...
                    num2str(obj.HW.Vcl(n)), latx{:}, ...
                    'fontSize', 11, 'color', colrtx)
            end

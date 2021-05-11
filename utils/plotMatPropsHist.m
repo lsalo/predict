@@ -40,7 +40,7 @@ edg_poro = linspace(0, 0.6, nbins);
 lim_perm = [round(log10(min(perm)))-1, round(log10(max(perm)))+1];
 edg_k = logspace(lim_perm(1), lim_perm(2), nbins);
 edg_SSFc = linspace(0, 12, nbins);
-edg_kprime = linspace(0, 40, nbins);
+edg_kprime = linspace(0, 10, nbins);
 
 % Smear props
 if faults{1}.MatMap.isclayIn(id) == 1
@@ -149,10 +149,10 @@ if faults{1}.MatMap.isclayIn(id)
     xlabel('$k^\prime$ [-]', latx{:}, 'fontSize', sz(2))
     %ylabel('P [-]', latx{:}, 'fontSize', sz(2))
     %title('Perm. anisotropy', 'fontsize', sz(2))
-    xlim([0, 40])
+    xlim([0, 10])
     ylim([0 1])
     grid on
-    xticks([0 10 20 30 40])
+    xticks([0 2 4 6 8 10])
     
     nexttile
     histogram(SSFc, edg_SSFc, 'Normalization', 'probability','FaceColor', [0.3 0.3 0.3])
