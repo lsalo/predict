@@ -25,7 +25,7 @@ vcl       = {repmat([0 0.4 0.2 0.7], 1, 1), ...
              repmat([0.4 0.2 0.7 0], 1, 1)};
 dip       = [0, 0];
 faultDip  = 60;
-Nsim      = 10;                 % Number of simulations/realizations
+Nsim      = 1000;                 % Number of simulations/realizations
 
 % Optional Input parameters
 zf      = [500, 500];           % [m]
@@ -83,7 +83,7 @@ mySect.plotStrati(faults{1}.MatProps.thick, faultDip);
 
 % Histograms for each MatProp (all sims, we select one stratigraphic layer)
 % This should plot for all realizations that contain the given id.
-layerId = 4;                                            
+layerId = 7;                                            
 plotMatPropsHist(faults, smears, mySect, layerId) 
 
 % MatProps correlations

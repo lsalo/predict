@@ -311,13 +311,22 @@ if numel(diagIds) > 0
         M.clayDiagBot = M.DiagBot;
         M.DiagBot = sort([M.DiagBot sandIds(1,:)]);
         M.DiagTop = sort([M.DiagTop sandIds(2,:)]);
-        [~, ids] = intersect(M.DiagBot, sandIds(1,:));
+        
         idSandAll = M.unitIn(~M.isclayIn);
-        sandParent = zeros(1, numel(ids));
-        for n=1:numel(ids)
-            [~, idClosestSand] = min(abs(ids(n) - idSandAll));
-            sandParent(n) = idSandAll(idClosestSand);
-        end
+        sandCenterDiag = mean(sandIds)';
+        stratiSandCenterDiag = M.layerDiagCenter(~M.isclayIn)';
+        stratiCenterRep = repmat(stratiSandCenterDiag, ...
+                                  [1 length(sandCenterDiag)]);
+        [~, idClosestSand] = min(abs(stratiCenterRep-sandCenterDiag'), [], 1);
+        sandParent = idSandAll(idClosestSand);
+        [~, ids] = intersect(M.DiagBot, sandIds(1,:));
+%         idSandAll = M.unitIn(~M.isclayIn);
+%         sandParent = zeros(1, numel(ids));
+%         for n=1:numel(ids)
+%             [~, idClosestSand] = min(abs(ids(n) - idSandAll));
+%             sandParent(n) = idSandAll(idClosestSand);
+%         end
+
         nunits = sum([sum(M.isclay), numel(ids)]);
         unitAll = zeros(1, nunits);
         unitAll(ids) = sandParent;

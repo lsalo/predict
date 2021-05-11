@@ -100,17 +100,21 @@ for n=1:numel(M.unit)
         kz_loc(cellIds(:, 1)) = kx_loc(cellIds(:, 1))*permAnisoRatio(M.unit(n));
         
         if any(~M.isclayIn)     % if sand in stratigraphy
-            if any(~M.isclay)
-                [~, sid] = min(abs(M.unit(~M.isclay) - M.unit(n)));
-                sandIds = M.unit(~M.isclay);
-            else
-                [~, sid] = min(abs(M.unitIn(~M.isclayIn) - M.unit(n)));
-                sandIds = M.unitIn(~M.isclayIn);
-            end
+            cCenter = mean([M.DiagBot(n); M.DiagTop(n)]);
+            sCenters = M.layerDiagCenter(~M.isclayIn);
+            [~, sid] = min(abs(cCenter - sCenters));
+            sandIds = M.unitIn(~M.isclayIn);
+%             if any(~M.isclay)
+%                 [~, sid] = min(abs(M.unit(~M.isclay) - M.unit(n)));
+%                 sandIds = M.unit(~M.isclay);
+%             else
+%                 [~, sid] = min(abs(M.unitIn(~M.isclayIn) - M.unit(n)));
+%                 sandIds = M.unitIn(~M.isclayIn);
+%             end
             closestSandId = sandIds(sid);
             phi_s = unitPoro(closestSandId);
             permx_s = unitPerm(closestSandId);
-            kprime = permAnisoRatio(closestSandId);
+            kprime_s = permAnisoRatio(closestSandId);
             
         else                    % no sand in stratigraphy
             disp('_______________________________________________________')
@@ -131,7 +135,7 @@ for n=1:numel(M.unit)
             cap = 1000;          % [mD]
             phi_s = getPorosity(0.15, 0.4, zf, zmax, 'zmax', 0);
             permx_s = getPermeability(0.15, 0.4, zf, zmax, cap);
-            kprime = 1;
+            kprime_s = 1;
         end
         
         % Sand porosity
@@ -144,7 +148,7 @@ for n=1:numel(M.unit)
         permxSandRange = [permx_s/fk permx_s*fk];
         kx_loc(cellIds(:, 2)) = permxSandRange(1) + ...
                                 rand(cellNum(2), 1)*diff(permxSandRange);
-        kz_loc(cellIds(:, 2)) = kx_loc(cellIds(:, 2)) * kprime;
+        kz_loc(cellIds(:, 2)) = kx_loc(cellIds(:, 2)) * kprime_s;
         
         % Transform
         cellIds = sort([find(cellIds(:, 1)); find(cellIds(:, 2))]);        
