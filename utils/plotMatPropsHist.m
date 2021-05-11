@@ -19,14 +19,18 @@ SSFc = cell2mat(cellfun(@(x) x.MatProps.ssfc(id), faults, ...
                          'UniformOutput', false));
 kprime = cell2mat(cellfun(@(x) x.MatProps.permAnisoRatio(id), faults, ...
                          'UniformOutput', false));
-N = 1000;
-perm = faults{1}.MatProps.perm{id}(N)/(milli*darcy);
-poro = faults{1}.MatProps.poro(id, :);
-if diff(poro) == 0
-    poro = poro(1)*ones(N, 1);
-else
-    poro = poro(1) + rand(N, 1) .* abs(diff(poro));
-end
+perm = cell2mat(cellfun(@(x) x.MatProps.perm(id), faults, ...
+                         'UniformOutput', false));
+poro = cell2mat(cellfun(@(x) x.MatProps.poro(id), faults, ...
+                         'UniformOutput', false));
+%N = 1000;
+%perm = faults{1}.MatProps.perm{id}(N)/(milli*darcy);
+%poro = faults{1}.MatProps.poro(id, :);
+% if diff(poro) == 0
+%     poro = poro(1)*ones(N, 1);
+% else
+%     poro = poro(1) + rand(N, 1) .* abs(diff(poro));
+% end
 
 % Fault Histogram params
 nbins = 25;
@@ -124,7 +128,7 @@ xlim([0, 0.6])
 ylim([0 1])
 grid on
 xticks([0 0.1 0.2 0.3 0.4 0.5 0.6])
-text(0.05, 0.9, ['N = ' num2str(N)], latx{:}, 'fontSize', sz(2))
+%text(0.05, 0.9, ['N = ' num2str(N)], latx{:}, 'fontSize', sz(2))
 
 nexttile
 histogram(perm, edg_k, 'Normalization', 'probability','FaceColor', [0.3 0.3 0.3])
@@ -137,7 +141,7 @@ grid on
 set(gca,'XScale','log')
 xticks(10.^(lim_perm(1):lim_perm(2)))
 %xticklabels({'10^{-7}' '10^{-5}' '10^{-3}' '0.1' '10' '10^3'})
-text(1.3*10^(lim_perm(1)), 0.9,['N = ' num2str(N)],  latx{:}, 'fontSize', sz(2))
+%text(1.3*10^(lim_perm(1)), 0.9,['N = ' num2str(N)],  latx{:}, 'fontSize', sz(2))
 
 if faults{1}.MatMap.isclayIn(id)
     nexttile
