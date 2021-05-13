@@ -39,6 +39,8 @@ classdef FaultedSection
         Tap             % Apparent layer thickness on the fault
         Thick           % True layer thickness
         MatPropDistr    % Distros of material properties to sample from
+        IsUndercompacted% Undercompacted section? Default: false
+        MaxPerm         % Perm Cap for FZ materials? Default: [] (none)
     end
     
     properties (Dependent, Hidden)
@@ -49,12 +51,19 @@ classdef FaultedSection
     end
     
     methods
-        function obj = FaultedSection(footwall, hangingwall, faultDip)
+        function obj = FaultedSection(footwall, hangingwall, faultDip, varargin)
             % We instantiate the object with the FW and HW objects required
             % to construct it.
             %
             % Example: mySect = FaultedSection(footwall, hangingwall)
             %
+            
+            % Optional inputs
+            opt.maxPerm = [];                   % mD
+            opt.isUndercompacted = false;
+            opt = merge_options_relaxed(opt, varargin{:});
+            obj.IsUndercompacted = opt.isUndercompacted;
+            obj.MaxPerm = opt.maxPerm;
             
             % Assign or compute apparent and true thicknesses
             if footwall.IsThickApp == 1
@@ -107,15 +116,10 @@ classdef FaultedSection
            zf = [obj.FW.DepthFaulting obj.HW.DepthFaulting]; 
         end
         
-        function obj = getMatPropDistr(obj, varargin)
+        function obj = getMatPropDistr(obj)
            %
            % TBD
            %
-           
-           % Optional inputs
-           opt.maxPerm = [];                   % mD
-           opt.isUndercompacted = false;
-           opt = merge_options_relaxed(opt, varargin{:});
             
            % Shorten input names
            zf   = obj.DepthFaulting;
@@ -142,11 +146,11 @@ classdef FaultedSection
            % Porosity at current depth
            obj.MatPropDistr.poro = getPorosity(obj.Vcl, obj.IsClayVcl, ...         
                                                zf, zmax, 'zmax', ...
-                                               opt.isUndercompacted, obj.HW.Id);
+                                               obj.IsUndercompacted, obj.HW.Id);
                                        
            % Perm
             obj.MatPropDistr.perm = getPermeability(obj.Vcl, obj.IsClayVcl, ...
-                                                    zf, zmax, opt.maxPerm, ...
+                                                    zf, zmax, obj.MaxPerm, ...
                                                     obj.HW.Id);
             
         end
