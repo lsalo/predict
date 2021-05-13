@@ -1,4 +1,4 @@
-function [poroG, permG, kz_loc] = setGridPoroPerm(obj, G, FS)
+function [poroG, permG, kz_loc, M] = setGridPoroPerm(obj, G, FS)
 %
 %
 %
@@ -9,6 +9,7 @@ alpha = obj.Alpha;
 unitPoro = obj.MatProps.poro;
 unitPerm = obj.MatProps.perm;
 permAnisoRatio = obj.MatProps.permAnisoRatio;
+M.unitInClayGaps = nan(1, numel(M.unit));
 
 
 % 1) Map diagonals to Grid indexing: Grid indexing starts at bottom left,
@@ -19,7 +20,7 @@ permAnisoRatio = obj.MatProps.permAnisoRatio;
 % figure(9); spy(sparse(M.vals))       % check that smears are correctly placed in M.
 % 2D grid (xy) mapping
 isSmear = reshape(transpose(flipud(M.vals)), G.cells.num, 1);
-whichUnit = reshape(transpose(flipud(M.units)), G.cells.num, 1);
+%whichUnit = reshape(transpose(flipud(M.units)), G.cells.num, 1);
 
 % 2) Assign permeability and porosity. We have end-member porosity, which 
 %    is assigned to the corresponding unit (clay or sand). For the
@@ -39,13 +40,19 @@ poroG = nan(G.cells.num, 1);                            % sand poro default
 permG = nan(G.cells.num, 3);                            % [kxx, kxz, kzz]
 kx_loc = nan(G.cells.num, 1);
 kz_loc = nan(G.cells.num, 1);
-T = [cosd(alpha) sind(alpha); -sind(alpha) cosd(alpha)];% Transform. mat
+T = [cosd(alpha) sind(alpha); ...
+     -sind(alpha) cosd(alpha)];                         % Transform. mat
 fn = 0.015;                                             % porosity var factor
 fk = 1.75;                                              % perm var factor
 
 for n=1:numel(M.unit)
-    cellIds = [all([isSmear, whichUnit == M.unit(n)], 2), ...
-               all([~isSmear, whichUnit == M.unit(n)], 2)];
+    % To get cellIds, we use idsUnitBlock instead of whichUnit == M.unit(n)
+    % since same unit can appear more than once, in separate blocks.
+    idsUnitBlock = ~full(spdiags(zeros(G.cartDims(1),M.nDiag(n)), ...
+                                 M.DiagBot(n):M.DiagTop(n), M.units));
+    idsUnitBlock = reshape(transpose(flipud(idsUnitBlock)), G.cells.num, 1);
+    cellIds = [all([isSmear, idsUnitBlock], 2), ...
+               all([~isSmear, idsUnitBlock], 2)];
     cellNum = [sum(cellIds(:, 1)), sum(cellIds(:, 2))];
     
     if M.isclay(n) && cellNum(2) == 0
@@ -63,12 +70,12 @@ for n=1:numel(M.unit)
         % porosity.
         unitPoroCorrRange = [unitPoro(M.unit(n))-fn unitPoro(M.unit(n))+fn];
         assert(all(unitPoroCorrRange > 0))
-        unitPermCorrRange = [unitPerm(M.unit(n))/fk unitPerm(M.unit(n))*fk];
+        unitPermCorrRangeLog = log10([unitPerm(M.unit(n))/fk unitPerm(M.unit(n))*fk]);
         % Variable value each cell
         poroG(cellIds) = unitPoroCorrRange(1) + ...
                          rand(cellNum, 1)*diff(unitPoroCorrRange);    
-        kx_loc(cellIds) = unitPermCorrRange(1) + ...
-                          rand(cellNum, 1)*diff(unitPermCorrRange);
+        kx_loc(cellIds) = 10.^(unitPermCorrRangeLog(1) + ...
+                               rand(cellNum, 1)*diff(unitPermCorrRangeLog));
         
         % Permeability
         %kx_loc = unitPerm{n}(cellNum);
@@ -94,9 +101,9 @@ for n=1:numel(M.unit)
         poroG(cellIds(:, 1)) = unitPoroCorrRange(1) + ...
                                rand(cellNum(1), 1)*diff(unitPoroCorrRange);
         % Clay permeability
-        unitPermCorrRange = [unitPerm(M.unit(n))/fk unitPerm(M.unit(n))*fk];
-        kx_loc(cellIds(:, 1)) = unitPermCorrRange(1) + ...
-                                rand(cellNum(1), 1)*diff(unitPermCorrRange);
+        unitPermCorrRangeLog = log10([unitPerm(M.unit(n))/fk unitPerm(M.unit(n))*fk]);
+        kx_loc(cellIds(:, 1)) = 10.^(unitPermCorrRangeLog(1) + ...
+                                rand(cellNum(1), 1)*diff(unitPermCorrRangeLog));
         kz_loc(cellIds(:, 1)) = kx_loc(cellIds(:, 1))*permAnisoRatio(M.unit(n));
         
         if any(~M.isclayIn)     % if sand in stratigraphy
@@ -115,6 +122,7 @@ for n=1:numel(M.unit)
             phi_s = unitPoro(closestSandId);
             permx_s = unitPerm(closestSandId);
             kprime_s = permAnisoRatio(closestSandId);
+            M.unitInClayGaps(n) = closestSandId;
             
         else                    % no sand in stratigraphy
             disp('_______________________________________________________')
@@ -127,13 +135,14 @@ for n=1:numel(M.unit)
             disp('     Permeability anisotropy ratio = 1');
             disp('_______________________________________________________')
             
-            % create dummy section, we will just use the FW;
+            % FS data
             zf     = FS.FW.DepthFaulting;
             zmax   = FS.FW.DepthBurial;
+            isuc   = FS.IsUndercompacted;
             
             % Compute sand poro and perm
             cap = 1000;          % [mD]
-            phi_s = getPorosity(0.15, 0.4, zf, zmax, 'zmax', 0);
+            phi_s = getPorosity(0.15, 0.4, zf, zmax, 'zmax', isuc);
             permx_s = getPermeability(0.15, 0.4, zf, zmax, cap);
             kprime_s = 1;
         end
@@ -145,9 +154,9 @@ for n=1:numel(M.unit)
                                rand(cellNum(2), 1)*diff(poroSandRange); 
         
         % Sand Permeability
-        permxSandRange = [permx_s/fk permx_s*fk];
-        kx_loc(cellIds(:, 2)) = permxSandRange(1) + ...
-                                rand(cellNum(2), 1)*diff(permxSandRange);
+        permxSandRangeLog = log10([permx_s/fk permx_s*fk]);
+        kx_loc(cellIds(:, 2)) = 10.^(permxSandRangeLog(1) + ...
+                                rand(cellNum(2), 1)*diff(permxSandRangeLog));
         kz_loc(cellIds(:, 2)) = kx_loc(cellIds(:, 2)) * kprime_s;
         
         % Transform

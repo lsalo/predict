@@ -20,16 +20,16 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 %% Define model and upscale permeability
 % Mandatory Input parameters
 %           {[FW], [HW]}
-thickness = {[25 25 25 25], [10 40 10 40]};
-vcl       = {repmat([0 0.4 0.2 0.7], 1, 1), ...
-             repmat([0.4 0.2 0.7 0], 1, 1)};
+thickness = {[50 50], [10 40 10 40]};
+vcl       = {repmat([0.4 0.3], 1, 1), ...
+             repmat([0.4 0.1 0.7 0], 1, 1)};
 dip       = [0, 0];
 faultDip  = 60;
 Nsim      = 1000;                 % Number of simulations/realizations
 
 % Optional Input parameters
 zf      = [500, 500];           % [m]
-maxPerm = 1000;                 % [mD]
+maxPerm = 5000;                 % [mD]
 rho     = 0.7;                  % Corr. coeff. for multivariate distributions
 
 % Flow upscaling options
@@ -46,17 +46,17 @@ hangingwall = Stratigraphy(thickness{2}, vcl{2}, 'Dip', dip(2), 'IsHW', 1, ...
                            'NumLayersFW', footwall.NumLayers, ...
                            'DepthFaulting', zf(2));
 
-% Strati in Faulted Section
-mySect = FaultedSection(footwall, hangingwall, faultDip);
+% Instantiate FaultedSection object (Strati in Faulted Section)
+mySect = FaultedSection(footwall, hangingwall, faultDip, 'maxPerm', maxPerm);
 
 % Get material property distributions
-mySect = mySect.getMatPropDistr('maxPerm', maxPerm);
+mySect = mySect.getMatPropDistr();
 
 % Generate fault object with properties for each realization
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
 tic
-for n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     myFault = Fault(mySect, faultDip);
     
     % Get material property samples
@@ -72,7 +72,9 @@ for n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     % Save result
     faults{n} = myFault;
     smears{n} = smear;
-    disp(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])
+    if mod(n, 100) == 0
+        disp(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])
+    end
 end
 toc
 
@@ -83,14 +85,14 @@ mySect.plotStrati(faults{1}.MatProps.thick, faultDip);
 
 % Histograms for each MatProp (all sims, we select one stratigraphic layer)
 % This should plot for all realizations that contain the given id.
-layerId = 7;                                            
+layerId = 1;                                            
 plotMatPropsHist(faults, smears, mySect, layerId) 
 
 % MatProps correlations
 plotMatPropsCorr(faults, mySect)
 
 % General fault materials and perm view
-plotId = selectSimId('maxZ', faults, Nsim);                % simulation index
+plotId = selectSimId('randm', faults, Nsim);                % simulation index
 faults{plotId}.plotMaterials(mySect) 
 % Add MatProps for this realization (table?)
 

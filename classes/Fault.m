@@ -102,7 +102,6 @@ classdef Fault
             
             % Optional inputs
             opt.corrCoef = 0.8;                   % correlation coefficient
-            opt.isUndercompacted = false;
             opt = merge_options_relaxed(opt, varargin{:});
             
             % Convenience
@@ -140,13 +139,14 @@ classdef Fault
             % Sand Perm and Poro (constant, deterministic)
             sandPermRange = cell2mat(FS.MatPropDistr.perm.range(~idc)');
             obj.MatProps.permRange(:, ~idc) = sandPermRange';
-            obj.MatProps.perm(~idc) = (sandPermRange(:, 1) + ...
-                                       diff(sandPermRange, [], 2) .* U(2))';
+            sandPermRangeLog = log10(sandPermRange);
+            obj.MatProps.perm(~idc) = 10.^(sandPermRangeLog(:, 1) + ...
+                                       diff(sandPermRangeLog, [], 2) .* U(2))';
             sandPoroRange = cell2mat(FS.MatPropDistr.poro.range(~idc)');
             obj.MatProps.poroRange(:, ~idc) = sandPoroRange';
             obj.MatProps.poro(~idc) = sandPoroRange(:, 1);
             
-            % Clay perm depends on poro, so we correlate poro first.
+            % Clay perm depends on poro, so we correlate poro too.
             clayPoroRange = cell2mat(FS.MatPropDistr.poro.range(idc)');
             obj.MatProps.poroRange(:, idc) = clayPoroRange';
             obj.MatProps.poro(idc) = (clayPoroRange(:, 1) + ...
@@ -167,7 +167,7 @@ classdef Fault
             % ------------------------------------------------------------
             % poro at zf
             poroDist = getPorosity(FS.Vcl, FS.IsClayVcl, zf, zmax, ...
-                                   'zf', opt.isUndercompacted, FS.HW.Id);
+                                   'zf', FS.IsUndercompacted, FS.HW.Id);
             sandPoroRange  = cell2mat(poroDist.range(~idc)');
             poroAtZf(~idc) = sandPoroRange(:, 1);
             clayPoroRange  = cell2mat(poroDist.range(idc)');
@@ -261,7 +261,7 @@ classdef Fault
             end
             
             % Assign porosity and permeability
-            [obj.Grid.poro, obj.Grid.perm, kz_loc] = ...
+            [obj.Grid.poro, obj.Grid.perm, kz_loc, obj.MatMap] = ...
                                                setGridPoroPerm(obj, G, FS);
             
             % Upscale Porosity (additive)
@@ -386,12 +386,12 @@ classdef Fault
                        'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0);
            xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); axis off
            c = colorbar;
-           if ~any(obj.MatMap.isclay)
+           %if ~any(obj.MatMap.isclay)
                 caxis([min(log10(rock.perm(:,1)/(milli*darcy))) ...
-                       max(log10(rock.perm(:,1)/(milli*darcy)))]);
-           else
-               caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 2]);
-           end
+                       max(log10(rock.perm(:,3)/(milli*darcy)))]);
+           %else
+           %    caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 2]);
+           %end
            c.Label.Interpreter = 'latex'; 
            c.Label.String = '$\log_{10} k_{xx}$ [mD]';
            c.Label.FontSize = 12;
@@ -420,12 +420,12 @@ classdef Fault
            xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); 
            axis off
            c = colorbar;
-           if ~any(obj.MatMap.isclay) % if there is sand
+           %if ~any(obj.MatMap.isclay) % if there is sand
                caxis([min(log10(rock.perm(:,1)/(milli*darcy))) ...
                       max(log10(rock.perm(:,3)/(milli*darcy)))]);
-           else
-              caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 2]);
-           end
+           %else
+           %   caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 2]);
+           %end
            c.Label.Interpreter = 'latex'; 
            c.Label.String = '$\log_{10} k_{zz}$ [mD]';
            c.Label.FontSize = 12;
