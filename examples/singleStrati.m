@@ -20,15 +20,15 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 %% Define model and upscale permeability
 % Mandatory Input parameters
 %           {[FW], [HW]}
-thickness = {[50 50], [10 40 10 40]};
-vcl       = {repmat([0.4 0.3], 1, 1), ...
-             repmat([0.4 0.1 0.7 0], 1, 1)};
+thickness = {repelem(25, 1, 4), [10 30 20 30 10]};
+vcl       = {[0.6 0.2 0.4 0.1], ...
+             [0.7 0.3 0.5 0.2 0.4]};
 dip       = [0, 0];
-faultDip  = 60;
+faultDip  = 70;
 Nsim      = 1000;                 % Number of simulations/realizations
 
 % Optional Input parameters
-zf      = [500, 500];           % [m]
+zf      = [1000, 1000];         % [m]
 maxPerm = 5000;                 % [mD]
 rho     = 0.7;                  % Corr. coeff. for multivariate distributions
 
@@ -41,10 +41,10 @@ U.ARcheck         = 0;          % check if Perm obtained with grid with
 
 % FW and HW
 footwall = Stratigraphy(thickness{1}, vcl{1}, 'Dip', dip(1), ...
-                        'DepthFaulting', zf(1));
+                        'DepthFaulting', zf(1), 'DepthBurial', repelem(2000, 1, 4));
 hangingwall = Stratigraphy(thickness{2}, vcl{2}, 'Dip', dip(2), 'IsHW', 1, ...
                            'NumLayersFW', footwall.NumLayers, ...
-                           'DepthFaulting', zf(2));
+                           'DepthFaulting', zf(2), 'DepthBurial', repelem(2000, 5));
 
 % Instantiate FaultedSection object (Strati in Faulted Section)
 mySect = FaultedSection(footwall, hangingwall, faultDip, 'maxPerm', maxPerm);
@@ -92,7 +92,7 @@ plotMatPropsHist(faults, smears, mySect, layerId)
 plotMatPropsCorr(faults, mySect)
 
 % General fault materials and perm view
-plotId = selectSimId('randm', faults, Nsim);                % simulation index
+plotId = selectSimId('minZ', faults, Nsim);                % simulation index
 faults{plotId}.plotMaterials(mySect) 
 % Add MatProps for this realization (table?)
 
