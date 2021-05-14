@@ -29,21 +29,36 @@ for n=1:N
     end
     
     if vcl(n) < isclayVcl   % ideal packing model (Revil et al., JGR, 2002)
-        b = 6*10^(-8);                               % [1/Pa] compaction coeff of the sand end-member
-        phi_0 = 0.49 + rand(1, 1).*0.1;              % [-] depositional poro of sand end-member
-        phi_r = 0.2556*exp(-5.028*10^(-4).*zf(n));   % [-] residual porosity of sand end-member
-        rho_g = 2650;                                % [kg/m^3] bulk density of sand grains
-        rho_w = 1050;                                % ["]      buld density of pure water
-        g = 9.806;                                   % [m/s^2] gravitational acceleration
-        zm = 1 ./ ( (1-phi_r).*g*b*(rho_g - rho_w) );   % characteristic length
-        num = phi_0 - phi_r + (1-phi_0) .* phi_r .* exp(z ./ zm);
-        den = phi_0 - phi_r + (1-phi_0) .* exp(z ./ zm);
-        poro.range{n} = repmat(num ./ den, 1, 2);
-        % TO ADD: vcl should be included (not endmember poro always). Just use
-        % a generic (e.g. kaolinite) for poro clay and compute using ideal
-        % packing.
+        % Sand end member (Eq 9)
+        b = 6*10^(-8);                              % [1/Pa] compaction coeff of the sand end-member
+        phi_0 = 0.49 + rand(1, 1)*0.1;              % [-] depositional poro of sand end-member
+        phi_r = 0.2556*exp(-5.028*10^(-4)*zf(n));   % [-] residual porosity of sand end-member
+        rho_g = 2650;                               % [kg/m^3] bulk density of sand grains
+        rho_w = 1050;                               % ["]      bulk density of pure water
+        g = 9.806;                                  % [m/s^2] gravitational acceleration
+        zm = 1 / ( (1-phi_r)*g*b*(rho_g - rho_w) ); % characteristic length
+        num = phi_0 - phi_r + (1-phi_0) * phi_r * exp(z / zm);
+        den = phi_0 - phi_r + (1-phi_0) * exp(z / zm);
+        sPoro = num /den;
+       
+        % Clay end-member (Eq 10). Here we use a generic kaolinite value,
+        % bc this model makes sand porosity more accurate than not using the
+        % clay fraction at all. However, most of these factors are
+        % uncertain. Hence, we do not follow this process for the clay
+        % layers(below), and use the full envelope to determine porosity 
+        % and permeability ranges.
+        phi0  = 0.55;                                   % depositional porosity
+        bc    = 4*10^(-8);                              % 1/Pa "compaction coefficient of the shale end-member"
+        zmc   = 1/(g*bc*(rho_g-rho_w));                 % characteristic length [m]
+        cPoro = phi0./(phi0 + (1-phi0)*exp(z./zmc));    % clay end-member porosity [-]
         
-        poro.type{n} = 'det';       % deterministic
+        % Porosity of an ideal sand-clay mixture (Eq. 11 and 12)
+        if vcl(n) < sPoro
+            poro.range{n} = repelem(sPoro - vcl(n)*(1-cPoro), 2);
+        else
+            poro.range{n} = repelem(vcl(n)*cPoro , 2);
+        end        
+        poro.type{n} = 'det';                           % deterministic
         poro.fcn{n} = @(x) repelem(poro.range{n}(1), x, 1);
         
     else        

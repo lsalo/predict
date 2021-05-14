@@ -370,7 +370,7 @@ classdef Fault
            xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); 
            axis off
            c = colorbar;
-           caxis([0 max([max(rock.poro), 0.35])]);
+           caxis([0 max([max(rock.poro), 0.25])]);
            set(gca,'fontSize', 10)
            %c.Label.Interpreter = 'latex'; 
            %c.Label.String = '$n$ [-]';
