@@ -21,11 +21,11 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 % Mandatory Input parameters
 %           {[FW], [HW]}
 thickness = {repelem(25, 1, 4), [10 30 20 30 10]};
-vcl       = {[0.6 0.2 0.4 0.1], ...
-             [0.7 0.3 0.5 0.2 0.4]};
+vcl       = {[0.6 0 0.4 0.7], ...
+             [0.7 0.14 0.5 0.27 0.4]};
 dip       = [0, 0];
 faultDip  = 70;
-Nsim      = 1000;                 % Number of simulations/realizations
+Nsim      = 10000;                 % Number of simulations/realizations
 
 % Optional Input parameters
 zf      = [1000, 1000];         % [m]
@@ -92,7 +92,7 @@ plotMatPropsHist(faults, smears, mySect, layerId)
 plotMatPropsCorr(faults, mySect)
 
 % General fault materials and perm view
-plotId = selectSimId('minZ', faults, Nsim);                % simulation index
+plotId = selectSimId('maxX', faults, Nsim);                % simulation index
 faults{plotId}.plotMaterials(mySect) 
 % Add MatProps for this realization (table?)
 

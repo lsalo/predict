@@ -12,7 +12,13 @@ sz = [16, 14];
 % Fault MatProps
 perms = cell2mat(cellfun(@(x) x.Perm, faults, ...
                          'UniformOutput', false)) ./ (milli*darcy);
-                     
+if any(any(perms < 0))
+    id = unique([find(perms(:, 1)<0), find(perms(:, 2)<0), find(perms(:, 3)<0)]);
+    warning(['Negative upscaled perms found in ' num2str(numel(id))...
+             ' simulations (ignored).'])
+    perms(id, :) = [];
+end
+    
 % Hist params
 nbins = 25;
 logMinP = log10(min(min(perms)));
