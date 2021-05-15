@@ -190,8 +190,8 @@ diagsGroup(~any(Omap(diagsGroup(:, 1), :), 2), :) = []; % remove diags w/o clay
 
 % Select final unit randomly, and assign unit to each diagonal group 
 unitGroup = zeros(size(diagsGroup, 1), 1);
-DiagBot = zeros(1, numel(M.DiagBot));
-DiagTop = zeros(1, numel(M.DiagBot));
+DiagBot = nan(1, numel(M.DiagBot));
+DiagTop = nan(1, numel(M.DiagBot));
 len = numel(M.DiagBot);
 for n = 1:size(diagsGroup, 1)
     repeatedUnitNonConsec = false;
@@ -199,7 +199,7 @@ for n = 1:size(diagsGroup, 1)
     vals(vals == 0) = [];
     idSelectedUnit = randi(numel(vals), 1);
     unitGroup(n) = vals(idSelectedUnit);
-    if DiagBot(unitGroup(n)) == 0 && DiagTop(unitGroup(n)) == 0 % new unit
+    if isnan(DiagBot(unitGroup(n)))                     % new unit
         DiagBot(unitGroup(n)) = diagsGroup(n, 1) - G.cartDims(1);
         DiagTop(unitGroup(n)) = diagsGroup(n, 2) - G.cartDims(1);
         
@@ -227,15 +227,14 @@ for n = 1:size(diagsGroup, 1)
         end
     end
 end
-M.DiagBot = DiagBot;
-M.DiagTop = DiagTop;
-M.nDiag = (M.DiagTop - M.DiagBot) + 1;
+M.nDiag = (DiagTop - DiagBot) + 1;
 M.nDiag(~M.isclay) = 0;                     % 0 diags for sand intervals
 clayUnitsAssigned = unique(unitGroup);      
 idNotPresent = ~ismember(idc, clayUnitsAssigned);
 M.nDiag(idc(idNotPresent)) = 0;             % 0 diags for non-appearing c
 assert(sum(M.nDiag) <= M.nDiagTot);
-
+M.DiagBot = DiagBot;    M.DiagBot(isnan(M.DiagBot)) = 0;
+M.DiagTop = DiagTop;    M.DiagTop(isnan(M.DiagTop)) = 0;
 
 % 1.6  If any M.nDiag is 1 we neglect it (For now, we don't)
 if any(M.nDiag == 1) 
@@ -255,7 +254,11 @@ end
 
 % 1.7 Check smearThickAsFault
 if smearThickAsFault
-    assert(sum(M.nDiag) == M.nDiagTot)
+    try
+        assert(sum(M.nDiag) == M.nDiagTot)
+    catch
+        error('smear not as thick as fault!')
+    end
 end
 
 
