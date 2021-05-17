@@ -1,4 +1,4 @@
-%% Analysis of material properties
+%% Analysis of material properties (marginal distributions)
 %
 % 
 % 
@@ -10,7 +10,7 @@ close all
 vcl = [0 0.15 0.25 0.35 0.4 0.55 0.7 0.9];
 isClayVcl = 0.4;
 thick = [2, 15, 50, 100];
-zf = [50, 500, 1000, 2000];
+zf = [50, 500, 1000, 2000, 3000];
 zmax = [500, 1000, 2000, 3000];
 clayMine = {'kao', 'mic', 'sme'};
 
@@ -26,9 +26,9 @@ lw = {'linewidth', 1};
 sz = [14, 12];
 
 %% Fault thickness
-
-f.thick = getFaultThickness(f.disp, Nsim);
-DTratios = f.disp./f.thick;
+f.thick = getFaultThickness();
+thickVal = f.thick.fcn(repelem(f.disp, Nsim, 1));
+DTratios = f.disp./thickVal;
 
 % Histogram parameters
 nbins = 25;
@@ -47,10 +47,10 @@ set(fh1, 'position', [500, 200, 275, 250]);
 
 
 %% Residual friction angle of clay and sand sources
-
-phi = zeros(Nsim, numel(vcl));
-for n=1:Nsim
-    phi(n, :) = getResidualFrictionAngle(vcl);
+phi = getResidualFrictionAngle(vcl);
+phiv = zeros(Nsim, numel(vcl));
+for n=1:numel(vcl)
+    phiv(:, n) = phi.fcn{n}(Nsim);
 end
 
 nbins = 25;
@@ -60,7 +60,7 @@ fh2 = figure(2);
 tiledlayout(1, numel(vcl), 'Padding', 'compact', 'TileSpacing', 'compact');
 for n = 1:numel(vcl)
     nexttile
-    histogram(phi(:, n), edg_phi, 'Normalization', 'probability','FaceColor', ...
+    histogram(phiv(:, n), edg_phi, 'Normalization', 'probability','FaceColor', ...
               [0.3 0.3 0.3])
     if n == 1
         xlabel('$\phi_\mathrm{r}$ [deg.]', latx{:}, 'fontSize', sz(2))
@@ -77,51 +77,40 @@ set(fh2, 'position', [500, 200, 150*numel(vcl), 175]);
 
 
 %% SSFc 
-
 N = numel(zf)*numel(thick);
-SSFc = zeros(Nsim, numel(vcl), N);
+SSFcVals = zeros(Nsim, numel(vcl), N);
 id = find(vcl >= isClayVcl);
-SSFcBounds = zeros(2, numel(id), N);
 zf_all = repelem(zf', numel(thick), 1);
 thick_all = repmat(thick', numel(zf), numel(vcl));
-throw = f.throw;
 fdisp = f.disp;
-parfor j=1:N
-    [~, SSFcBounds(:, :, j)] = getSSFc(vcl, isClayVcl, zf_all(j), ...
-                                       thick_all(j, :), fdisp);
-    for n=1:Nsim
-        SSFc(n, :, j) = getSSFc(vcl, isClayVcl, zf_all(j), ...
-                                thick_all(j, :), fdisp);
-    end
+for j=1:N
+    SSFc = getSSFc(vcl, isClayVcl, zf_all(j), thick_all(j, :), fdisp);
+    SSFcVals(:, id, j) = cell2mat(cellfun(@(x) x(Nsim), SSFc.fcn(id), ...
+                                          'uniformOutput', false));
 end
 
 % histogram params
 nbins = 25;
 edg_SSFc = linspace(0, 20, nbins);
-colrs = repmat(hsv(numel(thick)), numel(zf), 1);
+colrs = repmat([0 0 0; 1 0 0; 0 0 1; 0.6 0.6 0.6], numel(zf), 1);
 nextzf = 1:numel(thick):N;
-rat = round(f.throw ./ thick, 1);
+tileids = 1:numel(id):N;
+tileids = (tileids + (0:numel(id)-1)')';
+rat = round(thick ./ f.disp, 2);
 
 fh3 = figure(3);
-tiledlayout(numel(id), numel(zf), 'Padding', 'compact', 'TileSpacing', 'compact');
+tiledlayout(numel(zf), numel(id), 'Padding', 'compact', 'TileSpacing', 'compact');
 for n = 1:numel(id)
     for j=1:N
-        if any(ismember(nextzf, j))
-            nexttile
-            hold on
-            plot(repelem(SSFcBounds(1, n, j), 1, 2), [0 1], '-', 'color', ...
-                [0.8 0.8 0.8], 'linewidth', 2, 'HandleVisibility','off')
-            plot(repelem(SSFcBounds(2, n, j), 1, 2), [0 1], '-', 'color', ...
-                [0.8 0.8 0.8], 'linewidth', 2, 'HandleVisibility','off') 
-        end
-        if j==1 && n == 1
-            text(SSFcBounds(2, n, j)+0.5, 0.9, 'SSFc lim.', latx{:}, ...
-                 'fontsize', sz(2))
-        end
+        idt = find(ismember(nextzf, j));
+         if any(idt)
+             nexttile(tileids(idt, n))
+             hold on
+         end
         if j <= numel(thick) && n == 1
-                histogram(SSFc(:, id(n), j), edg_SSFc, 'Normalization', ...
+                histogram(SSFcVals(:, id(n), j), edg_SSFc, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
-                  ['$t / T =$ ' num2str(rat(j), '%1.1f')], 'EdgeColor', ...
+                  ['$T / f.D =$ ' num2str(rat(j), '%1.2f')], 'EdgeColor', ...
                   colrs(j, :));
             xlabel('SSFc [-]', latx{:}, 'fontSize', sz(2))
             ylabel('P [-]', latx{:}, 'fontSize', sz(2))
@@ -130,7 +119,7 @@ for n = 1:numel(id)
                    latx{:}, 'fontSize', sz(2))
             legend(latx{:}, 'fontSize', sz(2), 'location', 'southeast')
         else
-            histogram(SSFc(:, id(n), j), edg_SSFc, 'Normalization', ...
+            histogram(SSFcVals(:, id(n), j), edg_SSFc, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', ...
                   'EdgeColor', colrs(j, :));
             title(['$V_\mathrm{cl}$ = ' num2str(vcl(id(n))) ...
@@ -143,11 +132,10 @@ for n = 1:numel(id)
     end
 end
 hold off
-set(fh3, 'position', [500, 200, 200*numel(zf), 150*numel(id)]);
+set(fh3, 'position', [500, 200, 225*numel(id), 150*numel(zf)]);
 
 
 %% Porosity
-
 ids = find(vcl < isClayVcl);
 vcls = vcl(ids);
 idc = find(vcl >= isClayVcl);
@@ -160,41 +148,36 @@ zmaxc = repmat(zmax', 1, 1);
 poros = zeros(Nsim, numel(vcls), numel(zf_all));     % depends on zf, zmax, vcl
 poroc = zeros(Nsim, numel(zmax));                    % only depends on zmax
 for j=1:numel(zf_all)
-    for n=1:Nsim
-        poros_range = getPorosity(vcls, isClayVcl, zf_all(j), ...
-                                  zmax_all(j, :), 'zmax', 0);
-        poros(n, :, j) =  poros_range(:, 1);
-    end
+    poro = getPorosity(vcls, isClayVcl, zmax_all(j, :), 'zmax', ...
+                       zf_all(j), 0);
+    poros(:, :, j) =  cell2mat(cellfun(@(x) x(Nsim), poro.fcn, ...
+                                          'uniformOutput', false));
 end
 for j=1:numel(zmax)
-    for n=1:Nsim
-        poroc_range = getPorosity(vclc(1), isClayVcl, zf(1), zmaxc(j), ...
-                                  'zmax', 0);
-        poroc(n, j) =  poroc_range(1) + rand(1, 1) ...
-                                      .* (poroc_range(2) - poroc_range(1));
-    end
+    poro = getPorosity(vclc(1), isClayVcl, zmaxc(j), 'zmax', zf(1), 0);
+    poroc(:, j) = cell2mat(cellfun(@(x) x(Nsim), poro.fcn, ...
+                           'uniformOutput', false));
 end
 
 % histogram params
 nbins = 25;
 edg_poro = linspace(0, 0.6, nbins);
-colrs = repmat(hsv(numel(zmax)), numel(zf), 1);
+colrs = repmat([0 0 0; 1 0 0; 0 0 1; 0.6 0.6 0.6], numel(zf), 1);
 colrs(idRem, :) = [];
 N = numel(zf_all);
-nextzf = [1; 1+find(diff(zf_all) > 0)];        
+nextzf = [1; 1+find(diff(zf_all) > 0)];    
+tileids = 1:numel(vcls):numel(zf)*numel(vcls);
+tileids = (tileids + (0:numel(vcls)-1)')';
 
 % Plots
 fh4 = figure(4);
-tiledlayout(numel(vcls), numel(zf), 'Padding', 'compact', 'TileSpacing', 'compact');
+tiledlayout(numel(zf), numel(vcls), 'Padding', 'compact', 'TileSpacing', 'compact');
 for n = 1:numel(vcls)
     for j=1:N
-        if any(ismember(nextzf, j))
-            nexttile
-            hold on
-            %plot(repelem(SSFcBounds(1, n, j), 1, 2), [0 1], '-', 'color', ...
-            %    [0.8 0.8 0.8], 'linewidth', 2, 'HandleVisibility','off')
-            %plot(repelem(SSFcBounds(2, n, j), 1, 2), [0 1], '-', 'color', ...
-            %    [0.8 0.8 0.8], 'linewidth', 2, 'HandleVisibility','off') 
+        idt = find(ismember(nextzf, j));
+        if any(idt)
+            nexttile(tileids(idt, n))
+            hold on 
         end
         if j <= numel(zmax) && n == 1
                 histogram(poros(:, ids(n), j), edg_poro, 'Normalization', ...
@@ -223,7 +206,7 @@ for n = 1:numel(vcls)
     end
 end
 hold off
-set(fh4, 'position', [500, 200, 200*numel(zf), 150*numel(ids)]);
+set(fh4, 'position', [500, 200, 225*numel(ids), 150*numel(zf)]);
 
 fh5 = figure(5);
 hold on
