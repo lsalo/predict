@@ -133,7 +133,7 @@ classdef FaultedSection
            % ResFric
            obj.MatPropDistr.resFric = getResidualFrictionAngle(obj.Vcl);
            
-           % SSFc and SSFc bounds
+           % SSFc
            obj.MatPropDistr.ssfc = getSSFc(obj.Vcl, obj.IsClayVcl, zf, ...
                                            obj.Thick, Disp, obj.HW.Id);
                                    
