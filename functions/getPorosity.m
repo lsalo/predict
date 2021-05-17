@@ -1,4 +1,4 @@
-function [poro] = getPorosity(vcl, isclayVcl, zf, zmax, zclay, isUndercompacted, idHW)
+function [poro] = getPorosity(vcl, isclayVcl, z, zeval, zf, isUndercompacted, idHW)
 %
 %
 %
@@ -17,14 +17,15 @@ else
     zf  = [repelem(zf(1), idHW(1)-1), ...
            repelem(zf(2), numel(idHW))];
 end
+if strcmp(zeval, 'zf')
+    z = zf;
+end
 
 for n=1:N
     % Depth at which porosity should be computed
-    if strcmp(zclay, 'zf')
-        z = zf(n);
+    if strcmp(zeval, 'zf')
         poro.param{n} = 'zf';
-    elseif strcmp(zclay, 'zmax')
-        z = zmax(n);
+    elseif strcmp(zeval, 'zmax')
         poro.param{n} = 'zmax';
     end
     
@@ -37,8 +38,8 @@ for n=1:N
         rho_w = 1050;                               % ["]      bulk density of pure water
         g = 9.806;                                  % [m/s^2] gravitational acceleration
         zm = 1 / ( (1-phi_r)*g*b*(rho_g - rho_w) ); % characteristic length
-        num = phi_0 - phi_r + (1-phi_0) * phi_r * exp(z / zm);
-        den = phi_0 - phi_r + (1-phi_0) * exp(z / zm);
+        num = phi_0 - phi_r + (1-phi_0) * phi_r * exp(z(n) / zm);
+        den = phi_0 - phi_r + (1-phi_0) * exp(z(n) / zm);
         sPoro = num /den;
        
         % Clay end-member (Eq 10). Here we use a generic kaolinite value,
@@ -50,7 +51,7 @@ for n=1:N
         phi0  = 0.55;                                   % depositional porosity
         bc    = 4*10^(-8);                              % 1/Pa "compaction coefficient of the shale end-member"
         zmc   = 1/(g*bc*(rho_g-rho_w));                 % characteristic length [m]
-        cPoro = phi0./(phi0 + (1-phi0)*exp(z./zmc));    % clay end-member porosity [-]
+        cPoro = phi0./(phi0 + (1-phi0)*exp(z(n)./zmc)); % clay end-member porosity [-]
         
         % Porosity of an ideal sand-clay mixture (Eq. 11 and 12)
         if vcl(n) < sPoro
@@ -63,13 +64,13 @@ for n=1:N
         
     else        
         if isUndercompacted == 0
-            poro.range{n} = [(1 - nthroot(z./(6.02*1000), 6.35)) - 0.05, 0];
+            poro.range{n} = [(1 - nthroot(z(n)./(6.02*1000), 6.35)) - 0.05, 0];
             poro.range{n}(2) = poro.range{n}(1) + 0.1;
             poro.type{n} = 'unif';
             poro.fcn{n} = @(x) poro.range{n}(1) + rand(x, 1) .* ...
                                (poro.range{n}(2) - poro.range{n}(1));
         elseif isUndercompacted == 1
-            poro.range{n} = repelem(1 - nthroot(z./(15*1000), 8), 1, 2);
+            poro.range{n} = repelem(1 - nthroot(z(n)./(15*1000), 8), 1, 2);
             poro.type{n} = 'det';
             poro.fcn{n} = @(x) repelem(poro.range{n}(1), x, 1);
         else
