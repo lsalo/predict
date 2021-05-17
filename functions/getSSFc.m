@@ -112,7 +112,7 @@ for n = 1:N
         SSFc.type{n} = 'tri';
         SSFc.dist{n} = makedist('Triangular', 'a', endpoints(1), 'b', peak, ...
                                 'c', endpoints(2));
-        SSFc.fcn{n} = @(x) random(SSFc.triDist{n}, x, 1);
+        SSFc.fcn{n} = @(x) random(SSFc.dist{n}, x, 1);
     end
 end
 
