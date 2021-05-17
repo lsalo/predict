@@ -107,7 +107,6 @@ classdef Fault
             % Convenience
             idc  = FS.Vcl >= FS.IsClayVcl;
             zf   = FS.DepthFaulting;
-            zmax = [FS.FW.DepthBurial, FS.HW.DepthBurial];
             
             
             % -------------------------------------------------------------
@@ -166,8 +165,8 @@ classdef Fault
             % Perm Anisotropy Ratio
             % ------------------------------------------------------------
             % poro at zf
-            poroDist = getPorosity(FS.Vcl, FS.IsClayVcl, zf, zmax, ...
-                                   'zf', FS.IsUndercompacted, FS.HW.Id);
+            poroDist = getPorosity(FS.Vcl, FS.IsClayVcl, zf, 'zf', ...
+                                   zf, FS.IsUndercompacted, FS.HW.Id);
             sandPoroRange  = cell2mat(poroDist.range(~idc)');
             poroAtZf(~idc) = sandPoroRange(:, 1);
             clayPoroRange  = cell2mat(poroDist.range(idc)');
