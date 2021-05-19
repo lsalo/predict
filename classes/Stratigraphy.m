@@ -31,7 +31,7 @@ classdef Stratigraphy       % Value class to define a data structure.
     % OPTIONAL PARAMETERS:
     %   dip:        Dip angle of each layer, in degrees. The dip angle is 
     %               the angle between the horizontal and the line of max
-    %               slope on a given layer. It can take an array of size
+    %               slope on a given layer. It can be an array of size
     %               1xN, where N is the number of layers, or a scalar value
     %               (same dip angle for all layers).
     %   'property' - Set property to the specified value.
@@ -45,8 +45,8 @@ classdef Stratigraphy       % Value class to define a data structure.
     %   footwall = Stratigraphy(thickness, vcl)
     %   footwall = Stratigraphy(thickness, vcl, 'DepthFaulting', 50)
     %   footwall = Stratigraphy(thickness, vcl, 'Dip', dip, ...
-    %                           'DepthBurial', 2000, 'ResFric', [15, 45])
-    %   hangingwall = Stratigraphy(thickness, vcl, dip, 'IsHW', 1, ...
+    %                           'DepthBurial', 2000)
+    %   hangingwall = Stratigraphy(thickness, vcl, 'Dip', dip, 'IsHW', 1, ...
     %                              'NumLayersFW', footwall.NumLayers)
     % 
     % ____________________________________________________________________
@@ -60,28 +60,30 @@ classdef Stratigraphy       % Value class to define a data structure.
         Dip             % Dip of each layer (w/ respect to hzntal) [deg]
         DepthFaulting   % Depth of faulting [m]
         DepthBurial     % Maximum burial depth of the layer [m]
-        ClayMine        % Predominant clay mineral in clay beds
+        ClayMine        % Main clay mineral in clay beds (3-letter string)
         IsHW            % pass 1 if this is the HangingWall object.
         Perm            % Permeability perpendicular to bedding [mD]
         ResFric         % Residual Friction Angle [deg]
-        
-        % Pre-set
-        IsThickApp      % 0 if true thickness was passed (no dip), 1 otherwise.
+    end
+    properties(SetAccess=protected)
+        % Automatically set
+        IsThickApp      % 0 if true thickness was passed (no dip), 1 otherwise. 
     end
     properties (Hidden)
-        NumLayersFW     % if IsHW = 1, pass obj.NumLayers of FW object. [req.]
-        IsClayVcl       % clay smears for Vcl >= this value.
+        NumLayersFW     % if IsHW = 1, pass FW.NumLayers of FW object. [req.]
+        IsClayVcl       % clay smear source if Vcl >= this value (0.4)
     end  
     properties (Dependent, Hidden)    % Computed based on other inputs
         NumLayers       % Number of layers
         Id              % 1: NumLayers (FW), N(FW)+1:N(FW)+NumLayers(HW) (HW)
-        IsClay          % true for Vcl >= IsClayValue   
-        
+        IsClay          % true for Vcl >= IsClayValue     
     end
     
     methods
         function obj = Stratigraphy(thickness, vcl, varargin)
+            %
             %  Construct an instance of this class with properties
+            %
 
             % Required inputs
             obj.Thickness = thickness;
