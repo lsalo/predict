@@ -20,12 +20,12 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 %% Define model and upscale permeability
 % Mandatory Input parameters
 %           {[FW], [HW]}
-thickness = {repelem(25, 1, 4), [10 30 20 30 10]};
-vcl       = {[0.6 0 0.4 0.7], ...
-             [0.7 0.14 0.5 0.27 0.4]};
-dip       = [0, 0];
+thickness = {repelem(25, 1, 4), [5 10 15 10 20 10 10 10 10]};
+vcl       = {[0.6 0 0.4 0.5], ...
+             [0.3 0.5 0.25 0.7 0.1 0.6 0.3 0.5 0.1]};
+dip       = [0, -10];
 faultDip  = 70;
-Nsim      = 10000;                 % Number of simulations/realizations
+Nsim      = 1000;                % Number of simulations/realizations
 
 % Optional Input parameters
 zf      = [1000, 1000];         % [m]
@@ -44,7 +44,7 @@ footwall = Stratigraphy(thickness{1}, vcl{1}, 'Dip', dip(1), ...
                         'DepthFaulting', zf(1), 'DepthBurial', repelem(2000, 1, 4));
 hangingwall = Stratigraphy(thickness{2}, vcl{2}, 'Dip', dip(2), 'IsHW', 1, ...
                            'NumLayersFW', footwall.NumLayers, ...
-                           'DepthFaulting', zf(2), 'DepthBurial', repelem(2000, 5));
+                           'DepthFaulting', zf(2), 'DepthBurial', repelem(2000, 9));
 
 % Instantiate FaultedSection object (Strati in Faulted Section)
 mySect = FaultedSection(footwall, hangingwall, faultDip, 'maxPerm', maxPerm);

@@ -383,7 +383,7 @@ classdef Fault
            set(gca, 'colormap', copper)
            plotToolbar(G, log10(rock.perm(:,1)/(milli*darcy)), ...
                        'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0);
-           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); axis off
+           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); %axis off
            c = colorbar;
            %if ~any(obj.MatMap.isclay)
                 caxis([min(log10(rock.perm(:,1)/(milli*darcy))) ...
@@ -395,7 +395,9 @@ classdef Fault
            c.Label.String = '$\log_{10} k_{xx}$ [mD]';
            c.Label.FontSize = 12;
            set(gca,'fontSize', 10)
-           %xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
+           xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
+           xticks([0 obj.MatProps.thick])
+           xticklabels([0 round(obj.MatProps.thick, 2)])
            val = obj.Perm(1)/(milli*darcy);
            if val < 1e-3
                val = val*1000;
