@@ -32,7 +32,7 @@ for n=1:N
     if vcl(n) < isclayVcl   % ideal packing model (Revil et al., JGR, 2002)
         % Sand end member (Eq 9)
         b = 6*10^(-8);                              % [1/Pa] compaction coeff of the sand end-member
-        phi_0 = 0.49 + rand(1, 1)*0.1;              % [-] depositional poro of sand end-member
+        phi_0 = 0.49;                               % [-] depositional poro of sand end-member
         phi_r = 0.2556*exp(-5.028*10^(-4)*zf(n));   % [-] residual porosity of sand end-member
         rho_g = 2650;                               % [kg/m^3] bulk density of sand grains
         rho_w = 1050;                               % ["]      bulk density of pure water
