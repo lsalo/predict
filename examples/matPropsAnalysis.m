@@ -228,88 +228,70 @@ set(fh5, 'position', [500, 200, 275, 225]);
 
 
 %% Permeability Anisotropy ratio
-idc    = find(vcl >= isClayVcl);
-vclc   = vcl(idc);
-zmax   = repelem(1500, 1, numel(idc));
-porozf = zeros(numel(zf), 1);
-for n=1:numel(zf)
-    r = getPorosity(vclc(1), isClayVcl, zf(n), zmax, 'zf', 0);
-    porozf(n) = r(1) + rand(1, 1) .* (r(2) - r(1));
-end
-
-shear_strain = [10 50 100 500 1000];           % fault throw / fault thick.
-silt  = [0 1];
-N = numel(zf)*numel(clayMine)*numel(shear_strain)*numel(silt);
-cm_all     = repmat(repelem(clayMine', 1, 1), N/numel(clayMine), 1);
-ss_all     = repmat(repelem(shear_strain', numel(clayMine), 1), ...
-                    numel(zf)*numel(silt), 1);
-zf_all     = repmat(repelem(zf', numel(clayMine)*numel(shear_strain), 1), ...
-                    numel(silt), 1);
-porozf_all = repmat(repelem(porozf, numel(clayMine)*numel(shear_strain), 1), ...
-                    numel(silt), 1);
-silt_all   = repelem(silt', N/numel(silt), 1);
-krat = zeros(Nsim, N);
-for j=1:N
-    for n=1:Nsim
-        krat(n, j) = getAnisotropyRatio(0.5, isClayVcl, zf_all(j), ...
-                                        cm_all(j), ss_all(j), ...
-                                        silt_all(j), porozf);
+g = [10 50 100 500 1000];           % shear strain: fault throw / fault thick.
+N = numel(zf)*numel(clayMine)*numel(g);
+g_all = repmat(g',N/numel(g), 1);
+zf_all = repmat(repelem(zf', numel(g), 1), numel(clayMine), 1);
+cm_all = repelem(clayMine', N/numel(clayMine), 1);
+krVals = zeros(Nsim, numel(vcl), N);
+for n=1:N
+    poro = getPorosity(vcl, isClayVcl, zf_all(n), 'zf', zf_all(n), 0);
+    porov = cell2mat(cellfun(@(x) x(Nsim), poro.fcn, 'uniformOutput', false));
+    krat = getAnisotropyRatio(vcl, zf_all(n), cm_all{n});
+    gv = repelem(g_all(n), Nsim, 1);
+    for j=1:numel(vcl)
+        krVals(:, j, n) = krat.fcn{j}(gv,porov(:,j));
     end
 end
 
 % Histogram params
-nbins = 50;
-edg_krat = logspace(0, 4, nbins);
-colrs = repmat(hsv(numel(clayMine)), N/numel(clayMine), 1);
-nextcm = 1:numel(clayMine):N/2;  
+nbins = 25;
+edg_krat = linspace(0, 8, nbins);
+colrs = repmat([0 0 0; 1 0 0; 0 0 1; 0.5 0.5 0.5; 0 1 1], N/5, 1);
+styls = {'-','-','.-','--',':'};
+nextcm = 1:N/numel(clayMine):N; 
+nextzf = [1; 1+find(diff(zf_all) > 0)];    
+tileids = 1:numel(vcl):numel(zf)*numel(vcl);
+tileids = (tileids + (0:numel(vcl)-1)')';
 
 % Plots
 fh6 = figure(6);
-tiledlayout(numel(zf), numel(shear_strain), 'Padding', 'compact', 'TileSpacing', 'compact');
-idSilt = find(diff(silt_all) > 0);
-for j=1:N/numel(silt)
-    if any(ismember(nextcm, j))
-        nexttile
-        hold on
-    end
-    if j <= numel(clayMine)
-        histogram(krat(:, j), edg_krat, 'Normalization', ...
-            'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
-            ['$m =$ ' cm_all{j}], 'EdgeColor', colrs(j, :));
-        if j == numel(clayMine)
-            histogram(krat(:, j+idSilt), edg_krat, 'Normalization', ...
-                'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
-            'silt = 0.1', 'EdgeColor', colrs(j, :), ...
-            'LineStyle', '-.');
-        else
-            histogram(krat(:, j+idSilt), edg_krat, 'Normalization', ...
-                'probability', 'DisplayStyle', 'stairs', 'EdgeColor', ...
-                colrs(j, :), 'LineStyle', '-.', 'HandleVisibility','off');
+tiledlayout(numel(zf), numel(vcl), 'Padding', 'compact', 'TileSpacing', 'compact');
+for n=1:numel(vcl)
+    for j=1:N/numel(clayMine)
+        idt = find(ismember(nextzf, j));
+        if any(idt)
+            nexttile(tileids(idt, n))
+            hold on 
         end
-        xlabel('$k^\prime$ [-]', latx{:}, 'fontSize', sz(2))
-        ylabel('P [-]', latx{:}, 'fontSize', sz(2))
-        title(['  $z_\mathrm{f}$ = ' num2str(zf_all(j)) ...
-               ' $\vert$ $\gamma = $' num2str(ss_all(j))], latx{:}, 'fontSize', sz(2))
-        h = legend(latx{:}, 'fontSize', sz(2), 'location', 'northeast');
-         set(h.BoxFace, 'ColorType','truecoloralpha', ...
-                'ColorData', uint8(255*[1;1;1;.7])); 
-    else
-        histogram(krat(:, j), edg_krat, 'Normalization', ...
-            'probability', 'DisplayStyle', 'stairs', ...
-            'EdgeColor', colrs(j, :));
-        histogram(krat(:, j+idSilt), edg_krat, 'Normalization', ...
-            'probability', 'DisplayStyle', 'stairs', 'EdgeColor', ...
-            colrs(j, :), 'LineStyle', '-.');
-        title(['  $z_\mathrm{f}$ = ' num2str(zf_all(j)) ...
-               ' $\vert$ $\gamma = $' num2str(ss_all(j))], latx{:}, 'fontSize', sz(2))
+        if j <= numel(g) && n == 1
+                histogram(krVals(:, n, j), edg_krat, 'Normalization', ...
+                  'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
+                  ['$\gamma =$ ' num2str(g_all(j))], 'EdgeColor', ...
+                  colrs(j, :));
+            xlabel('$k^\prime$ [-]', latx{:}, 'fontSize', sz(2))
+            ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+            title(['$m =$ ' cm_all{j} ' $\vert$ $V_\mathrm{cl}$ = ' num2str(vcls(n)) ...
+                   ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf_all(j)) ' m'], ...
+                   latx{:}, 'fontSize', sz(2))
+            h = legend(latx{:}, 'fontSize', sz(2), 'location', 'northwest');
+            set(h.BoxFace, 'ColorType','truecoloralpha', ...
+                'ColorData', uint8(255*[1;1;1;.5]));  
+        else
+            histogram(krVals(:, n, j), edg_krat, 'Normalization', ...
+                  'probability', 'DisplayStyle', 'stairs', ...
+                  'EdgeColor', colrs(j, :));
+            title(['$V_\mathrm{cl}$ = ' num2str(vcl(n)) ...
+                   ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf_all(j)) ' m'], ...
+                   latx{:}, 'fontSize', sz(2))
+        end
+        plot([0 8], [0 0], '-k', 'HandleVisibility','off')
+        xlim([0, 8]); xticks(0:2:8); 
+        yticks([0 0.2 0.4 0.6 0.8 1]); ylim([0 1]); grid on;            
     end
-    h = plot([1 10000], [0 0], '-k', 'HandleVisibility','off');
-    set(gca,'XScale','log')
-    xticks([1 10 100 1000 10000]); xticklabels({'1' '10' '10^{2}' '10^{3}' '10^{4}'})
-    xlim([0, 10000]); yticks([0 0.2 0.4 0.6 0.8 1]); ylim([0 1]); grid on;
 end
 hold off
-set(fh6, 'position', [500, 200, 200*numel(shear_strain), ...
+set(fh6, 'position', [500, 200, 100*numel(vcl), ...
     150*numel(zf)]);
 
 
