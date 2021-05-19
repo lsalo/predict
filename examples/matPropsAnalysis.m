@@ -233,34 +233,43 @@ N = numel(zf)*numel(clayMine)*numel(g);
 g_all = repmat(g',N/numel(g), 1);
 zf_all = repmat(repelem(zf', numel(g), 1), numel(clayMine), 1);
 cm_all = repelem(clayMine', N/numel(clayMine), 1);
-krVals = zeros(Nsim, numel(vcl), N);
+vclkr = [0.1 0.3 0.5 0.7 0.9];
+krVals = zeros(Nsim, numel(vclkr), N);
 for n=1:N
-    poro = getPorosity(vcl, isClayVcl, zf_all(n), 'zf', zf_all(n), 0);
+    poro = getPorosity(vclkr, isClayVcl, zf_all(n), 'zf', zf_all(n), 0);
     porov = cell2mat(cellfun(@(x) x(Nsim), poro.fcn, 'uniformOutput', false));
-    krat = getAnisotropyRatio(vcl, zf_all(n), cm_all{n});
+    krat = getAnisotropyRatio(vclkr, zf_all(n), cm_all{n});
     gv = repelem(g_all(n), Nsim, 1);
-    for j=1:numel(vcl)
+    for j=1:numel(vclkr)
         krVals(:, j, n) = krat.fcn{j}(gv,porov(:,j));
     end
 end
 
 % Histogram params
 nbins = 25;
-edg_krat = linspace(0, 8, nbins);
-colrs = repmat([0 0 0; 1 0 0; 0 0 1; 0.5 0.5 0.5; 0 1 1], N/5, 1);
-styls = {'-','-','.-','--',':'};
+edg_krat = linspace(0, 10, nbins);
+colrs = repmat([0 0 0; 1 0 0; 0 0 1; 0.5 0.5 0.5; 0 1 1], N/numel(g), 1);
+styls = repmat({'-','-','--','-.',':'}', N/numel(g), 1);
+lw = repmat([2 1.5 1 0.5 0.5]', N/numel(g), 1);
 nextcm = 1:N/numel(clayMine):N; 
-nextzf = [1; 1+find(diff(zf_all) > 0)];    
-tileids = 1:numel(vcl):numel(zf)*numel(vcl);
-tileids = (tileids + (0:numel(vcl)-1)')';
+nextzf = [1; 1+find(diff(zf_all) ~= 0)];    
+tileids = 1:numel(vclkr):numel(zf)*numel(vclkr);
+tileids = (tileids + (0:numel(vclkr)-1)')';
 
 % Plots
 fh6 = figure(6);
-tiledlayout(numel(zf), numel(vcl), 'Padding', 'compact', 'TileSpacing', 'compact');
-for n=1:numel(vcl)
-    for j=1:N/numel(clayMine)
+tiledlayout(numel(zf), numel(vclkr), 'Padding', 'compact', 'TileSpacing', 'compact');
+for n=1:numel(vclkr)
+    %for j=1:N/numel(clayMine)                           % kaolinite
+    %for j=N/numel(clayMine)+1:2*(N/numel(clayMine))     % mica
+    for j = 2*(N/numel(clayMine))+1:3*(N/numel(clayMine)) % smectite
         idt = find(ismember(nextzf, j));
         if any(idt)
+            if idt > size(tileids, 1) && idt < 2*size(tileids, 1)+1 
+                idt = idt - size(tileids, 1);
+            elseif idt >= 2*size(tileids, 1)+1
+                idt = idt - 2*size(tileids, 1);
+            end
             nexttile(tileids(idt, n))
             hold on 
         end
@@ -268,10 +277,10 @@ for n=1:numel(vcl)
                 histogram(krVals(:, n, j), edg_krat, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
                   ['$\gamma =$ ' num2str(g_all(j))], 'EdgeColor', ...
-                  colrs(j, :));
+                  colrs(j, :), 'lineStyle', styls{j}, 'lineWidth', lw(j));
             xlabel('$k^\prime$ [-]', latx{:}, 'fontSize', sz(2))
             ylabel('P [-]', latx{:}, 'fontSize', sz(2))
-            title(['$m =$ ' cm_all{j} ' $\vert$ $V_\mathrm{cl}$ = ' num2str(vcls(n)) ...
+            title(['$V_\mathrm{cl}$ = ' num2str(vclkr(n)) ...
                    ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf_all(j)) ' m'], ...
                    latx{:}, 'fontSize', sz(2))
             h = legend(latx{:}, 'fontSize', sz(2), 'location', 'northwest');
@@ -280,19 +289,19 @@ for n=1:numel(vcl)
         else
             histogram(krVals(:, n, j), edg_krat, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', ...
-                  'EdgeColor', colrs(j, :));
-            title(['$V_\mathrm{cl}$ = ' num2str(vcl(n)) ...
+                  'EdgeColor', colrs(j, :), 'lineStyle', styls{j}, 'lineWidth', lw(j));
+            title(['$V_\mathrm{cl}$ = ' num2str(vclkr(n)) ...
                    ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf_all(j)) ' m'], ...
                    latx{:}, 'fontSize', sz(2))
         end
-        plot([0 8], [0 0], '-k', 'HandleVisibility','off')
-        xlim([0, 8]); xticks(0:2:8); 
+        plot([0 10], [0 0], '-k', 'HandleVisibility','off')
+        xlim([0, 10]); xticks(0:2:10); 
         yticks([0 0.2 0.4 0.6 0.8 1]); ylim([0 1]); grid on;            
     end
 end
 hold off
-set(fh6, 'position', [500, 200, 100*numel(vcl), ...
-    150*numel(zf)]);
+set(fh6, 'position', [500, 200, 200*numel(vclkr), ...
+    175*numel(zf)]);
 
 
 
@@ -300,7 +309,6 @@ set(fh6, 'position', [500, 200, 100*numel(vcl), ...
 
 % Sands
 vcls   = [0.1 0.25 0.35];
-ids    = 1:numel(vcls);
 zmax_all = repmat(repmat(zmax', 1, numel(vcls)), numel(zf), 1);
 zf_all   = repelem(zf', numel(zmax), 1);
 idRem    = zf_all > zmax_all(:, 1);  % faulting depth must be <= max burial
@@ -308,33 +316,35 @@ zmax_all(idRem, :) = []; zf_all(idRem, :) = [];
 N = numel(zf_all);
 perms =  zeros(Nsim, numel(vcls), N);
 for n=1:N
-   permf = getPermeability(vcls, isClayVcl, zf_all(n), zmax_all(n, :), ...
-                           [], []);
-   for k = 1:numel(vcls)
-   perms(:, k, n) = permf{k}(Nsim) / (milli*darcy);     % mD
-   end
+   perm = getPermeability(vcls, isClayVcl, zf_all(n), zmax_all(n, :), ...
+                           []);
+   perms(:, :, n) =cell2mat(cellfun(@(x) x(Nsim), perm.fcn', ...
+                            'uniformOutput', false))/9.8692e-16;     % mD
 end
 
 % hist params
-nbins = 25;
+nbins = 50;
 edg_perms = logspace(-4, 6, nbins);
-colrs = repmat(hsv(numel(zmax)), numel(zf), 1);
+colrs = repmat([0 0 0; 1 0 0; 0 0 1; 0.5 0.5 0.5], numel(zf), 1);
 colrs(idRem, :) = [];
-nextzf = [1; 1 + find(diff(zf_all))];  
+nextzf = [1; 1 + find(diff(zf_all))]; 
+tileids = 1:numel(vcls):numel(zf)*numel(vcls);
+tileids = (tileids + (0:numel(vcls)-1)')';
 
 % Plot
 fh7 = figure(7);
-tiledlayout(numel(vcls), numel(zf), 'Padding', 'compact', 'TileSpacing', 'compact');
+tiledlayout(numel(zf), numel(vcls), 'Padding', 'compact', 'TileSpacing', 'compact');
 for n = 1:numel(vcls)
     for j=1:N
-        if any(ismember(nextzf, j))
-            nexttile
-            hold on
+        idt = find(ismember(nextzf, j));
+        if any(idt)
+            nexttile(tileids(idt, n))
+            hold on 
         end
         if j <= numel(zmax) && n == 1
-                histogram(perms(:, ids(n), j), edg_perms, 'Normalization', ...
+                histogram(perms(:, n, j), edg_perms, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
-                  ['$z_\mathrm{max} =$ ' num2str(zmax_all(j))], 'EdgeColor', ...
+                  ['$z_\mathrm{max} =$ ' num2str(zmax_all(j, 1))], 'EdgeColor', ...
                   colrs(j, :));
             xlabel('$k_\mathrm{xx}$ [mD]', latx{:}, 'fontSize', sz(2))
             ylabel('P [-]', latx{:}, 'fontSize', sz(2))
@@ -345,7 +355,7 @@ for n = 1:numel(vcls)
             set(h.BoxFace, 'ColorType','truecoloralpha', ...
                 'ColorData', uint8(255*[1;1;1;.7])); 
         else
-            histogram(perms(:, ids(n), j), edg_perms, 'Normalization', ...
+            histogram(perms(:, n, j), edg_perms, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', ...
                   'EdgeColor', colrs(j, :));
             title(['$V_\mathrm{cl}$ = ' num2str(vcls(n)) ...
@@ -360,29 +370,28 @@ for n = 1:numel(vcls)
     end
 end
 hold off
-set(fh7, 'position', [500, 200, 200*numel(zf), 150*numel(vcls)]);
+set(fh7, 'position', [500, 200, 200*numel(vcls), 175*numel(zf)]);
 
 
 % Clays
 vclc   = vcl(vcl >= isClayVcl);
-idc = 1:numel(vclc);
 zmaxc = repmat(zmax', 1, numel(vclc));
 permc =  zeros(Nsim, numel(vclc), numel(zmax));
 for n=1:numel(zmax)
-    poro = getPorosity(vclc, isClayVcl, zf(1), zmaxc(n, :), 'zmax', 0);
-    permf = getPermeability(vclc, isClayVcl, zf(1), zmaxc(n, :), ...
-                           [], poro);
+    poro = getPorosity(vclc, isClayVcl, zmaxc(n, :), 'zmax', 1000, 0);
+    porov = cell2mat(cellfun(@(x) x(Nsim), poro.fcn, 'uniformOutput', false));
+    permf = getPermeability(vclc, isClayVcl, zf(1), zmaxc(n, :), []);
     for k = 1:numel(vclc)
-   permc(:, k, n) = permf{k}(Nsim) / (micro*darcy);    
-   end
+        permc(:, k, n) = permf.fcn{k}(porov(:,k), poro.range{k}(1), ...
+                                      poro.range{k}(2))/9.8692e-19;  %microD  
+    end
 end
 
 
 % hist params
-nbins = 25;
+nbins = 50;
 edg_permc = logspace(-5, 1, nbins);
-colrs = hsv(numel(zmax));
-%nextzf = [1; 1 + find(diff(zf_all))];  
+colrs = [0 0 0; 1 0 0; 0 0 1; 0.5 0.5 0.5];  
 
 % Plot
 fh8 = figure(8);
