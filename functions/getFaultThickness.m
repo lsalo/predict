@@ -12,11 +12,6 @@ function thick = getFaultThickness()
 % MODEL:
 %   Fault rock thickness is known to primarily depend on
 %   displacement (see papers above and references therein).
-%   Although other controls exist, such as clay content (i.e.
-%   rheology) and juxtapositions in the deformed section, it is
-%   difficult to include them rigorously due to lack of data.
-%   Hence, we consider only the dependency of fault thickness
-%   (T) on fault displacement (D).
 %   We consider that D/T is between 10 and 1000 and most of the
 %   data is around D/T = 100, which agrees with the published
 %   literature. Hence, we sample from a beta distribution with
@@ -26,11 +21,17 @@ function thick = getFaultThickness()
 %   [log10(10), log10(1000)].
 %
 % OUTPUT:
-%  fcn:  Fault core thickness anonymous fcn
-%  type: distribution type (beta)
+%  Structure thick with fields:
+%       type: distribution type (beta)
+%       param: shape parameters of the beta distribution
+%       range: thickness range (function of fault displacement)
+%       fcn:  function to compute thickness, by passing a scalar fault
+%             displacement value or a Nx1 array of displacement values.
 %
 % EXAMPLE:
-%       myFault = myFault.getFaultThickness
+%       D     = repelem(100, 1000, 1);
+%       thick = getFaultThickness();
+%       vals  = thick.fcn(D);
 %
 %--------------------------------------------------------------
 

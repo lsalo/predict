@@ -23,18 +23,19 @@ function phi = getResidualFrictionAngle(vcl)
 %             datapoints).
 %         *See details in utils/fitClayResFricSke64Mes86.m
 %
-% NOTE:
-%   We allow for user-defined residual friction angles. Hence, if the 
-%   footwall or hangingwall objects have ResFric values, we will use those 
-%   instead. See the documentation of the Stratigraphy class for more 
-%   information.
-%
 % OUTPUT:
-%  Residual friction angle of each layer in obj (footwall layers first from
-%  bottom to top, and hangingwall layers follow, also from bottom to top).
+%  Structure phi with fields:
+%       type: distribution type (unif or beta)
+%       param: shape parameters of the beta distribution
+%       range: thickness range 
+%       fcn:  function to compute n values of phi consistent with each
+%             value provided in vcl.
 %
 % EXAMPLE:
-%   phi = getResidualFrictionAngle(myFaultedSection)
+%   n = 1000;
+%   vcl = [0.1, 0.3, 0.5, 0.7, 0.9];
+%   phi = getResidualFrictionAngle(vcl)
+%   vals = cell2mat(cellfun(@(x) x(n), phi.fcn, 'uniformOutput', false));
 %--------------------------------------------------------------
 
 % Initialize
