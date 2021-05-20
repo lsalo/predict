@@ -48,6 +48,7 @@ classdef FaultedSection
        Vcl
        IsClayVcl
        DepthFaulting
+       DepthBurial
     end
     
     methods
@@ -114,6 +115,11 @@ classdef FaultedSection
         function zf = get.DepthFaulting(obj)
             % 
            zf = [obj.FW.DepthFaulting obj.HW.DepthFaulting]; 
+        end
+        
+        function zf = get.DepthBurial(obj)
+            % 
+           zf = [obj.FW.DepthBurial obj.HW.DepthBurial]; 
         end
         
         function obj = getMatPropDistr(obj)
