@@ -42,7 +42,7 @@ kx_loc = nan(G.cells.num, 1);
 kz_loc = nan(G.cells.num, 1);
 T = [cosd(alpha) sind(alpha); ...
      -sind(alpha) cosd(alpha)];                         % Transform. mat
-fn = 0.015;                                             % porosity var factor
+fn = 0.01;                                              % porosity var factor
 fk = 1.75;                                              % perm var factor
 
 for n=1:numel(M.unit)
