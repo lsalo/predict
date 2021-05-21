@@ -110,19 +110,17 @@ classdef Fault
             
             
             % -------------------------------------------------------------
-            % Fault thickness and Perm across (correlated)
+            % Fault thickness, poro, and Perm across (correlated)
             % -------------------------------------------------------------
-            %obj.MatProps.thick = FS.MatPropDistr.thick.fcn(obj.Disp);
             n = 1;
+            p = opt.corrCoef;
             if opt.corrCoef > 0
-                U = copularnd('Gaussian', [1 opt.corrCoef; ...
-                                           opt.corrCoef 1], n);                
+                U = copularnd('Gaussian', [1 p p; p 1 p; p p 1], n);                
             else 
-                U = copularnd('Gaussian', [1 -opt.corrCoef; ...
-                                           -opt.corrCoef 1], n); 
+                U = copularnd('Gaussian', [1 -p -p; -p 1 -p; -p -p 1], n); 
             end
             
-            % Assert that resFric marginal distros are all beta/unif
+            % Assert that marginal distros are all beta/unif
             assert(strcmp(FS.MatPropDistr.thick.type, 'beta'));
             assert(all(cellfun(@(x) strcmp(x, 'unif'), ...
                                FS.MatPropDistr.perm.type)));
@@ -135,15 +133,16 @@ classdef Fault
             obj.MatProps.thick = 10^(thickRangeLog(1) + ...
                                      diff(thickRangeLog) .* X1);
             
-            % Sand Perm and Poro (constant, deterministic)
+            % Sand Perm and Poro
             sandPermRange = cell2mat(FS.MatPropDistr.perm.range(~idc)');
             obj.MatProps.permRange(:, ~idc) = sandPermRange';
             sandPermRangeLog = log10(sandPermRange);
             obj.MatProps.perm(~idc) = 10.^(sandPermRangeLog(:, 1) + ...
-                                       diff(sandPermRangeLog, [], 2) .* U(2))';
+                                       diff(sandPermRangeLog, [], 2) .* U(3))';
             sandPoroRange = cell2mat(FS.MatPropDistr.poro.range(~idc)');
             obj.MatProps.poroRange(:, ~idc) = sandPoroRange';
-            obj.MatProps.poro(~idc) = sandPoroRange(:, 1);
+            obj.MatProps.poro(~idc) = (sandPoroRange(:, 1) + ...
+                                      diff(sandPoroRange, [], 2) .* U(2))';
             
             % Clay perm depends on poro, so we correlate poro too.
             clayPoroRange = cell2mat(FS.MatPropDistr.poro.range(idc)');
@@ -158,7 +157,7 @@ classdef Fault
             obj.MatProps.permRange(:, idc) = clayPermRange';
             clayPermRangeLog = log10(clayPermRange);
             obj.MatProps.perm(idc) = 10.^(clayPermRangeLog(:, 1) + ...
-                                   diff(clayPermRangeLog, [], 2) .* U(2))';
+                                   diff(clayPermRangeLog, [], 2) .* U(3))';
             
             
             % ------------------------------------------------------------
@@ -448,7 +447,7 @@ classdef Fault
            end
            title(['$k_{zz} =$ ' num2str(val, form) units], latx{:}, ...
                  'fontSize', sz(2));
-           set(hh, 'position', [200, 0, 650, 350]);       
+           set(hh, 'position', [200, 0, 750, 350]);       
            
            % MatProps 
            %Thick = repelem(obj.MatProps.thick, numel(obj.MatProps.resFric));

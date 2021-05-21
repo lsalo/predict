@@ -55,12 +55,14 @@ for n=1:N
         
         % Porosity of an ideal sand-clay mixture (Eq. 11 and 12)
         if vcl(n) < sPoro
-            poro.range{n} = repelem(sPoro - vcl(n)*(1-cPoro), 2);
+            porov = sPoro - vcl(n)*(1-cPoro);
         else
-            poro.range{n} = repelem(vcl(n)*cPoro , 2);
-        end        
-        poro.type{n} = 'det';                           % deterministic
-        poro.fcn{n} = @(x) repelem(poro.range{n}(1), x, 1);
+            porov = vcl(n)*cPoro;
+        end 
+        poro.range{n} = [porov-0.02 porov+0.02];
+        poro.type{n} = 'unif';                           % uniform
+        poro.fcn{n} = @(x) poro.range{n}(1) + rand(x, 1) .* ...
+                           (poro.range{n}(2) - poro.range{n}(1));
         
     else        
         if isUndercompacted == 0
