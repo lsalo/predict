@@ -166,11 +166,7 @@ classdef Fault
             % poro at zf
             poroDist = getPorosity(FS.Vcl, FS.IsClayVcl, zf, 'zf', ...
                                    zf, FS.IsUndercompacted, FS.HW.Id);
-            sandPoroRange  = cell2mat(poroDist.range(~idc)');
-            poroAtZf(~idc) = sandPoroRange(:, 1);
-            clayPoroRange  = cell2mat(poroDist.range(idc)');
-            poroAtZf(idc)  = clayPoroRange(:, 1) + ...
-                             rand(sum(idc), 1).*diff(clayPoroRange, [], 2);
+            poroAtZf = cellfun(@(x) x(1), poroDist.fcn);
             
             % Perm anisotropy ratio
             gamma = obj.Disp / obj.MatProps.thick;
