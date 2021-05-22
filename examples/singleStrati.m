@@ -89,7 +89,7 @@ mySect.plotStrati(faults{1}.MatProps.thick, faultDip);
 %plotMatPropsHist(faults, smears, mySect, layerId) 
 
 % MatProps correlations
-[R, pval] = plotMatPropsCorr(faults, mySect, 3);
+[R, P] = plotMatPropsCorr(faults, mySect, 6);
 
 % General fault materials and perm view
 %plotId = selectSimId('minX', faults, Nsim);                % simulation index

@@ -1,4 +1,4 @@
-function [R, pval] = plotMatPropsCorr(faults, FS, idPlot)
+function [R, P] = plotMatPropsCorr(faults, FS, idPlot)
 %
 %
 %
@@ -82,14 +82,19 @@ xlim([1 3])
 %% Correlation plot
 % Delete data if constant
 varn = ["t","phi","ssfc","n","k","k'"];
+idn = 4;
+nbins = [20, 20, 20, 20, 20, 20];
 if FS.Vcl(idPlot) < FS.IsClayVcl
-    varn(3) = [];   % remove ssfc  
+    varn(3) = [];   % remove ssfc
+    idn = 3;
+    nbins(3) = [];
     T = [log10(thick), resFric(:, idPlot), poro(:,idPlot), ...
          log10(perm(:,idPlot)), kprime(:,idPlot)];
     idk = 4;
     if max(T(:,4)) == min(T(:,4))
         T(:, idk) = [];
         varn(4) = [];
+        nbins(4) = [];
     end
 else
     T = [log10(thick), resFric(:, idPlot), SSFc(:,idPlot), poro(:,idPlot), ...
@@ -97,13 +102,12 @@ else
 end
 
 nv = size(T, 2);
-nbins = [20, 10, 5, 5, 25, 5];
 edges = cell(1, nv);
 for n=1:nv
     % Edges for histograms
     m = min(T(:,n));
     M = max(T(:,n));
-    edges{n} = linspace(fix(m)-1, fix(M)+1, nbins(n));
+    edges{n} = linspace(m, M, nbins(n));
 end
 
 % Correlation analysis
@@ -114,28 +118,64 @@ a = 0.05;                       % significance level
 fh = figure(38);
 tiledlayout(nv, nv, 'Padding', 'compact', 'TileSpacing', 'compact');
 
-nexttile(1)
-histogram(T(:, 1), edges{1}, 'Normalization', 'probability', ...
-          'FaceColor', [0.7 0.7 0.7], 'FaceAlpha', 1)
-ylabel('$\log_{10}(\mathrm{f}_\mathrm{T}$[m])', latx{:}, 'fontSize', sz(2))
-xlim([min(edges{1}) max(edges{1})])
-ylim([0 1])
-grid on
-
-nexttile(2)
-scatter(T(:,2), T(:,1), '.', 'MarkerEdgeColor', [0.7 0.7 0.7])
-if P(1,2) < a
-    colr = 'm';
-else
-    colr = 'k';
+% histograms
+tidsh = 1:nv+1:nv^2;
+labls = ["$\log_{10}(\mathrm{f}_\mathrm{T}$[m])", ...
+         "$\phi_\mathrm{r}$[deg.]", "SSFc[-]", "$n$[-]", ...
+         "$\log_{10}(k$[mD])", "$k^\prime$"];
+if ~ismember('ssfc', varn), labls(3) = []; end
+if ~ismember('k', varn), labls(4) = []; end
+for n=1:numel(tidsh)
+    nexttile(tidsh(n))
+    histogram(T(:, n), edges{n}, 'Normalization', 'probability', ...
+              'FaceColor', [0.7 0.7 0.7], 'FaceAlpha', 1)
+    if n == 1
+        ylabel(labls{n}, latx{:}, 'fontSize', sz(2))
+    elseif n==numel(tidsh)
+        xlabel(labls{n}, latx{:}, 'fontSize', sz(2))
+    end
+    xlim([min(edges{n}) max(edges{n})])
+    p = histcounts(T(:,n), edges{n}, 'normalization', 'probability');
+    ylim([0 round(max(p)+0.05, 1)])
+    grid on
 end
-text(1.05*min(edges{2}), 0.9*max(edges{1}), num2str(round(R(1,2), 3)), ...
-     'color', colr, 'fontSize', 10)
-xlim([min(edges{2}) max(edges{2})])
-ylim([min(edges{1}) max(edges{1})])
-grid on
 
-
+% scatter plots
+tidss = 1:nv^2;
+tidss(ismember(tidss,tidsh)) = [];
+x = repmat(1:numel(varn), 1, nv); x(tidsh) = [];
+y = repelem(1:numel(varn), 1, nv); y(tidsh) = [];
+pvals = P'; pvals(tidsh) = [];
+r = R'; r(tidsh) = [];
+idlaby = numel(varn)+1:nv:nv^2;
+lablsy = labls(2:end);
+idlabx = nv^2-numel(varn)+1:nv^2-1;
+lablsx = labls(1:end-1);
+for n=1:numel(tidss)
+    nexttile(tidss(n))
+    scatter(T(:,x(n)), T(:,y(n)), '.', 'MarkerEdgeColor', [0.7 0.7 0.7])
+    if pvals(n) < a
+        colr = 'm';
+        fw = 'bold';
+    else
+        colr = 'k';
+        fw = 'normal';
+    end
+    text(edges{x(n)}(1) + 0.05*(edges{x(n)}(end) - edges{x(n)}(1)), ...
+         edges{y(n)}(end) - 0.05*(edges{y(n)}(end) - edges{y(n)}(1)), ...
+         num2str(round(r(n), 3)),  'color', colr, 'fontSize', 10, 'fontWeight', fw); 
+    xlim([min(edges{x(n)}) max(edges{x(n)})])
+    ylim([min(edges{y(n)}) max(edges{y(n)})])
+    grid on
+    if ismember(tidss(n), idlaby)
+        idly = ismember(idlaby, tidss(n));
+        ylabel(lablsy{idly}, latx{:}, 'fontSize', sz(2))
+    end
+    if ismember(tidss(n), idlabx)
+        idlx = ismember(idlabx, tidss(n));
+        xlabel(lablsx{idlx}, latx{:}, 'fontSize', sz(2))
+    end
+end
 set(fh, 'position', [200, 0, 900, 600]);
 
 % corrplot requires the Econometrics Toolbox, which requires the Statistics 
