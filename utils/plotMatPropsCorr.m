@@ -112,7 +112,7 @@ end
 
 % Correlation analysis
 [R, P] = corrcoef(T);           % corrcoeff and pval matrices
-a = 0.05;                       % significance level
+a = 0.01;                       % significance level
 
 % Plot
 fh = figure(38);
