@@ -63,8 +63,7 @@ parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     myFault = myFault.getMaterialProperties(mySect, 'corrCoef', rho);
     
     % Generate smear object with T, Tap, L, Lmax
-    smear = Smear(mySect.Vcl, mySect.IsClayVcl, mySect.Thick, ...
-                  mySect.Tap, mySect.DepthFaulting, myFault, 1, mySect);
+    smear = Smear(mySect, myFault, 1);
     
     % Compute upscaled permeability distribution
     myFault = myFault.upscaleSmearPerm(mySect, smear, U);
@@ -85,15 +84,15 @@ mySect.plotStrati(faults{1}.MatProps.thick, faultDip);
 
 % Histograms for each MatProp (all sims, we select one stratigraphic layer)
 % This should plot for all realizations that contain the given id.
-%layerId = 1;                                            
-%plotMatPropsHist(faults, smears, mySect, layerId) 
+layerId = 8;                                            
+plotMatPropsHist(faults, smears, mySect, layerId) 
 
 % MatProps correlations
-[R, P] = plotMatPropsCorr(faults, mySect, 6);
+%[R, P] = plotMatPropsCorr(faults, mySect, 6);
 
 % General fault materials and perm view
-%plotId = selectSimId('minX', faults, Nsim);                % simulation index
-%faults{plotId}.plotMaterials(mySect) 
+plotId = selectSimId('minX', faults, Nsim);                % simulation index
+faults{plotId}.plotMaterials(mySect) 
 
 % Plot upscaled Poro and Perm (all sims, 3 directions)
-plotUpscaledPerm(faults)
+%plotUpscaledPerm(faults)

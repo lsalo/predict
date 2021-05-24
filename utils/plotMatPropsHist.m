@@ -20,7 +20,7 @@ SSFc = cell2mat(cellfun(@(x) x.MatProps.ssfc(id), faults, ...
 kprime = cell2mat(cellfun(@(x) x.MatProps.permAnisoRatio(id), faults, ...
                          'UniformOutput', false));
 perm = cell2mat(cellfun(@(x) x.MatProps.perm(id), faults, ...
-                         'UniformOutput', false));
+                         'UniformOutput', false))./(milli*darcy);
 poro = cell2mat(cellfun(@(x) x.MatProps.poro(id), faults, ...
                          'UniformOutput', false));
 %N = 1000;
@@ -37,7 +37,7 @@ nbins = 25;
 edg_T = logspace(1, 3, nbins);
 edg_phi = linspace(0, 35, nbins);
 edg_poro = linspace(0, 0.6, nbins);
-lim_perm = [round(log10(min(perm)))-1, round(log10(max(perm)))+1];
+lim_perm = [fix(log10(min(perm)))-1, fix(log10(max(perm)))+1];
 edg_k = logspace(lim_perm(1), lim_perm(2), nbins);
 edg_SSFc = linspace(0, 12, nbins);
 edg_kprime = linspace(0, 10, nbins);

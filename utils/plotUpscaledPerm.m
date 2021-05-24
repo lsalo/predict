@@ -46,9 +46,9 @@ grid on
 %xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
 
 nexttile(5)
-rr = [221, 31, 0]/255;
+rr = [255, 125, 125]/255;
 histogram(K(:, 2), edges, 'Normalization', 'probability', ...
-          'FaceColor', rr, 'EdgeColor', rr, 'FaceAlpha', 1)
+          'FaceColor', rr, 'FaceAlpha', 1)
 %xlabel('$\hat{k}_{yy}$ [mD]', latx{:}, 'fontSize', sz(2))
 %ylabel('P [-]', latx{:}, 'fontSize', sz(2))
 xlim([fix(logMinP)-1 fix(logMaxP)+1])
@@ -57,9 +57,9 @@ grid on
 %xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
 
 nexttile(9)
-bb = [0, 71, 171]/255;
+bb = [125, 125, 255]/255;
 histogram(K(:, 3), edges, 'Normalization', 'probability', ...
-          'FaceColor', bb, 'EdgeColor', bb, 'FaceAlpha', 1)
+          'FaceColor', bb, 'FaceAlpha', 1)
 xlabel(labls(3), latx{:}, 'fontSize', sz(2))
 %ylabel('P [-]', latx{:}, 'fontSize', sz(2))
 xlim([fix(logMinP)-1 fix(logMaxP)+1])
