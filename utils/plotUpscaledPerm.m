@@ -7,7 +7,7 @@ function plotUpscaledPerm(faults)
 
 % Utilities
 latx = {'Interpreter', 'latex'};
-sz = [16, 14];
+sz = [14, 12];
 
 % Fault MatProps
 perms = cell2mat(cellfun(@(x) x.Perm, faults, ...
@@ -20,52 +20,98 @@ if any(any(perms < 0))
 end
     
 % Hist params
+K = log10(perms);
 nbins = 25;
-logMinP = log10(min(min(perms)));
-logMaxP = log10(max(max(perms)));
-edges = logspace(fix(logMinP)-1, fix(logMaxP)+1, nbins);
+logMinP = min(min(K));
+logMaxP = max(max(K));
+edges = linspace(fix(logMinP)-1, fix(logMaxP)+1, nbins);
 
 
 % Plot
+
+% Histograms
 fh = figure(randi(1000, 1, 1));
-tiledlayout(1, 3, 'Padding', 'compact', 'TileSpacing', 'compact');
-nexttile
-histogram(perms(:, 1), edges, 'Normalization', 'probability', ...
-          'FaceColor', [0.5 0.5 0.5], 'FaceAlpha', 1)
-xlabel('$\hat{k}_{xx}$ [mD]', latx{:}, 'fontSize', sz(2))
-ylabel('P [-]', latx{:}, 'fontSize', sz(2))
-xlim([0.7*10^logMinP 2*10^logMaxP])
-ylim([0 1])
-grid on
-set(gca,'XScale','log')
-xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
-%xticklabels({'10^{-5}' '10^{-4}' '10^{-3}' '0.01' '0.1' '1' '10'})
-text(2*10^logMinP, 0.9, ['$N_\mathrm{sim} = $ ' num2str(numel(faults))], ...
-     latx{:}, 'fontSize', sz(2))
-
-nexttile
-histogram(perms(:, 2), edges, 'Normalization', 'probability', ...
-          'FaceColor', [1 0.5 0.5], 'FaceAlpha', 1)
-xlabel('$\hat{k}_{yy}$ [mD]', latx{:}, 'fontSize', sz(2))
+tiledlayout(3, 3, 'Padding', 'compact', 'TileSpacing', 'compact');
+labls = ["$\log_{10}(k_{xx}$ [mD])", ...
+        "$\log_{10}(k_{yy}$ [mD])", ...
+        "$\log_{10}(k_{zz}$ [mD])"];
+nexttile(1)
+histogram(K(:, 1), edges, 'Normalization', 'probability', ...
+          'FaceColor', [0 0 0], 'FaceAlpha', 1)
+ylabel(labls(1), latx{:}, 'fontSize', sz(2))
 %ylabel('P [-]', latx{:}, 'fontSize', sz(2))
-xlim([0.7*10^logMinP 2*10^logMaxP])
-ylim([0 1])
+xlim([fix(logMinP)-1 fix(logMaxP)+1])
+ylim([0 1]); yticks(0:.2:1)
 grid on
-set(gca,'XScale','log')
-xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
+%xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
 
-nexttile
-histogram(perms(:, 3), edges, 'Normalization', 'probability', ...
-          'FaceColor', [0.5 0.5 1], 'FaceAlpha', 1)
-xlabel('$\hat{k}_{zz}$ [mD]', latx{:}, 'fontSize', sz(2))
+nexttile(5)
+rr = [221, 31, 0]/255;
+histogram(K(:, 2), edges, 'Normalization', 'probability', ...
+          'FaceColor', rr, 'EdgeColor', rr, 'FaceAlpha', 1)
+%xlabel('$\hat{k}_{yy}$ [mD]', latx{:}, 'fontSize', sz(2))
 %ylabel('P [-]', latx{:}, 'fontSize', sz(2))
-xlim([0.7*10^logMinP 2*10^logMaxP])
-ylim([0 1])
+xlim([fix(logMinP)-1 fix(logMaxP)+1])
+ylim([0 1]); yticks(0:.2:1)
 grid on
-set(gca,'XScale','log')
-xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
-set(fh, 'position', [500, 200, 600, 250]);
+%xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
 
+nexttile(9)
+bb = [0, 71, 171]/255;
+histogram(K(:, 3), edges, 'Normalization', 'probability', ...
+          'FaceColor', bb, 'EdgeColor', bb, 'FaceAlpha', 1)
+xlabel(labls(3), latx{:}, 'fontSize', sz(2))
+%ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+xlim([fix(logMinP)-1 fix(logMaxP)+1])
+ylim([0 1]); yticks(0:.2:1)
+grid on
+%xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
 
+% Scatters
+tidss = [2 3 4 6 7 8];
+tidsh = [1 5 9];
+x = [2 3 1 3 1 2];
+y = [1 1 2 2 3 3];
+colrs = [128, 0, 0; 0, 119, 128; 128, 0, 0; 128, 119, 128; 0, 119, 128; ...
+         128, 119, 128]./255;
+[R, P] = corrcoef(perms);       % corrcoeff and pval matrices
+a = 0.05;                       % significance level
+pvals = P'; pvals(tidsh) = [];
+r = R'; r(tidsh) = [];
+idlaby = [4 7];
+lablsy = labls(2:end);
+idlabx = [7 8];
+lablsx = labls(1:end-1);
+for n=1:numel(tidss)
+    nexttile(tidss(n))
+    colormap(hot);
+    histogram2(K(:,x(n)), K(:,y(n)), edges, edges, ...
+               'Normalization', 'Probability', 'DisplayStyle','tile', ...
+               'ShowEmptyBins','off');
+    colorbar
+    %scatter(K(:,x(n)), K(:,y(n)), 4, 'o', 'MarkerEdgeColor', colrs(n, :))
+     if pvals(n) < a
+         colr = 'm';
+         fw = 'bold';
+     else
+         colr = 'k';
+         fw = 'normal';
+     end
+     text(edges(1) + 0.05*(edges(end) - edges(1)), ...
+          edges(end) - 0.05*(edges(end) - edges(1)), ...
+          num2str(round(r(n), 3)),  'color', colr, 'fontSize', 10, 'fontWeight', fw); 
+    xlim([fix(logMinP)-1 fix(logMaxP)+1])
+    ylim([fix(logMinP)-1 fix(logMaxP)+1])
+    grid on
+    if ismember(tidss(n), idlaby)
+        idly = ismember(idlaby, tidss(n));
+        ylabel(lablsy(idly), latx{:}, 'fontSize', sz(2))
+    end
+    if ismember(tidss(n), idlabx)
+        idlx = ismember(idlabx, tidss(n));
+        xlabel(lablsx(idlx), latx{:}, 'fontSize', sz(2))
+    end
+end
+set(fh, 'position', [200, 200, 575, 400]);
 
 end
