@@ -49,7 +49,7 @@ classdef Smear
     end
     
     methods
-        function smear = Smear(vcl, isClayVcl, T, Tap, zf, fault, Nsim, FS)
+        function smear = Smear(FS, fault, Nsim)
             % Key references:
             %   Egholm et al., Geology (2008)
             %
@@ -83,17 +83,20 @@ classdef Smear
             %
             %--------------------------------------------------------------
             
+            % Get required vars
+            vcl = FS.Vcl;
+            isClayVcl = FS.IsClayVcl;
+            T = FS.Thick;
+            Tap = FS.Tap;
+            zf = FS.DepthFaulting;
+            
             % Initialize
             idc = find(vcl >= isClayVcl);
             ids = find(vcl < isClayVcl);
-            if nargin > 7
-                smear.ParentId = FS.ParentId(idc);
-                assert(numel(zf) == 2)
-                zf = [repelem(zf(1), sum(idc < FS.HW.Id(1))), ...
-                      repelem(zf(2), sum(idc >= FS.HW.Id(1)))];
-            else
-                zf = repelem(zf, numel(idc));
-            end
+            smear.ParentId = FS.ParentId(idc);
+            assert(numel(zf) == 2)
+            zf = [repelem(zf(1), sum(idc < FS.HW.Id(1))), ...
+                  repelem(zf(2), sum(idc >= FS.HW.Id(1)))];
             N = numel(idc);
             [smear.Thick, smear.ThickInFault, smear.Length, ...
              smear.SegLenMax, smear.Psmear, smear.DomainLength] = ...
