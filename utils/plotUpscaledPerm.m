@@ -37,7 +37,7 @@ labls = ["$\log_{10}(k_{xx}$ [mD])", ...
         "$\log_{10}(k_{zz}$ [mD])"];
 nexttile(1)
 histogram(K(:, 1), edges, 'Normalization', 'probability', ...
-          'FaceColor', [0 0 0], 'FaceAlpha', 1)
+          'FaceColor', [0.5 0.5 0.5], 'FaceAlpha', 1)
 ylabel(labls(1), latx{:}, 'fontSize', sz(2))
 %ylabel('P [-]', latx{:}, 'fontSize', sz(2))
 xlim([fix(logMinP)-1 fix(logMaxP)+1])
@@ -74,7 +74,7 @@ x = [2 3 1 3 1 2];
 y = [1 1 2 2 3 3];
 colrs = [128, 0, 0; 0, 119, 128; 128, 0, 0; 128, 119, 128; 0, 119, 128; ...
          128, 119, 128]./255;
-[R, P] = corrcoef(perms);       % corrcoeff and pval matrices
+[R, P] = corrcoef(K);           % corrcoeff and pval matrices
 a = 0.05;                       % significance level
 pvals = P'; pvals(tidsh) = [];
 r = R'; r(tidsh) = [];
