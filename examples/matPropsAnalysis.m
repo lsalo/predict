@@ -260,9 +260,9 @@ tileids = (tileids + (0:numel(vclkr)-1)')';
 fh6 = figure(6);
 tiledlayout(numel(zf), numel(vclkr), 'Padding', 'compact', 'TileSpacing', 'compact');
 for n=1:numel(vclkr)
-    %for j=1:N/numel(clayMine)                           % kaolinite
+    for j=1:N/numel(clayMine)                           % kaolinite
     %for j=N/numel(clayMine)+1:2*(N/numel(clayMine))     % mica
-    for j = 2*(N/numel(clayMine))+1:3*(N/numel(clayMine)) % smectite
+    %for j = 2*(N/numel(clayMine))+1:3*(N/numel(clayMine)) % smectite
         idt = find(ismember(nextzf, j));
         if any(idt)
             if idt > size(tileids, 1) && idt < 2*size(tileids, 1)+1 

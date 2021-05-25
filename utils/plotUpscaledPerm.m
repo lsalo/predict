@@ -88,7 +88,12 @@ for n=1:numel(tidss)
     histogram2(K(:,x(n)), K(:,y(n)), edges, edges, ...
                'Normalization', 'Probability', 'DisplayStyle','tile', ...
                'ShowEmptyBins','off');
-    colorbar
+    c = colorbar;
+    if n == 1
+        c.Label.Interpreter = 'latex'; 
+        c.Label.String = 'P [-]';
+        c.Label.FontSize = 9;
+    end
     %scatter(K(:,x(n)), K(:,y(n)), 4, 'o', 'MarkerEdgeColor', colrs(n, :))
      if pvals(n) < a
          colr = 'm';
