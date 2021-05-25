@@ -23,29 +23,34 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 % Mandatory Input parameters
 %           {[FW], [HW]}
 name      = {'A', 'B', 'C', 'D', 'E'};
-thickness = {[repelem(10, 1, 10); repelem(10, 1, 10)], ...
-             [25 25 25 25; 25 25 25 25], [50 50; 50 50], ...
-             [20 10 20 10 30 10; 20 10 20 10 30 10], ...
-             [20 40 20 20; 40 20 20 20]};
-vcl       = {[repmat([0.2 0.6], 1, 5); repmat([0.5 0.3], 1, 5)], ...
-             [0.8 0.3 0.5 0; 0.3, 0.7, 0.15, 0.6], [0.5 0.1; 0.5 0.1], ...
-             [0.05 0.4 0.1 0.5 0.15 0.6; 0.2, 0.7, 0.25, 0.8, 0.3, 0.9], ...
-             [0 0.4 0.3 0.6; 0.1 0.4 0.2 0.6]};
-dip       = {[0, 0], [0, 0], [10, 20], [10, 5], [0, 0]};
-faultDip  = [85, 60, 65, 75, 70];
+thickness = {{repelem(10, 1, 10), repelem(10, 1, 10)}, ...
+             {[25 25 25 25], [25 25 25 25]}, ...
+             {[50 50], [50 50]}, ...
+             {[5 10 15 10 20 10 10 5 15], [20 10 20 10 30 10]}, ...
+             {[20 30 30 20]; [40 20 10 10 10 10]}};
+vcl       = {{repmat([0.2 0.6], 1, 5), repmat([0.5 0.3], 1, 5)}, ...
+             {[0.8 0.3 0.5 0], [0.3, 0.7, 0.15, 0.6]}, ...
+             {[0.5 0.1], [0.5 0.1]}, ...
+             {[0.3 0.6 0.1 0.7 0.2 0.8 0.3 0.9 0.1], [0.2, 0.7, 0.25, 0.8, 0.3, 0.9]}, ...
+             {[0 0.4 0.3 0.6], [0.1 0.4 0.2 0.6 0.1 0.5]}};
+dip       = {[0, 0], [0, 0], [10, 20], [5, -5], [0, 0]};
+faultDip  = [50, 60, 75, 85, 55];
 
 % Optional Input parameters
-nl   = [size(vcl{1}, 2), size(vcl{2}, 2), size(vcl{3}, 2), ...
-        size(vcl{4}, 2), size(vcl{5}, 2)];   % just for convenience here
+nl   = [numel(vcl{1}{1}), numel(vcl{1}{2}); ...
+        numel(vcl{2}{1}), numel(vcl{2}{2}); ...
+        numel(vcl{3}{1}), numel(vcl{3}{2}); ...
+        numel(vcl{4}{1}), numel(vcl{4}{2}); ...
+        numel(vcl{5}{1}), numel(vcl{5}{2})];  % just for convenience here
 zf   = {[100, 100], [500, 500], [1000, 1000], [100, 100], [2000, 2000]};    % m
-zmax = {[repelem(800, 1, nl(1)); repelem(800, 1, nl(1))], ...
-        [repelem(1000, 1, nl(2)); repelem(1000, 1, nl(2))], ...
-        [repelem(1000, 1, nl(3)); repelem(1000, 1, nl(3))], ...
-        [repelem(2000, 1, nl(4)); repelem(2000, 1, nl(4))], ...
-        [repelem(3000, 1, nl(5)); repelem(3000, 1, nl(5))]};
-cm = {'kao', 'sme', 'ill', 'mic', 'kao'};    % predominant clay mineral
-maxPerm = [];                   % cap max perm? [mD]
-siltInClay = [true, false, false, true, true];     % silt fraction in clay?
+zmax = {{repelem(800, 1, nl(1,1)), repelem(800, 1, nl(1,2))}, ...
+        {repelem(1000, 1, nl(2,1)), repelem(1000, 1, nl(2,2))}, ...
+        {repelem(1000, 1, nl(3,1)); repelem(1000, 1, nl(3,2))}, ...
+        {repelem(2000, 1, nl(4,1)); repelem(2000, 1, nl(4,2))}, ...
+        {repelem(3000, 1, nl(5,1)); repelem(3000, 1, nl(5,2))}};
+cm = {'kao', 'sme', 'ill', 'mic', 'kao'};   % predominant clay mineral
+maxPerm = 5000;                             % cap max perm? [mD]
+rho = 0.7;                                  % Corr. coeff. for multiv. distr.
 
 % Flow upscaling options
 U.useAcceleration = 1;          % requires MEX and AMGCL setup
@@ -56,7 +61,7 @@ U.ARcheck         = 0;          % check if Perm obtained with grid with
                                 
 % Prepare
 Nstrat = numel(vcl);
-arTarget = [NaN, 50, 25, 10, 3];
+arTarget = [NaN, 50, 25, 10, 5];
 ar = zeros(Nstrat, numel(arTarget));
 Ngrid = numel(arTarget);
 perm = nan(Ngrid, 2, Nstrat);
@@ -66,38 +71,39 @@ for k=1:Nstrat
     disp(['Stratigraphic case ' num2str(k) ' / ' num2str(Nstrat)])
     
     % FW and HW
-    footwall = Stratigraphy(thickness{k}(1,:), vcl{k}(1,:), dip{k}(1), ...
+    footwall = Stratigraphy(thickness{k}{1}, vcl{k}{1}, 'Dip', dip{k}(1), ...
                             'DepthFaulting', zf{k}(1), ...
-                            'DepthBurial', zmax{k}(1,:), 'ClayMine', cm{k});
-    hangingwall = Stratigraphy(thickness{k}(2,:), vcl{k}(2,:), dip{k}(2), ...
+                            'DepthBurial', zmax{k}{1}, 'ClayMine', cm{k});
+    hangingwall = Stratigraphy(thickness{k}{2}, vcl{k}{2}, 'Dip', dip{k}(2), ...
                                'IsHW', 1, 'NumLayersFW', footwall.NumLayers, ...
                                'DepthFaulting', zf{k}(2), ...
-                               'DepthBurial', zmax{k}(2,:), 'ClayMine', cm{k});
+                               'DepthBurial', zmax{k}{2}, 'ClayMine', cm{k});
     
     % Strati in Faulted Section
-    mySect = FaultedSection(footwall, hangingwall);
+    mySect = FaultedSection(footwall, hangingwall, faultDip(k), ...
+                            'maxPerm', maxPerm);
+    
+    % Get material property distributions
+    mySect = mySect.getMatPropDistr();
     
     % Generate fault object with properties for each realization
-    myFault = Fault(mySect, faultDip(k));
-    
+    myFault = Fault(mySect, faultDip(k));                 
+
     % Get dependent variables
-    myFault = myFault.getMaterialProperties(mySect, 'maxPerm', maxPerm, ...
-                                            'siltInClay', siltInClay(k));
+    myFault = myFault.getMaterialProperties(mySect, 'corrCoef', rho); 
+    
     itnum = 0;
-    while myFault.MatProps.Thick < myFault.Disp/100  % avoid thinest faults
+    while myFault.MatProps.thick < myFault.Disp/500  % avoid thinest faults
         if itnum == 0
             disp('Material properties recalculated.')
         end
-        myFault = myFault.getMaterialProperties(mySect, 'maxPerm', maxPerm, ...
-                                                'siltInClay', siltInClay(k));
+        myFault = myFault.getMaterialProperties(mySect, 'corrCoef', rho);
         itnum = itnum + 1;
         disp(['iteration number = ' num2str(itnum)])
     end
     
-    % Generate smear object with T, Tap, L, Lmax
-    Tap = getApparentThick(mySect, myFault.Dip);
-    smear = Smear(mySect.Vcl, mySect.IsClayVcl, mySect.Thick, Tap, ...
-                  mySect.DepthFaulting, myFault, 1, mySect);
+    % Generate smear object
+    smear = Smear(mySect, myFault, 1);
     
     % Compute upscaled permeability distribution
     myFault = myFault.upscaleSmearPerm(mySect, smear, U);
@@ -105,11 +111,11 @@ for k=1:Nstrat
     for n=1:Ngrid
         if n == 1
             perm(n, :, k) = [myFault.Perm(1) myFault.Perm(end)];
-            cellDim(n, :, k) = myFault.Grid.CellDim;
+            cellDim(n, :, k) = myFault.Grid.cellDim;
     
             % Base grid
-            G = makeFaultGrid(myFault.MatProps.Thick, myFault.Disp, ...
-                              myFault.Grid.TargetCellDim);
+            G = makeFaultGrid(myFault.MatProps.thick, myFault.Disp, ...
+                              myFault.Grid.targetCellDim);
             ar(k, n) = G.CellDim(2)/G.CellDim(1);
             L = max(G.faces.centroids) - min(G.faces.centroids);
             Dp{1} = 5*barsa;
@@ -119,11 +125,11 @@ for k=1:Nstrat
             % Iteration grid
             Lz = G.cartDims(2)*G.CellDim(2);
             nels = [G.cartDims(1) round(Lz/(arTarget(n)*G.CellDim(1)))];
-            cellDim(n, :, k) = [myFault.MatProps.Thick/nels(1), ...
+            cellDim(n, :, k) = [myFault.MatProps.thick/nels(1), ...
                                 myFault.Disp/nels(2)];
             ar(k, n) = cellDim(n, end, k) / cellDim(n, 1, k);
             G2 = computeGeometry(cartGrid([nels(1), nels(2)], ...
-                                          [myFault.MatProps.Thick, myFault.Disp]));
+                                          [myFault.MatProps.thick, myFault.Disp]));
             disp(['--> Iteration grid with cell aspect ratio = ' ...
                   num2str(round(ar(k, n), 2)) ' created.'])
             disp(['    This grid has a total of ' num2str(G2.cells.num) ...
@@ -138,7 +144,7 @@ for k=1:Nstrat
 
             % Compute 2nd perm
             [~, mapG2toG] = min(dist,[],2);
-            rock2.perm = myFault.Grid.Perm(mapG2toG, :);
+            rock2.perm = myFault.Grid.perm(mapG2toG, :);
             hTmp2 = computeMultiPointTrans(G2, rock2, 'invertBlocks', 'mex');
             psolver = @(state0, G, fluid, bc) incompMPFA(state0, G, hTmp2, ...
                                                          fluid, 'bc', bc);

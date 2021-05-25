@@ -84,15 +84,15 @@ mySect.plotStrati(faults{1}.MatProps.thick, faultDip);
 
 % Histograms for each MatProp (all sims, we select one stratigraphic layer)
 % This should plot for all realizations that contain the given id.
-layerId = 8;                                            
-plotMatPropsHist(faults, smears, mySect, layerId) 
+%layerId = 8;                                            
+%plotMatPropsHist(faults, smears, mySect, layerId) 
 
 % MatProps correlations
 %[R, P] = plotMatPropsCorr(faults, mySect, 6);
 
 % General fault materials and perm view
-plotId = selectSimId('minX', faults, Nsim);                % simulation index
-faults{plotId}.plotMaterials(mySect) 
+%plotId = selectSimId('minX', faults, Nsim);                % simulation index
+%faults{plotId}.plotMaterials(mySect) 
 
 % Plot upscaled Poro and Perm (all sims, 3 directions)
-%plotUpscaledPerm(faults)
+plotUpscaledPerm(faults)
