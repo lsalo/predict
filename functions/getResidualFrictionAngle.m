@@ -49,7 +49,7 @@ for n=1:N
     if vcl(n) < 0.2         % Random with uniform P for Vcl < 0.2
         phi.type{n}  = 'unif';
         phi.range{n} = [28, 38];
-        phi.fcn{n}   = @(x) randi(phi.range{n}, x, 1);
+        phi.fcn{n}   = @(x) phi.range{n}(1) + rand(x, 1).*diff(phi.range{n});
     
     else                    % Vcl > 0.2
         phi.type{n}  = 'beta';
