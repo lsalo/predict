@@ -8,8 +8,12 @@ function SSFc = getSSFc(vcl, isClayVcl, zf, thick, faultDisp, idHW)
 %   Grant, Petroleum Geoscience (2017)
 %
 % INPUT:
-%   fault: Usually, an instance of Fault with property Throw in m.
-%   FS: An instance of FaultedSection.
+%   vcl: clay content of each layer in the stratigraphy (1xN array)
+%   isClayVcl: minimum clay volume fraction to contribute smear
+%   zf: faulting depth [m] (1x1 or 1x2 array if idHW is passed)
+%   thick: true thickness of each layer [m] (1xN array)
+%   faultDisp: fault Displacement [m]
+%   idHW: [optional] indices of layers in HW (e.g. 3:5)
 %
 % MODELS:
 %   Vcl < smear threshold: NaN (it does not apply).
@@ -41,12 +45,23 @@ function SSFc = getSSFc(vcl, isClayVcl, zf, thick, faultDisp, idHW)
 %              of each layer in the faulted stratigraphy.
 %
 % OUTPUT:
-%  SSFc: Critical shale smear factor for each fault material derived from 
-%        the footwall and hangingwall stratigraphy (field vals) and
-%        min and max bounds for each material (field bounds).
+% SSFc structure with the fields below. Each field has n entries, where
+% n is the number of stratigraphic layers (=numel(Vcl)).
+%       type:  distribution type (triangular)
+%       param: mode of the triangular distribution 
+%       range: SSFc endpoints 
+%       fcn:   function to compute n values of ssfc consistent with inputs
+%              for each layer.
 %
 % EXAMPLE:
-%       SSFc = getSSFc(myFaultedSection, fault)
+%   n   = 1000;
+%   vcl = [0.1, 0.3, 0.5, 0.7, 0.9];
+%   isClayVcl = 0.4;
+%   zf = 500;
+%   thick = [20, 10, 20, 30, 20];
+%   faultDisp = sum(thick);
+%   ssfc = getSSFc(vcl, isClayVcl, zf, thick, faultDisp)
+%   vals = cell2mat(cellfun(@(x) x(n), ssfc.fcn(3:5), 'uniformOutput', false));
 %
 %--------------------------------------------------------------
 

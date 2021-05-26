@@ -76,7 +76,7 @@ for n=1:N
         a    = [8*10^4, 19.4, 0.00403, 0.0055, 12.5];
         permSand  = (a(1)*exp(-(a(2)*vcl(n) + a(3)*zmax(n) + ...
                     (a(4)*zf(n) - a(5)).*(1-vcl(n)).^7)));    % [mD]
-        permSand = [0.5.*permSand, 5.*permSand];              % min & max
+        permSand = 10.^([log10(permSand)-0.5 log10(permSand)+0.5]);              % min & max
         perm.type{n} = 'unif';
 
         % Cap values
