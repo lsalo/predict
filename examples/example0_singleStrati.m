@@ -30,7 +30,7 @@ Nsim      = 1000;               % Number of simulations/realizations
 % Optional Input parameters
 zf      = [500, 500];           % [m]
 maxPerm = 1000;                 % [mD]
-rho     = 0.7;                  % Corr. coeff. for multivariate distributions
+rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 
 % Flow upscaling options
 U.useAcceleration = 1;          % requires MEX and AMGCL setup

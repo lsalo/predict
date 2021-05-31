@@ -101,7 +101,7 @@ classdef Fault
             %
             
             % Optional inputs
-            opt.corrCoef = 0.8;                   % correlation coefficient
+            opt.corrCoef = 0.6;                   % correlation coefficient
             opt = merge_options_relaxed(opt, varargin{:});
             
             % Convenience
