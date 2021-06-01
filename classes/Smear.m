@@ -5,24 +5,24 @@ classdef Smear
     %   - smear thickness (Thick).
     %   - apparent smear thickness in fault (ThickInFault).
     %   - smear length (Length).
-    %   - maximum smear segment length (SegLenmax).
-    %   - Smear fraction within the corresponding subdomain within the
-    %     fault (Psmear). 
+    %   - maximum smear segment length (SegLenMax).
+    %   - Smear fraction in the corresponding domain within the fault 
+    %     (Psmear). 
     %
     %
     % SYNOPSIS:
-    %   smear = Smear(myFaultedSection, myFault, phi, SSFc)
+    %   smear = Smear(myFaultedSection, myFault, Nsim)
     %
     %
     % DESCRIPTION:
     %   See constructor for details.
     %
+    %
     % REQUIRED PARAMETERS:
     %   myFaultedSection: An instance of FaultedSection.
-    %   myFault: Usually, an instance of Fault with valid fields disp, 
-    %            thick, Alpha, etc (see Fault class documentation).
-    %   phi: Residual friction angle (see getResidualFrictionAngle.m).
-    %   SSFc: Critical shale smear factor and bounds (see getSSFc.m).
+    %   myFault: Usually, an instance of Fault with valid properties/fields 
+    %            (see Fault class documentation).
+    %   Nsim: Number of smear property realizations (typically 1).
     %
     %
     % OPTIONAL PARAMETERS:
@@ -51,7 +51,9 @@ classdef Smear
     methods
         function smear = Smear(FS, fault, Nsim)
             % Key references:
+            %   Childs et al., GSLSP (2007)
             %   Egholm et al., Geology (2008)
+            %   Grant, PG (2017)
             %
             % MODELS:
             %   Vcl < smear threshold: NaN (it does not apply).
@@ -59,24 +61,31 @@ classdef Smear
             %   Vcl >= smear threshold:
             %           - Thick: Average clay smear thickness of Egholm  
             %                    et al., Geology (2008), Eq. 5.
-            %           - ThickInFault: apparent thickness in the direction
+            %           - ThickInFault: apparent smear thickness in the dir
             %                           parallel to a diagonal from the 
             %                           top left or top right of fault to 
             %                           bottom right or bottom left of 
             %                           fault.
             %           - Length: Total smear length within the fault, as 
             %                     obtained from the source layer thickness, 
-            %                     smear angle in the fault, and SSFc.
+            %                     smear angle in the fault (alpha), and 
+            %                     SSFc.
             %           - SegLenMax: The maximum length of an individual 
             %                        segment of a smear within the fault.
-            %           - DomainLength: Length of smear subdomain within
+            %                        The closer the SSFc is to the upper
+            %                        bound, the more fragmented (same logic
+            %                        as Grant, PG, 2017).
+            %           - DomainLength: Length of smear domains within
             %                           fault, from FW cutoff to HW cutoff.
             %           - Psmear: Function of source layer thickness, SSFc, 
             %                     fault thickness, fault dip and fault 
             %                     throw. It can be seen as the probability 
             %                     of randomly finding a clay smear-filled 
             %                     cell within the corresponding smear 
-            %                     subdomain in the fault.
+            %                     domain in the fault. Or, the fraction
+            %                     of a given domain filled by clay smear.
+            %                     Similar logic to Childs et al., GSLSP
+            %                     2007).
             %
             % OUTPUT:
             %  smear object with corresponding properties.
@@ -136,7 +145,7 @@ classdef Smear
                                       SSFc(n, :);
                 
                 
-                % (4) Maximum length of smear segments (if discontinuous)
+                % (4) Maximum length of smear segments (if discontinuous). 
                 smear.SegLenMax(n, :) = ((epoin(2, :) - SSFc(n, :)) ./ ...
                                          (epoin(2, :) - epoin(1, :))) .* ...
                                          smear.Length(n, :);
