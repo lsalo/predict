@@ -1,71 +1,65 @@
-function M = faultMaterialMap(G, FS, smearDomainLength, ...
-                              smearThickInFault, Psmear)
+function M = faultMaterialMap(G, FS, smear)
 %
 % -----------------------------SUMMARY------------------------------------
 % This function takes as inputs the Grid structure (G), faulted section (FS)
 % and smear dimensions, and creates a structure, M, which contains
 % the information regarding the clay smears and sand distribution in
 % the modeled domain (the fault). The mapping matrix itself, stored in
-% M.vals and M.units, provides a direct map to the materials in the
-% simulation grid.
+% M.vals (0 = sand, 1 = clay smear) and M.units (parent unit in each 
+% domain), provides a direct map to the materials in the simulation grid.
 %
 % The matrix M.vals is initialized with all potential 1s (all cells in the 
-% fault that would contain smear if the smear was continuous, and 0s, 
-% all cells in the fault that will surely contain sand.
+% fault that would contain smear if all smears were continuous), and 0s 
+% (all cells in the fault that will surely contain sand).
 %
 % Each smear (which occupies a given number of diagonals in M.vals as well
-% as the simulation grid) is centered around the middle of the
+% as the simulation grid) is initialized around the middle of the
 % corresponding unit in the FW or HW. The number of diagonals are decided
-% based on Ts (Ls).
+% based on the corresponding thickness. In case of clay smear overlaps,
+% a single parent is selected according to a uniform PMF (random).
 %
-% Note that MRST grid indexing (G) starts at bottom left, columns (x) move 
-% faster. Standar MATLAB matrices start counting at top left, and rows (y) 
-% move faster.
-%
-% Also note that drectly superposed sand layers (consecutive in FW or HW)
+% **Reminder**: Directly superposed sand layers (consecutive in FW or HW)
 % should be collapsed in FW and HW variables. That is, FW, for example,
-% should be passed as [1 0 1] and not [1 0 0 0 1] for eg thicknesses [20 60
-% 20] and not [20 20 20 20 20]. Above the smearing threshold, consecutive
-% clay layers can be passed (eg. FW.IsClay = [1 0 1 1 1]).
+% should be passed as thicknesses [20 60 20] for vcl [A B A], where A is 
+% above smearing threshold and B is below, and not [20 20 20 20 20] with 
+% vcl [A B B B A]. Conversely, consecutive clay layers above the smearing 
+% threshold can be passed, e.g. thickness [20 20 20 40 20] for vcl 
+% [A A A B A].
+% 
+% Note: MRST grid indexing (G) starts at bottom left, columns (x) move 
+% faster. Standard MATLAB matrices start counting at top left, and rows (y) 
+% move faster.
 %
 % ------------------------------INPUTS------------------------------------
 % G   = MRST Grid structure
-% fw  = footwall information structure.
-% hw  = hangingwall information structure
-% f   = fault information structure
-% Ls  = length of smears in the direction parallel to a diagonal from the 
-%       top left or top right of fault to bottom right or bottom left of 
-%       fault.
-% Tap = Apparent layer thickness along the fault [fw hw]
+% FS  = FaultedSection object with valid fields.
+% smear = Smear object with valid fields.
 %
 % ------------------------------OUTPUT------------------------------------
-% M = matrix structure. For arrays, the FW goes first (left) and then the 
-%     HW. Contains the following fields:
+% M = matrix structure. Contains the following fields:
 %   nDiagTot        = number of total diagonals in grid of size n*n, i.e. 
-%                     2*n -1.
+%                     2*n - 1.
 %   vals            = matrix of n*n that contains the mapping of 1s (smear)
-%                     and 0s (sand) to the grid. Note that the smears are
+%                     and 0s (sand) to the grid. Note that the domains with
+%                     parent materials with vcl > smearing threshold are
 %                     just initialized with all 1s here, and the final
 %                     configuration is defined in another function, based 
 %                     on the chosen geostatistical method.
-%   units           = matrix of n*n that indicates which final unit is
-%                     present in each cell
-%   unit            = array with final unit, i.e. 1 (bottom of fw) to n
-%                     (top of hw). Note that, in some cases, this number
+%   units           = matrix of n*n that indicates which parent unit is
+%                     present in each cell.
+%   unit            = 1xk array where k is the number of different domains
+%                     in the fault. Note that, in some cases, this number
 %                     can be different from the input number of units given
-%                     that if 2 or more sand units are one on top of
-%                     another in the stratigraphy, they may be collapsed
-%                     into 1 since it is assumed that they are equal and so
-%                     generate the same type of sand-based FZ material.
-%   isclay          = logical array indicating whether each final unit is
-%                     sand (0) or clay (1).
-%   nDiag           = number of diagonals that each subdomain has in the
+%                     overlap handling.
+%   isclay          = logical array indicating whether the material in each
+%                     domain is sand-based (0) or clay smear (1).
+%   nDiag           = number of diagonals that each domain has in the
 %                     grid.
 %   layerCenter     = center height of each layer in the FW and HW, 
 %                     relative to the bottom of the modeled fault portion. 
 %   layerTop        = top height of each layer in the FW and HW.
 %   layerBot        = base height of each layer in the FW and HW.
-%   layerDiagCenter = Grid diagonal number corresponding to the center of 
+%   layerDiagCenter = Fault grid diag number corresponding to the center of 
 %                     each layer in the FW and HW. Follows the same
 %                     convention as MATLAB's spdiags, i.e. 0 is the main
 %                     diagonal, lower diagonals are negative and upper are
@@ -75,22 +69,29 @@ function M = faultMaterialMap(G, FS, smearDomainLength, ...
 %   layerDiagBot    = Grid diagonal number corresponding to the base of 
 %                     each layer in the FW and HW.
 %   nDiagLayer      = Number of diagonals between layerDiagTop and
-%                     layerDiagBot, i.e. the number of diagonals that each 
-%                     layer in the FW and HW would take up.
+%                     layerDiagBot, i.e. the number of diagonals in contact
+%                     with each stratigraphic layer in the FW and HW.
 %   DiagTop         = Grid diagonal number corresponding to the top of 
-%                     each subdomain in the fault.
+%                     each material domain in the fault.
 %   DiagBot         = Grid diagonal number corresponding to the bottom of 
-%                     each subdomain in the FW and HW.
+%                     each material domain in the fault.
 %   clayDiagBot     = Grid diagonal number corresponding to the bottom of 
-%                     each clay source subdomain in the FW and HW.
-%   unitIn          = array with input units, i.e. 1 (bottom of fw) to n
-%                     (top of hw).
+%                     each clay source domain in the fault.
+%   unitIn          = array with input units (parent materials), i.e. 1 
+%                     (bottom of fw) to j (top of hw). Same as FS.ParentId.
 %   isclayIn        = logical array indicating whether each input unit is
 %                     sand (0) or clay (1).
 %   divLayerDiag    = Number of diagonals in the lower and upper triangle
 %                     of the grid, when there is a layer whose 
 %                     corresponding subdomain in the fault crosses the 
 %                     main diagonal. Otherwise [0, 0];
+%   idSmearInRemoved = index of M.unitIn(M.isclayIn) corresponding to
+%                      smearing sources not appearing (i.e. not 
+%                      contributing material) to the fault, as a result of 
+%                      overlap handling.
+%   Psmear          = fraction of domains with smearing sources as parent
+%                     material that is actually occupied by smear 
+%                     (continuous smear = 1).
 %__________________________________________________________________________
 
 % Initial values to Matrix structure
@@ -108,8 +109,8 @@ idc           = find(M.isclay);
 
 % 1.1 Calculate number of diagonals with potential smear
 layerLs = zeros(1, max(FS.ParentId));
-layerLs(M.isclay) = smearThickInFault;
-M.nDiag = round((layerLs./smearDomainLength)*M.nDiagTot);
+layerLs(M.isclay) = smear.ThickInFault;
+M.nDiag = round((layerLs./smear.DomainLength)*M.nDiagTot);
 
 
 % 1.2 Position of stratigraphic layers with respect to diags in M
@@ -265,7 +266,7 @@ end
 % 1.8 Track which smear domains were removed (if 0 diag) or repeated (for
 %     Psmear)
 M.Psmear = zeros(1, max(M.unitIn));
-M.Psmear(M.isclayIn) = Psmear;
+M.Psmear(M.isclayIn) = smear.Psmear;
 M.Psmear = M.Psmear(M.unit);       % repeat Psmear for repeated units
 M.Psmear(M.Psmear == 0) = [];      % remove 0s (sands)
 if any(M.nDiag(idc) == 0)

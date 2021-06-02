@@ -64,7 +64,7 @@ for n=1:numel(M.unit)
         cellNum = cellNum(2);
     end
     
-    if numel(cellNum) == 1        
+    if numel(cellNum) == 1              % clay or sand domain, continuous
         % Give a factor of about 3 max variation in permeability (already
         % correlated to fault thickness through shear strain), and 0.03 to
         % porosity.

@@ -240,8 +240,7 @@ classdef Fault
             
             % Mapping matrix (material in each grid cell)
             % MatMap makes this object somewhat heavy on RAM.
-            obj.MatMap = faultMaterialMap(G, FS, smear.DomainLength, ...
-                                          smear.ThickInFault, smear.Psmear);
+            obj.MatMap = faultMaterialMap(G, FS, smear);
             
             % Smear placement (object simulation)
             if any(obj.MatMap.Psmear < 1)

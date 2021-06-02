@@ -56,7 +56,7 @@ mySect = mySect.getMatPropDistr();
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
 tic
-parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+for n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     myFault = Fault(mySect, faultDip);
     
     % Get material property samples
