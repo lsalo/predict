@@ -223,7 +223,14 @@ classdef Fault
         
         function obj = upscaleSmearPerm(obj, FS, smear, U)
             %
-            %   
+            % Place materials in the fault zone, assign permeabilities to
+            % each fault material, and upscale permeability.
+            % 
+            % INPUT
+            %
+            % OUTPUT
+            %
+            % EXAMPLE
             %
             
             % Generate Grid
@@ -232,7 +239,7 @@ classdef Fault
             obj.Grid.cellDim = G.CellDim;
             
             % Mapping matrix (material in each grid cell)
-            % MatMap makes this somewhat heavy on RAM.
+            % MatMap makes this object somewhat heavy on RAM.
             obj.MatMap = faultMaterialMap(G, FS, smear.DomainLength, ...
                                           smear.ThickInFault, smear.Psmear);
             

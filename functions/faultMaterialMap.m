@@ -2,16 +2,16 @@ function M = faultMaterialMap(G, FS, smearDomainLength, ...
                               smearThickInFault, Psmear)
 %
 % -----------------------------SUMMARY------------------------------------
-% This function takes as inputs the Grid structure (G), footwall,
-% hangingwall and fault information and creates a structure, M, which
-% contains the information regarding the smears and sand distribution in
+% This function takes as inputs the Grid structure (G), faulted section (FS)
+% and smear dimensions, and creates a structure, M, which contains
+% the information regarding the clay smears and sand distribution in
 % the modeled domain (the fault). The mapping matrix itself, stored in
 % M.vals and M.units, provides a direct map to the materials in the
 % simulation grid.
 %
 % The matrix M.vals is initialized with all potential 1s (all cells in the 
-% domain (the fault) which can potentially have smear, and 0s (all cells in
-% the domain that will surely contain sand.
+% fault that would contain smear if the smear was continuous, and 0s, 
+% all cells in the fault that will surely contain sand.
 %
 % Each smear (which occupies a given number of diagonals in M.vals as well
 % as the simulation grid) is centered around the middle of the

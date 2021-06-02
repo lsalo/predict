@@ -1,6 +1,27 @@
 function G = makeFaultGrid(thick, disp, targetCellDim, makeplot)
+% Generate MRST grid (an MRST installation is required).
 %
+% INPUTS
+%   thick: fault thickness (grid x dimension) [m]
+%   disp: fault displacement (grid y (z) dimension) [m]
+%   targetCellDim: target cell dimensions (thickness and length). An array
+%                  of 1x2 elements [m]. Note that 
+%   makeplot: [optional] pass 1 to generate grid plot coloring cells by
+%             index.
 %
+% OUTPUT
+%   G: MRST grid structure (refer to MRST documentation for details). A
+%      structured, quadrilateral 2D grid is created. The grid has the same
+%      number of cells in x and y dimensions, corresponding to the maximum
+%      of {thick/targetCellDim(1), disp/targetCellDim(2)}. Hence, cell size
+%      in one of the dimensions may be << than what was passed in
+%      targetCellDim.
+%
+% EXAMPLE
+%   thick = 0.5;
+%   disp = 100;
+%   targetCellDim = [0.1, 1]
+%   G = makeFaultGrid(thick, disp, targetCellDim); 
 %
 nelem = max([round(thick / targetCellDim(1)), ...
     round(disp / targetCellDim(2))]);
