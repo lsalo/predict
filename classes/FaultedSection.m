@@ -85,7 +85,7 @@ classdef FaultedSection
             
             % Checks
             assert(hangingwall.IsHW == 1)
-            assert(sum(TapFW) == sum(TapHW))
+            assert(abs(sum(TapFW) - sum(TapHW)) < 1e-4)
             assert(footwall.IsClayVcl == hangingwall.IsClayVcl);  % assumed by MatProps
             
             % Assign
