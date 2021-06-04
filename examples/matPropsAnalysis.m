@@ -1,6 +1,8 @@
 %% Analysis of material properties (marginal distributions)
 %
-% 
+% Provides an overview of marginal distributions for intermediate
+% variables, using different inputs. Recommended to run one section at a 
+% time.
 % 
 
 clear
