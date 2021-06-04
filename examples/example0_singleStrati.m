@@ -25,7 +25,7 @@ vcl       = {[0.1 0.4 0.2 0.5], ...
              [0.3 0.6 0.1 0.7 0.2 0.8 0.3 0.9 0.1]};
 dip       = [0, -5];
 faultDip  = 70;
-Nsim      = 1000;               % Number of simulations/realizations
+Nsim      = 10;                 % Number of simulations/realizations
 
 % Optional Input parameters
 zf      = [500, 500];           % [m]
@@ -88,11 +88,11 @@ mySect.plotStrati(faults{1}.MatProps.thick, faultDip);
 %plotMatPropsHist(faults, smears, mySect, layerId) 
 
 % MatProps correlations
-[R, P] = plotMatPropsCorr(faults, mySect, 2);
+%[R, P] = plotMatPropsCorr(faults, mySect, 2);
 
 % General fault materials and perm view
-plotId = selectSimId('randm', faults, Nsim);                % simulation index
+plotId = selectSimId('minZ', faults, Nsim);                % simulation index
 faults{plotId}.plotMaterials(mySect) 
 
 % Plot upscaled Poro and Perm (all sims, 3 directions)
-plotUpscaledPerm(faults)
+%plotUpscaledPerm(faults)

@@ -92,6 +92,20 @@ function M = faultMaterialMap(G, FS, smear)
 %   Psmear          = fraction of domains with smearing sources as parent
 %                     material that is actually occupied by smear 
 %                     (continuous smear = 1).
+%   unitInClayGaps  = sand unit to be placed in each smear domain in case
+%                     of discontinuous smear. The selected sand is the
+%                     closest to the domain location in the fault. Only
+%                     defined if at least one sand unit is present in the
+%                     stratigraphy.
+%   windowBot       = In the fault, a smear contributed by a given parent 
+%                     can only appear at an elevation (z) <= top of parent
+%                     in FW, and >= bottom of parent in HW (window in which
+%                     it is sheared). windowBot corresponds to the bottom
+%                     id of each smear window in a diagonal with m 
+%                     elements, where m is the grid size.
+%   windowTop       = Top id of each smear window in a diagonal with m
+%                     elements, where m is the grid size.
+%   
 %__________________________________________________________________________
 
 % Initial values to Matrix structure
@@ -376,81 +390,11 @@ else
         idLay = M.DiagTop == 0;
         M.divLayerDiag = [M.nDiag(idLay) 0];
     end
-%     idbt = 1:numel(M.DiagBot);
-%     if sum(M.DiagBot(M.DiagTop == 0) == 0 > 0)
-%         idbt(all([M.DiagBot == 0; M.DiagTop == 0])) = [];
-%     end
-%     id = M.DiagTop == -1;
-%     if ~any(M.DiagTop(idbt) == 0) && ~any(M.DiagBot(idbt) == 0)
-%         if ~isempty(id)
-%             M.DiagTop(id) = 0;
-%         else
-%             id = M.DiagBot == 1;
-%             M.DiagBot(id) = 0;
-%         end
-%         M.nDiag(id) = M.nDiag(id)+1;
-%     end
-%     [v, id] = min(abs(M.DiagBot(idbt)));
-%     [v(2), id(2)] = min(abs(M.DiagTop(idbt)));
-%     [~, idLay] = min(v);
-%     idLay = idbt(id(idLay));
-%     if M.DiagBot(idLay) < 0
-%         M.divLayerDiag = [abs(M.DiagBot(idLay))+1 M.DiagTop(idLay)];
-%     elseif M.DiagBot(idLay) > 0
-%         M.divLayerDiag = [0 abs(M.DiagTop(idLay))];
-%     else
-%         M.divLayerDiag = [0 abs(M.DiagTop(idLay))+1];
-%     end
 end
 
-% idc = find(M.isclay);
-% if any(M.nDiag(idc)==0)
-%    ij = M.nDiag(idc) == 0;
-%    M.nDiag(idc(ij)) = [];
-%    M.DiagTop(idc(ij)) = [];
-%    M.DiagBot(idc(ij)) = [];
-%    M.isclay(idc(ij)) = [];
-%    M.unit(idc(ij)) = [];
-% end
 
-% In case of multiple, very thin smears we may need to adjust and add 1
-% diagonal to some entries.
-% if sum(M.nDiag) ~= M.nDiagTot
-%    zerBotTop = find(all([M.DiagBot == 0; M.DiagTop == 0]));
-%    zerBotTop(zerBotTop == 1) = [];
-%    zerBotTop(zerBotTop == numel(M.isclay)) = [];
-%    assert(all(M.isclay(zerBotTop) == 0))
-%    diagPerLyr = (M.nDiagTot - sum(M.nDiag)) / numel(zerBotTop);
-%    if mod(diagPerLyr, 1) ~= 0
-%       nDiagMis = M.nDiagTot - sum(M.nDiag);
-%       diagPerLyr = 1;
-%       if nDiagMis < numel(zerBotTop)
-%           zerBotTop = zerBotTop(1:nDiagMis);
-%       end
-%    end
-%    M.nDiag(zerBotTop) = diagPerLyr;
-%    M.DiagBot(zerBotTop) = M.DiagTop(zerBotTop - 1) + 1;
-%    M.DiagTop(zerBotTop) = M.DiagBot(zerBotTop + 1) - 1;
-% end
 
-% Remove any sand entries with 0 diagonals
-% if any(M.nDiag==0)
-%    id = M.nDiag == 0;
-%    M.nDiag(id) = [];
-%    M.DiagTop(id) = [];
-%    M.DiagBot(id) = [];
-%    M.isclay(id) = [];
-%    M.unit(id) = [];
-% end
-
-% Adjust DiagBot and DiagTop if needed (very coarse grids, few nDiag)
-% if sum((abs(M.DiagBot - M.DiagTop) + 1) - M.nDiag) ~= 0
-%     id1 = -(G.cartDims(1)-1);
-%     M.DiagBot = [id1 id1+cumsum(M.nDiag(1:end-1))];
-%     M.DiagTop = [M.DiagBot(2:end)-1 G.cartDims(1)-1];
-% end
-
-% Check that we have the correct number of diagonals for each layer.
+%% Check that we have the correct number of diagonals for each layer.
 assert(all(M.nDiag > 0))
 try
     assert(sum(M.nDiag) == M.nDiagTot)
@@ -461,19 +405,56 @@ end
 
 
 %% 4. Populate mapping matrix with all potential 1s and sure 0s
-for n = 1:numel(M.nDiag)
-    assert(M.DiagTop(n) >= M.DiagBot(n))    
+M.unitInClayGaps = nan(1, numel(M.unit));
+M.windowBot = nan(1, numel(M.unit));
+M.windowTop = nan(1, numel(M.unit));
+for n = 1:numel(M.nDiag)    
+    assert(M.DiagTop(n) >= M.DiagBot(n))
     if M.isclay(n) == 1
-        M.vals = full(spdiags(true(G.cartDims(1), M.nDiag(n)), ...
-                              -M.DiagTop(n):-M.DiagBot(n), M.vals));   
+        % Select sand unit to be placed in smear gap, if any (used later)
+        if any(~M.isclayIn)
+            cCenter = mean([M.DiagBot(n); M.DiagTop(n)]);
+            sCenters = M.layerDiagCenter(~M.isclayIn);
+            [~, sid] = min(abs(cCenter - sCenters));
+            sandIds = M.unitIn(~M.isclayIn);
+            closestSandId = sandIds(sid);
+            M.unitInClayGaps(n) = closestSandId;
+        end
+        
+        % 4.1 Select elevation window in which each clay smear can be found 
+        % (never at higher z than top of source in FW, and never at lower z 
+        % than bottom of source in HW).
+        % Top and bottom ids of smear window
+        if ismember(M.unit(n), FS.FW.Id)
+            idTop = round(( M.layerTop(M.unit(n))/...
+                            (G.cartDims(2)*G.cellDim(2)) ) * G.cartDims(2));
+            idTop(idTop > G.cartDims(2)) = G.cartDims(2);
+            idBot = 1;
+        else
+            idTop = G.cartDims(2);
+            idBot = round(( M.layerBot(M.unit(n))/...
+                            (G.cartDims(2)*G.cellDim(2)) ) * G.cartDims(2)); 
+            idBot(idBot == 0) = 1;
+        end
+        M.windowBot(n) = idBot;     
+        M.windowTop(n) = idTop;
+        diagVals = false(G.cartDims(2), M.nDiag(n));        % unitInClayGaps (sand)
+        diagVals(idBot:idTop, :) = true;                    % clay
+        diagVals = flipud(diagVals);                        % for spdiags
+        
+        % 4.2 Populate mapping matrix
+        M.vals = full(spdiags(diagVals, -M.DiagTop(n):-M.DiagBot(n), ...
+                              M.vals));
+        
     else
-        M.vals = full(spdiags(false(G.cartDims(1), M.nDiag(n)), ...
+        % Populate mapping matrix directly
+        M.vals = full(spdiags(false(G.cartDims(2), M.nDiag(n)), ...
                               -M.DiagTop(n):-M.DiagBot(n), M.vals));
-    end   
-    M.units = full(spdiags(M.unit(n)*ones(G.cartDims(1), M.nDiag(n)), ...
-                           -M.DiagTop(n):-M.DiagBot(n), M.units));
+    end
+    M.units = full(spdiags(M.unit(n)*ones(G.cartDims(2), M.nDiag(n)), ...
+                   -M.DiagTop(n):-M.DiagBot(n), M.units));
 end
-M.units = transpose(M.units); 
+M.units = transpose(M.units);
 % M.vals also needs to be transposed. We do it later in placeSmearObjects.
 
 end

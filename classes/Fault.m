@@ -236,7 +236,7 @@ classdef Fault
             % Generate Grid
             G = makeFaultGrid(obj.MatProps.thick, obj.Disp, ...
                               obj.Grid.targetCellDim);
-            obj.Grid.cellDim = G.CellDim;
+            obj.Grid.cellDim = G.cellDim;
             
             % Mapping matrix (material in each grid cell)
             % MatMap makes this object somewhat heavy on RAM.
@@ -244,16 +244,13 @@ classdef Fault
             
             % Smear placement (object simulation)
             if any(obj.MatMap.Psmear < 1)
-                tol = 0.001;
-                obj.MatMap = placeSmearObjects(obj.MatMap, G, tol, ...
-                                                smear.Length, ...
-                                                smear.SegLenMax, ...
-                                                smear.DomainLength, 0);
+                tol = 0.025;
+                obj.MatMap = placeSmearObjects(obj.MatMap, smear, G, tol, 0);
             else
                 if isempty(obj.MatMap.Psmear)
                     disp('No smear: P(smear) = 0')
-                else
-                    disp('Continuous smears: P(smear) = 1')
+                %else
+                %    disp('Continuous smears: P(smear) = 1')
                 end
                 obj.MatMap.vals = transpose(obj.MatMap.vals);
                 obj.MatMap.P = [obj.MatMap.Psmear; ...  % desired (calculated)
@@ -261,7 +258,7 @@ classdef Fault
             end
             
             % Assign porosity and permeability
-            [obj.Grid.poro, obj.Grid.perm, kz_loc, obj.MatMap] = ...
+            [obj.Grid.poro, obj.Grid.perm, kz_loc] = ...
                                                setGridPoroPerm(obj, G, FS);
             
             % Upscale Porosity (additive)

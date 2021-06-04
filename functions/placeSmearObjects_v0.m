@@ -1,4 +1,4 @@
-function M = placeSmearObjects(M, smear, G, tolerance, verbose)
+function M = placeSmearObjects_v0(M, smear, G, tolerance, verbose)
 %
 % -----------------------------SUMMARY------------------------------------
 % This function randomly places smear objects using object-based simulation, 
@@ -120,9 +120,7 @@ if any(all([cDiagBound(1,:)<0; cDiagBound(2,:)>0]))
     cDiagMain(idLay) = 0;
 end
 cnDiag = M.nDiag(cunits);                    % N of diags of each cunit (Psmear < 1)
-maxLSmearSeg = segLMax(M.Psmear<1);       
-winBot = M.windowBot(cunits);     
-winTop = M.windowTop(cunits);
+maxLSmearSeg = segLMax(M.Psmear<1);         
 
 % Tolerances 
 tolP = tolerance;              % tolerance in deviation from P(smear)
@@ -141,8 +139,7 @@ for j = 1:numel(cunits)
     
     % 2.1 Initial parameters to place smear segments in each subdomain
     smearL = min([maxLSmearSeg(j), Lsmear(j)]);
-    %DiagCellsNum = G.cartDims(1)-cDiagMain(j);
-    DiagCellsNum = numel(winBot(j):winTop(j));
+    DiagCellsNum = G.cartDims(1)-cDiagMain(j);
     cellDiagL  = sqrt(sum(G.cellDim.^2));
     if smearL > G.cartDims(1)*cellDiagL
         smearL = G.cartDims(1)*cellDiagL;
@@ -157,7 +154,6 @@ for j = 1:numel(cunits)
     else
         Dvals_Mtest = G.cartDims(1)-abs(cDiagBound(2,j)):G.cartDims(1)-abs(cDiagBound(1,j));
     end
-    Dvals_Mtest(Dvals_Mtest > DiagCellsNum) = DiagCellsNum;
     assert(~isempty(Dvals_Mtest))
     
     % 2.2 Iterate to end up with number of cells with smear = P(smear).

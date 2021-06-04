@@ -1,4 +1,4 @@
-function [poroG, permG, kz_loc, M] = setGridPoroPerm(obj, G, FS)
+function [poroG, permG, kz_loc] = setGridPoroPerm(obj, G, FS)
 %
 %
 %
@@ -9,7 +9,6 @@ alpha = obj.Alpha;
 unitPoro = obj.MatProps.poro;
 unitPerm = obj.MatProps.perm;
 permAnisoRatio = obj.MatProps.permAnisoRatio;
-M.unitInClayGaps = nan(1, numel(M.unit));
 
 
 % 1) Map diagonals to Grid indexing: Grid indexing starts at bottom left,
@@ -107,22 +106,9 @@ for n=1:numel(M.unit)
         kz_loc(cellIds(:, 1)) = kx_loc(cellIds(:, 1))*permAnisoRatio(M.unit(n));
         
         if any(~M.isclayIn)     % if sand in stratigraphy
-            cCenter = mean([M.DiagBot(n); M.DiagTop(n)]);
-            sCenters = M.layerDiagCenter(~M.isclayIn);
-            [~, sid] = min(abs(cCenter - sCenters));
-            sandIds = M.unitIn(~M.isclayIn);
-%             if any(~M.isclay)
-%                 [~, sid] = min(abs(M.unit(~M.isclay) - M.unit(n)));
-%                 sandIds = M.unit(~M.isclay);
-%             else
-%                 [~, sid] = min(abs(M.unitIn(~M.isclayIn) - M.unit(n)));
-%                 sandIds = M.unitIn(~M.isclayIn);
-%             end
-            closestSandId = sandIds(sid);
-            phi_s = unitPoro(closestSandId);
-            permx_s = unitPerm(closestSandId);
-            kprime_s = permAnisoRatio(closestSandId);
-            M.unitInClayGaps(n) = closestSandId;
+            phi_s = unitPoro(M.unitInClayGaps(n));
+            permx_s = unitPerm(M.unitInClayGaps(n));
+            kprime_s = permAnisoRatio(M.unitInClayGaps(n));
             
         else                    % no sand in stratigraphy
             disp('_______________________________________________________')
