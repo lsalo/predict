@@ -26,7 +26,7 @@ function G = makeFaultGrid(thick, disp, targetCellDim, makeplot)
 nelem = max([round(thick / targetCellDim(1)), ...
     round(disp / targetCellDim(2))]);
 G = computeGeometry(cartGrid([nelem, nelem], [thick, disp]));
-G.CellDim = [thick/nelem, disp/nelem];
+G.cellDim = [thick/nelem, disp/nelem];
 
 if nargin > 3 && makeplot == 1
     f1 = figure(1);
