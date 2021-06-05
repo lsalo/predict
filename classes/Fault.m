@@ -245,7 +245,8 @@ classdef Fault
             % Smear placement (object simulation)
             if any(obj.MatMap.Psmear < 1)
                 tol = 0.025;
-                obj.MatMap = placeSmearObjects(obj.MatMap, smear, G, tol, 0);
+                obj.MatMap = placeSmearObjects(obj.MatMap, smear, FS, ...
+                                               G, tol, 0);
             else
                 if isempty(obj.MatMap.Psmear)
                     disp('No smear: P(smear) = 0')
