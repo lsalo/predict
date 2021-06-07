@@ -114,11 +114,11 @@ idcAll = find(M.isclay);
 idc = idcAll(M.Psmear<1);           % Clay units with Psmear < 1
 sL = sLAll(M.Psmear<1);
 cDiagBound = [M.DiagBot(idc);M.DiagTop(idc)];
-% cDiagMain  = min(abs(cDiagBound)); % Ndiag to subtract from G.cartDims(1)
-% if any(all([cDiagBound(1,:)<0; cDiagBound(2,:)>0]))
-%     idLay = all([cDiagBound(1,:)<0; cDiagBound(2,:)>0]);
-%     cDiagMain(idLay) = 0;
-% end
+cDiagMain  = min(abs(cDiagBound)); % Ndiag to subtract from G.cartDims(1)
+if any(all([cDiagBound(1,:)<0; cDiagBound(2,:)>0]))
+    idLay = all([cDiagBound(1,:)<0; cDiagBound(2,:)>0]);
+    cDiagMain(idLay) = 0;
+end
 cnDiag = M.nDiag(idc);              % N of diags of each cunit (Psmear < 1)
 segLMax = segLMaxAll(M.Psmear<1);       
 winBot = M.windowBot(idc);     
@@ -145,7 +145,38 @@ for j = 1:numel(idc)
     % number of available cells for smear for the domain j in M.
     segLMax(j) = min([segLMax(j), sL(j)]);
     %diagCellsNum = G.cartDims(1)-cDiagMain(j);
-    diagCellsNum = numel(winBot(j):winTop(j));
+    if ismember(M.unit(idc(j)), FS.HW.Id) && cDiagBound(1,j) <= 0 || ...
+       ismember(M.unit(idc(j)), FS.FW.Id) && cDiagBound(2,j) >= 0
+        diagCellsNum = numel(winBot(j):winTop(j)) - cDiagMain(j);
+        if all([cDiagBound(1,j)<0 cDiagBound(2,j)>0]) && ...
+           ismember(M.unit(idc(j)), FS.HW.Id) 
+            dvals_Mtest = [diagCellsNum+cDiagBound(1,j):diagCellsNum ...
+                           fliplr(G.cartDims(1)-cDiagBound(2,j):G.cartDims(1)-1)];
+        elseif all([cDiagBound(1,j)<0 cDiagBound(2,j)>0]) && ...
+               ismember(M.unit(idc(j)), FS.FW.Id) 
+           dvals_Mtest = [G.cartDims(1)+cDiagBound(1,j):G.cartDims(1) ...
+                          fliplr(diagCellsNum-cDiagBound(2,j):diagCellsNum-1)];
+        elseif abs(cDiagBound(1,j)) >= abs(cDiagBound(2,j))
+            dvals_Mtest = diagCellsNum-(cnDiag(j) - 1):diagCellsNum;
+        else
+            dvals_Mtest = fliplr(diagCellsNum-(cnDiag(j) - 1):diagCellsNum);
+        end 
+    else
+        diagCellsNum = numel(winBot(j):winTop(j));
+%         if all([cDiagBound(1,j)<0 cDiagBound(2,j)>0])
+%             dvals_Mtest = [G.cartDims(1)+cDiagBound(1,j):G.cartDims(1) ...
+%                            fliplr(G.cartDims(1)-cDiagBound(2,j):G.cartDims(1)-1)];
+        if abs(cDiagBound(1,j)) > abs(cDiagBound(2,j))
+            dvals_Mtest = G.cartDims(1)-abs(cDiagBound(1,j)):...
+                          G.cartDims(1)-abs(cDiagBound(2,j));
+        else
+            dvals_Mtest = G.cartDims(1)-abs(cDiagBound(2,j)):...
+                          G.cartDims(1)-abs(cDiagBound(1,j));
+        end
+    end
+    dvals_Mtest(dvals_Mtest > diagCellsNum) = diagCellsNum;
+    assert(~isempty(dvals_Mtest))
+    
     cellDiagL  = sqrt(sum(G.cellDim.^2));
     if segLMax(j) > G.cartDims(2)*cellDiagL
         segLMax(j) = G.cartDims(2)*cellDiagL;
@@ -154,18 +185,6 @@ for j = 1:numel(idc)
     claySegCellNum = min(round(segLMax(j)*G.cartDims(2)/...
                                smear.DomainLength), diagCellsNum);
     claySegCellNum(claySegCellNum==0) = 1;
-    if all([cDiagBound(1,j)<0 cDiagBound(2,j)>0])
-        dvals_Mtest = [G.cartDims(1)+cDiagBound(1,j):G.cartDims(1) ...
-                    fliplr(G.cartDims(1)-cDiagBound(2,j):G.cartDims(1)-1)];
-    elseif abs(cDiagBound(1,j)) > abs(cDiagBound(2,j))
-        dvals_Mtest = G.cartDims(1)-abs(cDiagBound(1,j)):...
-                      G.cartDims(1)-abs(cDiagBound(2,j));
-    else
-        dvals_Mtest = G.cartDims(1)-abs(cDiagBound(2,j)):...
-                      G.cartDims(1)-abs(cDiagBound(1,j));
-    end
-    dvals_Mtest(dvals_Mtest > diagCellsNum) = diagCellsNum;
-    assert(~isempty(dvals_Mtest))
     
     % 2 Iterate to end up with number of cells with smear = P(smear).
     % This outer iterative loop matches the smear fraction to a value that 
@@ -320,14 +339,23 @@ for j = 1:numel(idc)
         
         % 2.5 Prepare for matrix, compute iteration probability and compare
         % with calculated probability
-        addZeros = zeros(G.cartDims(1)-numel(dvals), 1);
-        numLow = -cDiagBound(2,j); numUp = -cDiagBound(1,j);
         %if -cDiagBound(2,j) > 0
-        if ismember(M.unit(idc(j)), FS.FW.Id)
+        if cDiagBound(1,j) <= 0 && ismember(M.unit(idc(j)), FS.HW.Id)
+            addZerosBot = zeros(winBot(j)-1, 1);
+            addZerosTop = zeros(G.cartDims(2)-numel([dvals; addZerosBot]), 1);
+            dvals = repmat([addZerosTop; dvals; addZerosBot],1,cnDiag(j));
+        elseif cDiagBound(2,j) >= 0 && ismember(M.unit(idc(j)), FS.FW.Id)
+            addZerosTop = zeros(G.cartDims(2)-winTop(j), 1);
+            addZerosBot = zeros(G.cartDims(2)-numel([addZerosTop; dvals]), 1);
+            dvals = repmat([addZerosTop; dvals; addZerosBot],1,cnDiag(j));
+        elseif -cDiagBound(2,j) > 0
+            addZeros = zeros(G.cartDims(1)-numel(dvals), 1);
             dvals = repmat([addZeros; dvals],1,cnDiag(j));
         else
+            addZeros = zeros(G.cartDims(1)-numel(dvals), 1);
             dvals = repmat([dvals; addZeros],1,cnDiag(j));
         end
+        numLow = -cDiagBound(2,j); numUp = -cDiagBound(1,j);
         diagIds = numLow:numUp;
         Mtest = transpose(full(spdiags(dvals, diagIds, ...
                                        false(G.cartDims(1)))));
@@ -381,9 +409,17 @@ for j = 1:numel(idc)
                 dvals2              = false(diagCellsNum,1);
                 dvals2(smearCells)  = true;
                 %if -cDiagBound(2,j) > 0
-                if ismember(M.unit(idc(j)), FS.FW.Id)
+                if cDiagBound(1,j) <= 0 && ismember(M.unit(idc(j)), FS.HW.Id)
+                    addZerosTop = zeros(G.cartDims(2)-numel([dvals2; addZerosBot]), 1);
+                    dvals2 = repmat([addZerosTop; dvals2; addZerosBot],1,cnDiag(j));
+                elseif cDiagBound(2,j) >= 0 && ismember(M.unit(idc(j)), FS.FW.Id)
+                    addZerosBot = zeros(G.cartDims(2)-numel([addZerosTop; dvals2]), 1);
+                    dvals2 = repmat([addZerosTop; dvals2; addZerosBot],1,cnDiag(j));
+                elseif -cDiagBound(2,j) > 0
+                    addZeros = zeros(G.cartDims(1)-numel(dvals2), 1);
                     dvals2 = repmat([addZeros; dvals2],1,cnDiag(j));
                 else
+                    addZeros = zeros(G.cartDims(1)-numel(dvals2), 1);
                     dvals2 = repmat([dvals2; addZeros],1,cnDiag(j));
                 end
                 Mtest = transpose(full(spdiags(dvals2, diagIds, ...
@@ -423,78 +459,82 @@ for j = 1:numel(idc)
             % extra short smear segments). Shortest smear is chosen.
             if numel(smearCells) == diagCellsNum
                 if verbose == 1
-                    disp('Psmear cannot be matched, not enough cell resolution')
+                    disp(['Psmear cannot be matched, not enough cell '...
+                        'resolution'])
                 end
+            else
+                if verbose == 1
+                    disp(['2nd iterative loop (addition) required to match' ...
+                        ' Psmear in the 2D subdomain:'])
+                end
+                itNum3  = 0;
+                maxIts3 = 25;
+                while itNum3 < maxIts3
+                    itNum3  = itNum3 + 1;
+                    dvals3   = false(diagCellsNum,1);
+                    dvals3(smearCells) = true;
+                    start1 = strfind([0, dvals3'==1],[0 1]);
+                    end1 = strfind([dvals3'==1, 0],[1 0]);
+                    segCells = end1 - start1 + 1;
+                    [~, idMinL] = min(segCells);
+                    addToStartOrEnd = rand(1);
+                    if addToStartOrEnd >= 0.5 && end1(idMinL) < diagCellsNum || ...
+                            addToStartOrEnd < 0.5 && start1(idMinL) == 1
+                        idToAdd = end1(idMinL) + 1;
+                    else
+                        idToAdd = start1(idMinL) - 1;
+                    end
+                    assert(idToAdd > 0)
+                    dvals3(idToAdd) = 1;
+                    smearCells = find(dvals3);
+                    
+                    % Compute 3rd iterative loop probability
+                    %if -cDiagBound(2,j) > 0
+                    if cDiagBound(1,j) <= 0 && ismember(M.unit(idc(j)), FS.HW.Id)
+                        addZerosTop = zeros(G.cartDims(2)-numel([dvals3; addZerosBot]), 1);
+                        dvals3 = repmat([addZerosTop; dvals3; addZerosBot],1,cnDiag(j));
+                    elseif cDiagBound(2,j) >= 0 && ismember(M.unit(idc(j)), FS.FW.Id)
+                        addZerosBot = zeros(G.cartDims(2)-numel([addZerosTop; dvals3]), 1);
+                        dvals3 = repmat([addZerosTop; dvals3; addZerosBot],1,cnDiag(j));
+                    elseif -cDiagBound(2,j) > 0
+                        addZeros = zeros(G.cartDims(1)-numel(dvals3), 1);
+                        dvals3 = repmat([addZeros; dvals3],1,cnDiag(j));
+                    else
+                        addZeros = zeros(G.cartDims(1)-numel(dvals3), 1);
+                        dvals3 = repmat([dvals3; addZeros],1,cnDiag(j));
+                    end
+                    Mtest = transpose(full(spdiags(dvals3, diagIds, ...
+                                                   false(G.cartDims(1)))));
+                    pObjIt3 = sum(Mtest(Mtest==true)) / sum(dvals_Mtest);
+                    
+                    % Breaks and verbose messages
+                    if abs(pObjIt3 - pCalc(j)) < tolP
+                        if verbose == 1
+                            disp(['Tolerance of ' num2str(tolP) ' met in ' ...
+                                num2str(itNum3) ' iterations.'])
+                        end
+                        break
+                    elseif itNum3 == maxIts3
+                        if verbose == 1
+                            disp(['Tolerance cannot be met: max number of ' ...
+                                'iterations reached'])
+                        end
+                    elseif pObjIt3 > pCalc(j)
+                        if verbose == 1
+                            disp(['Tolerance of ' num2str(tolP) ...
+                                ' cannot be met: not enough cell resolution.'])
+                            disp(['Number of iterations = ' num2str(itNum3)])
+                        end
+                        break
+                    end
+                end
+                
+                % pass dvals and object probabilities from 3rd iterative loop
+                dvals = dvals3;
+                pObjIt  = pObjIt3;
                 break
             end
-            if verbose == 1
-                disp(['2nd iterative loop (addition) required to match' ...
-                      ' Psmear in the 2D subdomain:'])
-            end
-            itNum3  = 0;
-            maxIts3 = 25;
-            while itNum3 < maxIts3
-                itNum3  = itNum3 + 1;
-                dvals3   = false(diagCellsNum,1);
-                dvals3(smearCells) = true;
-                start1 = strfind([0, dvals3'==1],[0 1]);
-                end1 = strfind([dvals3'==1, 0],[1 0]);
-                segCells = end1 - start1 + 1;
-                [~, idMinL] = min(segCells);
-                addToStartOrEnd = rand(1);
-                if addToStartOrEnd >= 0.5 && end1(idMinL) < diagCellsNum || ...
-                   addToStartOrEnd < 0.5 && start1(idMinL) == 1
-                    idToAdd = end1(idMinL) + 1;
-                else
-                    idToAdd = start1(idMinL) - 1;
-                end
-                try
-                    assert(idToAdd > 0)   
-                catch
-                    error('What´s going on?')
-                end
-                dvals3(idToAdd) = 1;
-                smearCells = find(dvals3);
-                
-                % Compute 3rd iterative loop probability
-                %if -cDiagBound(2,j) > 0
-                if ismember(M.unit(idc(j)), FS.FW.Id)
-                    dvals3 = repmat([addZeros; dvals3],1,cnDiag(j));
-                else
-                    dvals3 = repmat([dvals3; addZeros],1,cnDiag(j));
-                end
-                Mtest = transpose(full(spdiags(dvals3, diagIds, ...
-                                               false(G.cartDims(1)))));
-                pObjIt3 = sum(Mtest(Mtest==true)) / sum(dvals_Mtest);
-                
-                % Breaks and verbose messages
-                if abs(pObjIt3 - pCalc(j)) < tolP
-                    if verbose == 1
-                        disp(['Tolerance of ' num2str(tolP) ' met in ' ...
-                              num2str(itNum3) ' iterations.'])
-                    end
-                    break
-                elseif itNum3 == maxIts3
-                    if verbose == 1
-                        disp(['Tolerance cannot be met: max number of ' ...
-                              'iterations reached'])
-                    end
-                elseif pObjIt3 > pCalc(j)
-                    if verbose == 1
-                        disp(['Tolerance of ' num2str(tolP) ...
-                              ' cannot be met: not enough cell resolution.'])
-                        disp(['Number of iterations = ' num2str(itNum3)])
-                    end
-                    break
-                end
-            end
-            
-            % pass dvals and object probabilities from 3rd iterative loop
-            dvals = dvals3;
-            pObjIt  = pObjIt3;
-            break 
         end
-        
     end
 
     % 3. Final messages and assign values to mapping matrix
