@@ -91,7 +91,8 @@ function M = faultMaterialMap(G, FS, smear)
 %                      overlap handling.
 %   Psmear          = fraction of domains with smearing sources as parent
 %                     material that is actually occupied by smear 
-%                     (continuous smear = 1).
+%                     (continuous smear = 1). Result of calculation based
+%                     on SSFc performed by the Smear class.
 %   unitInClayGaps  = sand unit to be placed in each smear domain in case
 %                     of discontinuous smear. The selected sand is the
 %                     closest to the domain location in the fault. Only
@@ -105,6 +106,8 @@ function M = faultMaterialMap(G, FS, smear)
 %                     elements, where m is the grid size.
 %   windowTop       = Top id of each smear window in a diagonal with m
 %                     elements, where m is the grid size.
+%   P               = Psmear (1st row) and result of object simulation in
+%                     placeSmearObjects.m (performed later).
 %   
 %__________________________________________________________________________
 
@@ -406,8 +409,8 @@ end
 
 %% 4. Populate mapping matrix with all potential 1s and sure 0s
 M.unitInClayGaps = nan(1, numel(M.unit));
-M.windowBot = nan(1, numel(M.unit));
 M.windowTop = nan(1, numel(M.unit));
+M.windowBot = nan(1, numel(M.unit));
 for n = 1:numel(M.nDiag)    
     assert(M.DiagTop(n) >= M.DiagBot(n))
     if M.isclay(n) == 1
@@ -436,8 +439,8 @@ for n = 1:numel(M.nDiag)
                             (G.cartDims(2)*G.cellDim(2)) ) * G.cartDims(2)); 
             idBot(idBot == 0) = 1;
         end
-        M.windowBot(n) = idBot;     
         M.windowTop(n) = idTop;
+        M.windowBot(n) = idBot;     
         diagVals = false(G.cartDims(2), M.nDiag(n));        % unitInClayGaps (sand)
         diagVals(idBot:idTop, :) = true;                    % clay
         diagVals = flipud(diagVals);                        % for spdiags
