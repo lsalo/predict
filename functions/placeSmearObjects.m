@@ -6,17 +6,17 @@ function M = placeSmearObjects(M, smear, FS, G, tolerance, verbose)
 % inputs. The final goal is to assign correct number of 0s and 1s in M.vals 
 % such that probabilities in M.Psmear are matched to the indicated 
 % tolerance. These probabilities are matched in 2D, ie accounting for the 
-% total number of cells in each subdomain. Smears, however, are treated as 
-% 1D objects, so that their thickness in a given subdomain stays constant.
+% total number of cells in each domain. Smears, however, are treated as 
+% 1D objects, so that their thickness in a given domain stays constant.
 %
 % For each clay layer in the FW and HW, the iterative loop takes into
 % account the maximum length of a smear segment, indicated as an input 
-% (smear.inL), as well as P(smear). Then, it places smear objects of
-% maximum length inL, and successively adds or removes cells until P(1)
-% within each subdomain is matched to P(smear) to the given tolerance. The 
+% (smear.SegLenMax), as well as M.Psmear. Then, it places smear objects of
+% maximum length SegLenMax, and successively adds or removes cells until P
+% within each subdomain is matched to P(smear) within a tolerance. The 
 % smear objects/segments are placed one at a time within an inner for loop;
 % the algorithm randomly selects a location within the longest sand segment 
-% at the beginning of each iteration. This process is done in 1D, i.e. 
+% at the beginning of each iteration. This initial process is 1D, i.e. 
 % using a single array of 0s and 1s, since the smear thickness in a given 
 % subdomain stays constant.
 % 
@@ -26,67 +26,38 @@ function M = placeSmearObjects(M, smear, FS, G, tolerance, verbose)
 % - Iteration 1
 %   0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 
 %   (For this case, we see that each smear segment has a maximum length
-%   corresponding to 6 cells. This depends on the user input (desired
-%   maximum length) but may be modified (overwritten) to match the smear 
-%   fraction present in each subdomain)
-%   P calculated (in 2D, with all corresponding diags) + tol < P(smear)
+%   corresponding to 6 cells. This depends on SegLenMax, but may be 
+%   overwritten to match Psmear in each subdomain).
+%   Suppose P calculated (in 2D, with all corresponding diags) + tol <
+%   Psmear. We need another iteration.
 % - Iteration 2
 %   0 0 1 1 1 1 1 1 0 0 0 0 0 0 0 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0
-%   P calculated > P (smear)
-% - Inner loop to remove smear cells one (smear row) at a time
+%   Suppose P calculated - tol > Psmear, we need another iteration.
+% - Now remove smear cells one (smear row) at a time
 %   0 0 0 1 1 1 1 1 0 0 0 0 0 0 0 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0
-%   until abs(P(smear) - P calc.) < tol. 
+%   until abs(Psmear - P calc.) < tol. 
 %
-% -----------------------------INPUTS-------------------------------------
-% Length units are in meters (m), and angles are in degrees (º).
 %
+% -----------------------------INPUTS-------------------------------------%
 % M     = mapping matrix structure. For arrays, the FW goes first (left) 
-%         and then the HW. See smearMap.m for full documentation of fields.
+%         and then the HW. See faultMaterialMap.m for full documentation.
+% smear = smear object with the corresponding fields (see Smear.m)
+% FS    = faulted section object (see FaultedSection.m)
+% G     = MRST grid structure (see MRST documentation).
+% tolerance = tolerance for matching P calculated to Psmear, typically
+%             around 0.01-0.05.
+% verbose = 1 for displaying info on smear placement (verbose), 0 to avoid 
+%           it. Optional argument, default value is set to 0 (preferred if
+%           many simulations are going to be run).
 %
-% smear = smear structure with the following fields:
-%       inL       = desired maximum smear length. Either 'Lsmear' or double
-%                   value.
-%       modeledAs = algorithm to use, in this case only 'objects' is 
-%                   accepted.
-%       tolerance = tolerance to match simulated P with P(smear). Scalar
-%                   double.
-%       Ts        = smear thickness for each smear (horizontal array, FW 
-%                   first). 
-%       Ls        = smear apparent length in a diagonal crossing the fault 
-%                   from a lower extreme (eg bottom left) to the opposite 
-%                   upper extreme (eg top right). Not used here.
-%       L         = smear length at which it becomes discontinuous, i.e. 
-%                   the upper bound for smear length as determined from 
-%                   Tap*SSFc. Horizontal array.
-%       Ds        = path length along which the smear is distributed.
-%                   Scalar double.
-%
-% f     = fault structure with the following fields:
-%       T     = thickness (scalar double)
-%       dip   = dip angle     (")
-%       t     = throw         (")
-%       D     = displacement  (")
-%       L     = fault length, along the fault dip, for each FW and HW layer, 
-%               from top of that layer in the FW to bottom of the layer 
-%               in the HW.
-%       delta = delta angle, ie the angle of the shear zone within the
-%               fault, along which smears are distributed, with the
-%               horizontal. This would be equal to the fault dip if smears
-%               were parallel to the fault.
-%       alpha = 90 - gamma - delta, where gamma = 90 - f.dip.
-%
-% G     = MRST grid structure.
-%
-% verbose = 1 for displaying info on smear placement (verbose), 0 to avoid it. 
-%           Optional argument, default value is set to 1 (verbose).
 %
 % -----------------------------OUTPUT-------------------------------------
 % M     = mapping matrix structure. For arrays, the FW goes first (left) 
-%         and then the HW. See smearMap.m for full documentation of fields.
+%         and then the HW. See faultMaterialMap.m for full documentation.
 %         This function updates the field M.vals with the correct number
-%         and placement of 0s (sand) and 1s (smear) according to inputs.
-%         M.vals can be directly mapped to the grid cell indexes in G by
-%         using (this is for 2D grid):
+%         and placement of 0s (sand) and 1s (smear) after object-based
+%         simulation. M.vals can be directly mapped to the grid cell 
+%         indexes in G by using (this is for 2D grid):
 %         >>  gridIndices = reshape(transpose(flipud(M.vals)), ...
 %                                   G.cells.num, 1);
 %         We need to flip up-down and transpose since G indexing starts at 
@@ -96,7 +67,7 @@ function M = placeSmearObjects(M, smear, FS, G, tolerance, verbose)
 
 % verbose
 if nargin < 6
-    verbose = 1;
+    verbose = 0;
 end
 
 % Add Psmear and check if  removed/repeated smears
