@@ -344,10 +344,9 @@ for j = 1:numel(idc)
             % until P is within tolerance. Alternatively, if P becomes lower 
             % than true value again, it means that true P cannot be matched 
             % with this cell resolution. So, we break anyway.
-            % Values are removed from the top of longest smear segment for 
-            % smears below the main diagonal, from the bottom of longest 
-            % smear segment for smears above the main diagonal, and random 
-            % for smears with part below and part above the main diagonal.
+            % Values are removed randomly (but maintaining the same choice
+            % for a given segment) from either the top or the bottom of the
+            % longest segment.
             if verbose == 1
                 disp(['2nd iterative loop (removal) required to match ' ...
                       'Psmear in the 2D subdomain:'])
