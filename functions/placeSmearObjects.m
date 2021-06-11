@@ -116,8 +116,8 @@ for j = 1:numel(idc)
     % number of available cells for smear for the domain j in M.
     segLMax(j) = min([segLMax(j), sL(j)]);
     %diagCellsNum = G.cartDims(1)-cDiagMain(j);
-    if ismember(M.unit(idc(j)), FS.HW.Id) && cDiagBound(1,j) <= 0 || ...
-       ismember(M.unit(idc(j)), FS.FW.Id) && cDiagBound(2,j) >= 0
+    if ismember(M.unit(idc(j)), FS.HW.Id) && cDiagBound(1,j) < 0 || ...
+       ismember(M.unit(idc(j)), FS.FW.Id) && cDiagBound(2,j) > 0
         diagCellsNum = numel(winBot(j):winTop(j)) - cDiagMain(j);
         if all([cDiagBound(1,j)<0 cDiagBound(2,j)>0]) && ...
            ismember(M.unit(idc(j)), FS.HW.Id) 
@@ -134,19 +134,20 @@ for j = 1:numel(idc)
         end 
     else
         diagCellsNum = numel(winBot(j):winTop(j));
-%         if all([cDiagBound(1,j)<0 cDiagBound(2,j)>0])
-%             dvals_Mtest = [G.cartDims(1)+cDiagBound(1,j):G.cartDims(1) ...
-%                            fliplr(G.cartDims(1)-cDiagBound(2,j):G.cartDims(1)-1)];
+%       if all([cDiagBound(1,j)<0 cDiagBound(2,j)>0])
+%          dvals_Mtest = [G.cartDims(1)+cDiagBound(1,j):G.cartDims(1) ...
+%                         fliplr(G.cartDims(1)-cDiagBound(2,j):G.cartDims(1)-1)];
         if abs(cDiagBound(1,j)) > abs(cDiagBound(2,j))
             dvals_Mtest = G.cartDims(1)-abs(cDiagBound(1,j)):...
                           G.cartDims(1)-abs(cDiagBound(2,j));
         else
-            dvals_Mtest = G.cartDims(1)-abs(cDiagBound(2,j)):...
-                          G.cartDims(1)-abs(cDiagBound(1,j));
+            dvals_Mtest = fliplr(G.cartDims(1)-abs(cDiagBound(2,j)):...
+                                 G.cartDims(1)-abs(cDiagBound(1,j)));
         end
     end
     dvals_Mtest(dvals_Mtest > diagCellsNum) = diagCellsNum;
     assert(~isempty(dvals_Mtest))
+    assert(all(dvals_Mtest >= 0))
     
     cellDiagL  = sqrt(sum(G.cellDim.^2));
     if segLMax(j) > G.cartDims(2)*cellDiagL
@@ -206,7 +207,6 @@ for j = 1:numel(idc)
 %        
 %        else
         if numel(smearCells) < diagCellsNum
-            assert(~ismember(smearNum, inf))
             for k = 1:smearNum              
                 
                 % Cells of sand segment where smear segment is placed (the
@@ -311,15 +311,15 @@ for j = 1:numel(idc)
         % 2.5 Prepare for matrix, compute iteration probability and compare
         % with calculated probability
         %if -cDiagBound(2,j) > 0
-        if cDiagBound(1,j) <= 0 && ismember(M.unit(idc(j)), FS.HW.Id)
+        if cDiagBound(1,j) < 0 && ismember(M.unit(idc(j)), FS.HW.Id)
             addZerosBot = zeros(winBot(j)-1, 1);
             addZerosTop = zeros(G.cartDims(2)-numel([dvals; addZerosBot]), 1);
             dvals = repmat([addZerosTop; dvals; addZerosBot],1,cnDiag(j));
-        elseif cDiagBound(2,j) >= 0 && ismember(M.unit(idc(j)), FS.FW.Id)
+        elseif cDiagBound(2,j) > 0 && ismember(M.unit(idc(j)), FS.FW.Id)
             addZerosTop = zeros(G.cartDims(2)-winTop(j), 1);
             addZerosBot = zeros(G.cartDims(2)-numel([addZerosTop; dvals]), 1);
             dvals = repmat([addZerosTop; dvals; addZerosBot],1,cnDiag(j));
-        elseif -cDiagBound(2,j) > 0
+        elseif -cDiagBound(2,j) >= 0
             addZeros = zeros(G.cartDims(1)-numel(dvals), 1);
             dvals = repmat([addZeros; dvals],1,cnDiag(j));
         else
@@ -380,13 +380,13 @@ for j = 1:numel(idc)
                 dvals2              = false(diagCellsNum,1);
                 dvals2(smearCells)  = true;
                 %if -cDiagBound(2,j) > 0
-                if cDiagBound(1,j) <= 0 && ismember(M.unit(idc(j)), FS.HW.Id)
+                if cDiagBound(1,j) < 0 && ismember(M.unit(idc(j)), FS.HW.Id)
                     addZerosTop = zeros(G.cartDims(2)-numel([dvals2; addZerosBot]), 1);
                     dvals2 = repmat([addZerosTop; dvals2; addZerosBot],1,cnDiag(j));
-                elseif cDiagBound(2,j) >= 0 && ismember(M.unit(idc(j)), FS.FW.Id)
+                elseif cDiagBound(2,j) > 0 && ismember(M.unit(idc(j)), FS.FW.Id)
                     addZerosBot = zeros(G.cartDims(2)-numel([addZerosTop; dvals2]), 1);
                     dvals2 = repmat([addZerosTop; dvals2; addZerosBot],1,cnDiag(j));
-                elseif -cDiagBound(2,j) > 0
+                elseif -cDiagBound(2,j) >= 0
                     addZeros = zeros(G.cartDims(1)-numel(dvals2), 1);
                     dvals2 = repmat([addZeros; dvals2],1,cnDiag(j));
                 else
@@ -461,13 +461,13 @@ for j = 1:numel(idc)
                     
                     % Compute 3rd iterative loop probability
                     %if -cDiagBound(2,j) > 0
-                    if cDiagBound(1,j) <= 0 && ismember(M.unit(idc(j)), FS.HW.Id)
+                    if cDiagBound(1,j) < 0 && ismember(M.unit(idc(j)), FS.HW.Id)
                         addZerosTop = zeros(G.cartDims(2)-numel([dvals3; addZerosBot]), 1);
                         dvals3 = repmat([addZerosTop; dvals3; addZerosBot],1,cnDiag(j));
-                    elseif cDiagBound(2,j) >= 0 && ismember(M.unit(idc(j)), FS.FW.Id)
+                    elseif cDiagBound(2,j) > 0 && ismember(M.unit(idc(j)), FS.FW.Id)
                         addZerosBot = zeros(G.cartDims(2)-numel([addZerosTop; dvals3]), 1);
                         dvals3 = repmat([addZerosTop; dvals3; addZerosBot],1,cnDiag(j));
-                    elseif -cDiagBound(2,j) > 0
+                    elseif -cDiagBound(2,j) >= 0
                         addZeros = zeros(G.cartDims(1)-numel(dvals3), 1);
                         dvals3 = repmat([addZeros; dvals3],1,cnDiag(j));
                     else
