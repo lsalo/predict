@@ -47,6 +47,7 @@ classdef Fault
        Disp                             % Fault displacement [m]
        Poro                             % Final upscaled Poro (Nsim, 1)
        Perm                             % Final upscaled Perm (Nsim, 3)
+       Vcl                              % Final upscaled Vcl (Nsim, 1)
        Grid                             % contains resolution, cell Poro and Perm (G.cells.num, Nsim)
     end
     
@@ -259,7 +260,7 @@ classdef Fault
             end
             
             % Assign porosity and permeability
-            [obj.Grid.poro, obj.Grid.perm, kz_loc] = ...
+            [obj.Grid.poro, obj.Grid.perm, kz_loc, obj.Grid.vcl] = ...
                                                setGridPoroPerm(obj, G, FS);
             
             % Upscale Porosity (additive)
@@ -276,6 +277,10 @@ classdef Fault
             % Upscale Permeability (not an additive property)
             obj.Perm = computeCoarsePerm(G, obj.Grid.perm, kz_loc, U, ...
                                          obj.Disp, obj.MatProps.thick);
+            
+            % Upscale Vcl (additive)
+            obj.Vcl = mean(obj.Grid.vcl);
+            
         end
         
         function plotMaterials(obj, FS)
@@ -299,7 +304,7 @@ classdef Fault
            % SUBPLOTS
            % 1. Parent Ids
            hh = figure(randi(1000, 1));
-           tiledlayout(1, 5, 'Padding', 'compact', 'TileSpacing', 'none');
+           tiledlayout(1, 6, 'Padding', 'compact', 'TileSpacing', 'none');
            nexttile
            set(gca, 'colormap', hot(max(M.unit)));
            plotToolbar(G, reshape(transpose(flipud(M.units)), G.cells.num, 1), ...
@@ -359,8 +364,25 @@ classdef Fault
            set(gca,'fontSize', 10)
            title('Material', latx{:}, 'fontSize', sz(2));
            
+           % 3. Cell and upscaled Vcl
+           nexttile
+           set(gca, 'colormap', flipud(copper))
+           plotToolbar(G, obj.Grid.vcl, 'EdgeColor', [0.2 0.2 0.2], ...
+                       'EdgeAlpha', 0);
+           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); 
+           axis off
+           c = colorbar;
+           caxis([0 1]);
+           set(gca,'fontSize', 10)
+           %c.Label.Interpreter = 'latex'; 
+           %c.Label.String = '$n$ [-]';
+           %c.Label.FontSize = 12;
+           %xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
+           title(['f$_{V_\mathrm{cl}} =$ ' num2str(obj.Vcl, ' %1.2f') ' [-]'], latx{:}, ...
+                 'fontSize', sz(2));
            
-           % 3. Cell and upscaled porosity
+           
+           % 4. Cell and upscaled porosity
            nexttile
            set(gca, 'colormap', copper)
            plotToolbar(G, rock.poro, 'EdgeColor', [0.2 0.2 0.2], ...
@@ -377,7 +399,7 @@ classdef Fault
            title(['$n =$ ' num2str(obj.Poro, ' %1.2f') ' [-]'], latx{:}, ...
                  'fontSize', sz(2));
            
-           % 4. Cell and upscaled permeability
+           % 5. Cell and upscaled permeability
            nexttile
            set(gca, 'colormap', copper)
            plotToolbar(G, log10(rock.perm(:,1)/(milli*darcy)), ...
@@ -413,6 +435,7 @@ classdef Fault
            title(['$k_{xx} =$ ' num2str(val, form) units], latx{:}, ...
                  'fontSize', sz(2));
            
+           % 6. kzz
            nexttile
            set(gca, 'colormap', copper)
            plotToolbar(G, log10(rock.perm(:,3)/(milli*darcy)), ...
@@ -447,7 +470,7 @@ classdef Fault
            end
            title(['$k_{zz} =$ ' num2str(val, form) units], latx{:}, ...
                  'fontSize', sz(2));
-           set(hh, 'position', [200, 0, 750, 350]);       
+           set(hh, 'position', [200, 0, 900, 350]);       
            
            % MatProps 
            %Thick = repelem(obj.MatProps.thick, numel(obj.MatProps.resFric));

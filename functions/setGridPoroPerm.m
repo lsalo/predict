@@ -1,4 +1,4 @@
-function [poroG, permG, kz_loc] = setGridPoroPerm(obj, G, FS)
+function [poroG, permG, kz_loc, vcl] = setGridPoroPerm(obj, G, FS)
 %
 %
 %
@@ -37,6 +37,7 @@ isSmear = reshape(transpose(flipud(M.vals)), G.cells.num, 1);
 % clay.     
 poroG = nan(G.cells.num, 1);                            % sand poro default
 permG = nan(G.cells.num, 3);                            % [kxx, kxz, kzz]
+vcl   = nan(G.cells.num, 1);
 kx_loc = nan(G.cells.num, 1);
 kz_loc = nan(G.cells.num, 1);
 T = [cosd(alpha) sind(alpha); ...
@@ -75,7 +76,7 @@ for n=1:numel(M.unit)
                          rand(cellNum, 1)*diff(unitPoroCorrRange);    
         kx_loc(cellIds) = 10.^(unitPermCorrRangeLog(1) + ...
                                rand(cellNum, 1)*diff(unitPermCorrRangeLog));
-        
+        vcl(cellIds) = FS.Vcl(M.unit(n));
         % Permeability
         %kx_loc = unitPerm{n}(cellNum);
         kz_loc(cellIds) = kx_loc(cellIds) * permAnisoRatio(M.unit(n));
@@ -105,10 +106,14 @@ for n=1:numel(M.unit)
                                 rand(cellNum(1), 1)*diff(unitPermCorrRangeLog));
         kz_loc(cellIds(:, 1)) = kx_loc(cellIds(:, 1))*permAnisoRatio(M.unit(n));
         
+        % Clay Vcl
+        vcl(cellIds(:,1)) = FS.Vcl(M.unit(n));
+        
         if any(~M.isclayIn)     % if sand in stratigraphy
             phi_s = unitPoro(M.unitInClayGaps(n));
             permx_s = unitPerm(M.unitInClayGaps(n));
             kprime_s = permAnisoRatio(M.unitInClayGaps(n));
+            vcl_s = FS.Vcl(M.unitInClayGaps(n));
             
         else                    % no sand in stratigraphy
             disp('_______________________________________________________')
@@ -128,8 +133,9 @@ for n=1:numel(M.unit)
             
             % Compute sand poro and perm
             cap = 1000;          % [mD]
-            phi_s = getPorosity(0.15, 0.4, zf, zmax, 'zmax', isuc);
-            permx_s = getPermeability(0.15, 0.4, zf, zmax, cap);
+            vcl_s = 0.15;
+            phi_s = getPorosity(vcl_s, FS.IsClayVcl, zf, zmax, 'zmax', isuc);
+            permx_s = getPermeability(vcl_s, FS.IsClayVcl, zf, zmax, cap);
             kprime_s = 1;
         end
         
@@ -144,6 +150,9 @@ for n=1:numel(M.unit)
         kx_loc(cellIds(:, 2)) = 10.^(permxSandRangeLog(1) + ...
                                 rand(cellNum(2), 1)*diff(permxSandRangeLog));
         kz_loc(cellIds(:, 2)) = kx_loc(cellIds(:, 2)) * kprime_s;
+        
+        % Sand Vcl
+        vcl(cellIds(:, 2)) = vcl_s;
         
         % Transform
         cellIds = sort([find(cellIds(:, 1)); find(cellIds(:, 2))]);        
