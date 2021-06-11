@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <a href="https://github.mit.edu/lsalo/predict"><img src="readme_docs/predict_headerLogo.png" alt="PREDICT" width="250"></a>
+  <a href="https://github.mit.edu/lsalo/predict"><img src="readme_docs/predict_headerLogo.svg" alt="PREDICT" width="250"></a>
   <br>
 </h1>
 
