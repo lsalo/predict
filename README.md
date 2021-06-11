@@ -71,3 +71,5 @@ This work was funded by **ExxonMobil** through the project *"Modeling and Mitiga
 L.S. would like to acknowledge **The MathWorks, Inc.** and the **School of Engineering at MIT** for funding through a 2020-2021 *MathWorks Engineering Fellowship*.
     
 The authors would also like to thank Youssef Marzouk for his helpful comments on multivariate statistical modeling.
+
+Readme design based on examples from <a href="https://github.com/matiassingers/awesome-readme">Awesome README</a>.
