@@ -1,7 +1,5 @@
 <h1 align="center">
-  <br>
   <a href="https://github.mit.edu/lsalo/predict"><img src="readme_docs/predict_headerLogo.png" alt="PREDICT" width="250"></a>
-  <br>
 </h1>
 
 <h4 align="center">
