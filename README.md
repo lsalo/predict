@@ -1,9 +1,6 @@
-![PREDICT header](readme_docs/predict_headerLogo.png)
 <h1 align="center">
   <br>
   <a href="https://github.mit.edu/lsalo/predict"><img src="readme_docs/predict_headerLogo.png" alt="PREDICT" width="200"></a>
-  <br>
-  PREDICT
   <br>
 </h1>
 
