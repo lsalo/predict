@@ -43,33 +43,51 @@ First, the algorithm takes a set of numerical quantities, the input parameters, 
 
 ## Citation
 TBD. Paper will be added here when available.
+```
+bibtex reference here.
+```
 
 ## Requirements
-MATLAB
-toolboxes (statistics and ML, others?)
+**Hardware**: When running thousands of simulations, a machine with multiple cores (4+) and few GB of RAM (6-8+) is recommended. Running times will be greatly reduced (see below) and some of the output structures may be somewhat heavy.
 
-MRST (test with latest release)
+**Software**:
+PREDICT can be run on Windows, macOS and Linux (i.e. any OS where <a href="https://www.mathworks.com/products/matlab.html">MATLAB</a> can be installed). The code incorporates <a href="https://www.sintef.no/mrst/">MRST</a> functionality for flow-based permeability upscaling, so it requires an installation of both MATLAB and MRST (very straightforward, see steps below). Development took place using <a href="https://www.mathworks.com/company/newsroom/mathworks-introduces-release-2020b-of-matlab-and-simulink.html">MATLAB r2020b</a> and the development version of MRST. The code has also been tested with MATLAB r2020a and the current MRST public release (<a href="https://www.sintef.no/projectweb/mrst/download/">v2021a</a>). Backward compatibility with previous MATLAB versions also supported by MRST 2021a is likely, but it has not been tested.
+
+In addition, PREDICT uses the following MATLAB add-on toolboxes:
+
+* <a href="https://www.mathworks.com/products/parallel-computing.html">Statistics and Machine Learning Toolbox</a> (**required**): For generating intermediate variable distributions and samples.
+* <a href="https://www.mathworks.com/products/parallel-computing.html">Parallel Computing Toolbox</a> (*recommended*): Not required, but *highly* recommended for anyone using the code beyond exploration purposes. Time gains when running parallel simulations are illustrated below for 1000 realizations/simulations of a given stratigraphic case, using 1 core, 4 cores and 16 cores (Intel® Xeon® Gold 6144 Processor, 3.5 GHz).
+* <a href="https://www.mathworks.com/products/curvefitting.html">Curve Fitting Toolbox</a> (*recommended*): Not required, but may be useful for output analysis.
 
 ## Download
-git clone etc
+* **MATLAB**: Can be installed following the instructions <a href="https://www.mathworks.com/products/get-matlab.html?s_tid=gn_getml">on the website</a>, and your academic institution likely provides campus-wide access free of charge.
+* **MRST**: The latest public release of MRST can be downloaded <a href="https://www.sintef.no/projectweb/mrst/download/">here</a>:
+* **PREDICT**: The repository can be cloned or downloaded from <a href="https://github.mit.edu/lsalo/predict">here</a> (green button "clone or download"). [Public repo TBD]
 
 ## Installation
+We show installation steps for both MRST and PREDICT.
 
-(1) Basic
+### Basic (Minimum to run the code)
+1. Download the latest MRST release (see above).
+2. Download PREDICT (see above).
+3. From within MATLAB, run the `startup.m` file in the main MRST folder.
+4. From within MATLAB, right click on the `predict` folder and select "Add to Path > Selected Folders and Subfolders".
 
-(2) with MEX and AMGCL
+You can now run PREDICT (see Examples section below). Note that, for flow-based permeability upscaling, both a TPFA and a MPFA can be used. If running the code without MEX and AMGCL (see complete installation below), TPFA is recommended (otherwise, it will be slow).
+
+### Complete (Add MEX and AMGCL for fast permeability upscaling)
 
 ## Examples
-Examples are provided in the folder <a href="https://github.mit.edu/lsalo/predict/tree/master/examples">examples</a>. For a comprehensive introductory example, see `example0_singleStrati.m`.
+Examples are provided in the folder <a href="https://github.mit.edu/lsalo/predict/tree/master/examples">examples</a>. For a comprehensive introductory example, run `example0_singleStrati.m`.
 
 ## License
-TBD. PREDICT uses MRST functionality, so a GPL-compatible license must be added if/when distributed. 
+PREDICT incorporates MRST functionality, so it legally becomes an extension of MRST. This means that, when publicly released, it should be done under the terms of the GPL license.
 
 ## Acknowledgements
 This work was funded by **ExxonMobil** through the project *"Modeling and Mitigation of Induced Seismicity and Fault Leakage during CO2 storage"*. L.S. and R.J. greatly appreciate the numerous, productive discussions with the ExxonMobil team participating in the project. 
     
 L.S. would like to acknowledge **The MathWorks, Inc.** and the **School of Engineering at MIT** for funding through a 2020-2021 *MathWorks Engineering Fellowship*.
     
-The authors would also like to thank Youssef Marzouk for his helpful comments on multivariate statistical modeling.
+The authors would also like to thank Youssef Marzouk for his helpful comments on multivariate statistical modeling, as well as Olav Møyner and the MRST development team for outstanding support.
 
 Readme design based on examples from <a href="https://github.com/matiassingers/awesome-readme">Awesome README</a>.
