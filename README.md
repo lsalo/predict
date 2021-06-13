@@ -67,15 +67,12 @@ In addition, PREDICT uses the following MATLAB add-on toolboxes:
 ## Installation
 We show installation steps for both MRST and PREDICT.
 
-### Basic (Minimum to run the code)
 1. Download the latest MRST release (see above).
 2. Download PREDICT (see above).
-3. From within MATLAB, run the `startup.m` file in the main MRST folder.
+3. From within MATLAB, run the `startup.m` file in the main MRST folder. You will be prompted whether you want to enable MEX acceleration, select enable. This can be changed later by running the command `mrstSettings()`.
 4. From within MATLAB, right click on the `predict` folder and select "Add to Path > Selected Folders and Subfolders".
 
-You can now run PREDICT (see Examples section below). Note that, for flow-based permeability upscaling, both a TPFA and a MPFA can be used. If running the code without MEX and AMGCL (see complete installation below), TPFA is recommended (otherwise, it will be slow).
-
-### Complete (Add MEX and AMGCL for fast permeability upscaling)
+You can now run PREDICT (see Examples section below). Note that, for flow-based permeability upscaling, both a TPFA and a MPFA can be used. If you are running PREDICT without MEX, TPFA is recommended (otherwise, it will be slow).
 
 ## Examples
 Examples are provided in the folder <a href="https://github.mit.edu/lsalo/predict/tree/master/examples">examples</a>. For a comprehensive introductory example, run `example0_singleStrati.m`.
