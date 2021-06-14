@@ -128,7 +128,7 @@ if U.ARcheck == 1 % check if same perm with smaller aspect ratio. Slow.
         error('U.useAcceleration must be set to true. Too slow otherwise')
     end
     ar = G.xzFaceDim(2)/G.xzFaceDim(1);
-    ar2 = 3;
+    ar2 = 5;
     if ar > ar2
         disp(['Checking if cell aspect ratio is too high for', ...
               ' flow-based upscaling']);
