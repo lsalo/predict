@@ -15,10 +15,9 @@ function [poroG, permG, kz_loc, vcl] = setGridPoroPerm(fault, G, FS)
 %   just sand) or 2 units (clay smear + sand) are present in the domain.
 %   Then, sand or clay porosity/permeability is assigned based on the
 %   parent units, and a small range of variation is introduced to account 
-%   for their higher variation frequency (e.g. Grant, 2019). We give a 
-%   factor of about 3 max variation in permeability (already correlated to 
-%   fault thickness and porosity), and 0.03 to porosity (alredy correlated
-%   to fault thickness and permeability). The permeability along each
+%   for their higher variation frequency (e.g. Grant, 2019). Permeability 
+%   is allowed to vary a $\log_{10}$ value of $\pm 0.2$, while porosity is 
+%   allowed $\pm 0.015$. The permeability along each
 %   material is given based on the computed permeability anisotropy ratios.
 %   Finally, these permeabilities (along and across each material, not
 %   parallel to the fault zone) are transformed to the fault local axes, so
@@ -84,7 +83,7 @@ kz_loc = nan(G.cells.num, 1);
 T = [cosd(alpha) sind(alpha); ...
      -sind(alpha) cosd(alpha)];                         % Transform. mat
 fn = 0.01;                                              % porosity var factor
-fk = 1.75;                                              % perm var factor
+fk = 0.2;                                               % log perm var factor
 
 for n=1:numel(M.unit)
     % To get cellIds, we use idsUnitBlock instead of whichUnit == M.unit(n)
@@ -111,7 +110,7 @@ for n=1:numel(M.unit)
         % porosity.
         unitPoroCorrRange = [unitPoro(M.unit(n))-fn unitPoro(M.unit(n))+fn];
         assert(all(unitPoroCorrRange > 0))
-        unitPermCorrRangeLog = log10([unitPerm(M.unit(n))/fk unitPerm(M.unit(n))*fk]);
+        unitPermCorrRangeLog = log10(unitPerm(M.unit(n))) + [-fk, fk];
         % Variable value each cell
         poroG(cellIds) = unitPoroCorrRange(1) + ...
                          rand(cellNum, 1)*diff(unitPoroCorrRange);    
@@ -142,7 +141,7 @@ for n=1:numel(M.unit)
         poroG(cellIds(:, 1)) = unitPoroCorrRange(1) + ...
                                rand(cellNum(1), 1)*diff(unitPoroCorrRange);
         % Clay permeability
-        unitPermCorrRangeLog = log10([unitPerm(M.unit(n))/fk unitPerm(M.unit(n))*fk]);
+        unitPermCorrRangeLog = log10(unitPerm(M.unit(n))) + [-fk, fk];
         kx_loc(cellIds(:, 1)) = 10.^(unitPermCorrRangeLog(1) + ...
                                 rand(cellNum(1), 1)*diff(unitPermCorrRangeLog));
         kz_loc(cellIds(:, 1)) = kx_loc(cellIds(:, 1))*permAnisoRatio(M.unit(n));
@@ -187,7 +186,7 @@ for n=1:numel(M.unit)
                                rand(cellNum(2), 1)*diff(poroSandRange); 
         
         % Sand Permeability
-        permxSandRangeLog = log10([permx_s/fk permx_s*fk]);
+        permxSandRangeLog = log10(permx_s) + [-fk, fk];
         kx_loc(cellIds(:, 2)) = 10.^(permxSandRangeLog(1) + ...
                                 rand(cellNum(2), 1)*diff(permxSandRangeLog));
         kz_loc(cellIds(:, 2)) = kx_loc(cellIds(:, 2)) * kprime_s;
