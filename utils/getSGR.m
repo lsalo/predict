@@ -11,8 +11,9 @@ function SGR = getSGR(thick, vsh, res)
 %        cm.
 % 
 % OUTPUT:
-% SGR: Yielding's (1997) shale gouge ratio, at the indicated resolution
-% (e.g. one value per m). Values are given as a fraction, not percent.
+% SGR: Yielding et al.'s, AAPG Bull. (1997) shale gouge ratio, at the 
+%      indicated resolution (e.g. one value per m). Values are given as a 
+%      fraction, not percent.
 %
 
 if nargin < 3 
