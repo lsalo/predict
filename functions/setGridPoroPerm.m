@@ -1,14 +1,58 @@
-function [poroG, permG, kz_loc, vcl] = setGridPoroPerm(obj, G, FS)
+function [poroG, permG, kz_loc, vcl] = setGridPoroPerm(fault, G, FS)
+% Assign permeability and porosity to each grid cell, based on the material
+% mapping outcome.
+%
+% INPUT:
+%   fault: an instance of Fault with MatMap property.
+%   G: MRST grid structure.
+%   FS: an instance of FaultedSection.
 %
 %
+% DESCRIPTION:
+%   This function assigns porosity and permeability to each grid cell.
+%   The process is done one domain at a time. First, we determine whether 
+%   1 unit (continuous clay smear with window filling the whole domain, or 
+%   just sand) or 2 units (clay smear + sand) are present in the domain.
+%   Then, sand or clay porosity/permeability is assigned based on the
+%   parent units, and a small range of variation is introduced to account 
+%   for their higher variation frequency (e.g. Grant, 2019). We give a 
+%   factor of about 3 max variation in permeability (already correlated to 
+%   fault thickness and porosity), and 0.03 to porosity (alredy correlated
+%   to fault thickness and permeability). The permeability along each
+%   material is given based on the computed permeability anisotropy ratios.
+%   Finally, these permeabilities (along and across each material, not
+%   parallel to the fault zone) are transformed to the fault local axes, so
+%   that a full 2D perm tensor is obtained for each cell (permG = kxx, kxz, 
+%   kzz). These transformed values are the cell permeabilities used for
+%   flow-based upscaling, while Kyy (upscaled) is the average of the
+%   k-along prior to tensor rotation (kz_loc).
+%   
 %
+% NOTE:
+%   Sand-material properties in domains with smear but not fully covered by
+%   smear are assigned based on the closest sand unit in the stratigraphy
+%   (closest parent). If no sand is present in the stratigraphy, but the
+%   clay smears are discontinuous, sand-based fault material with generic
+%   properties is assigned. This case (no sand in stratigraphy) should be
+%   better modeled future code versions, but it requires some changes for 
+%   handling discontinuous smears.
+%
+% OUTPUT:
+%  poroG: nx1 array with cell porosity, where n is the number of cells in G
+%  permG: nx3 array with kxx, kxz, kzz (aligned with fault axes, ready for
+%         upscaling).
+%  kz_loc: nx1 array with permeability along each fault material, for
+%          calculating upscaled permeability along strike (Kyy).
+%  vcl:   nx1 array with clay content of each fault cell, based on vcl of
+%         parent contributing material to each cell.
+%--------------------------------------------------------------
 
 % Rename
-M = obj.MatMap;
-alpha = obj.Alpha;
-unitPoro = obj.MatProps.poro;
-unitPerm = obj.MatProps.perm;
-permAnisoRatio = obj.MatProps.permAnisoRatio;
+M = fault.MatMap;
+alpha = fault.Alpha;
+unitPoro = fault.MatProps.poro;
+unitPerm = fault.MatProps.perm;
+permAnisoRatio = fault.MatProps.permAnisoRatio;
 
 
 % 1) Map diagonals to Grid indexing: Grid indexing starts at bottom left,
@@ -21,12 +65,9 @@ permAnisoRatio = obj.MatProps.permAnisoRatio;
 isSmear = reshape(transpose(flipud(M.vals)), G.cells.num, 1);
 %whichUnit = reshape(transpose(flipud(M.units)), G.cells.num, 1);
 
-% 2) Assign permeability and porosity. We have end-member porosity, which 
-%    is assigned to the corresponding unit (clay or sand). For the
-%    permeability, we generate N random samples according to the
-%    distribution for each domain, and number of cells for each domain in
-%    the fault. This is then directly assumed to be the permeability
-%    across the clay/sand smears (principal directions). 
+% 2) Assign permeability and porosity based on parent unit(s) in each 
+%    domain. This is assumed to be the permeability across the clay/sand 
+%    smears (principal directions). 
 %    We then compute the permeability along the sand and clay smears based 
 %    on anisotropy ratios.
 %    This diagonal permeability tensor needs to be rotated to the fault 
