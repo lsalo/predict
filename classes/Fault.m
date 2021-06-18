@@ -76,7 +76,7 @@ classdef Fault
             
             % User can pass different grid resolution
             if nargin < 3
-                obj.Grid.targetCellDim = [0.1, 1];     % [m], [thick., disp.]
+                obj.Grid.targetCellDim = [obj.Disp/1000, obj.Disp/100];     % [m], [thick., disp.]
             else
                 assert(isa(targetCellDim, 'double') && numel(targetCellDim) == 2, ...
                        ['If grid resolution is passed, it must be a ', ...
@@ -225,13 +225,8 @@ classdef Fault
         function obj = upscaleSmearPerm(obj, FS, smear, U)
             %
             % Place materials in the fault zone, assign permeabilities to
-            % each fault material, and upscale permeability.
-            % 
-            % INPUT
-            %
-            % OUTPUT
-            %
-            % EXAMPLE
+            % each fault material, and upscale permeability. See
+            % documentation in used functions below for details.
             %
             
             % Generate Grid
@@ -259,9 +254,12 @@ classdef Fault
                                 obj.MatMap.Psmear];     % obtained
             end
             
-            % Assign porosity and permeability
+            % Assign vcl, porosity and permeability
             [obj.Grid.poro, obj.Grid.perm, kz_loc, obj.Grid.vcl] = ...
                                                setGridPoroPerm(obj, G, FS);
+            
+            % Upscale Vcl (additive)
+            obj.Vcl = mean(obj.Grid.vcl);
             
             % Upscale Porosity (additive)
             % --------------------------------------------------------
@@ -277,10 +275,6 @@ classdef Fault
             % Upscale Permeability (not an additive property)
             obj.Perm = computeCoarsePerm(G, obj.Grid.perm, kz_loc, U, ...
                                          obj.Disp, obj.MatProps.thick);
-            
-            % Upscale Vcl (additive)
-            obj.Vcl = mean(obj.Grid.vcl);
-            
         end
         
         function plotMaterials(obj, FS)

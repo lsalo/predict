@@ -3,10 +3,36 @@ function [Perm, axialDropVals, K2] = computeCoarsePerm(G, permG, ...
                                                        faultDisp, ...
                                                        faultThick)
 %
-% Sealed boundaries
+% SUMMARY
+% Obtain the permeability of a single-cell grid equivalent to that of the
+% fine grid, i.e. upscale the fine-grid permeability. This is accomplished
+% using flow-based upscaling for k_xx and k_zz, while an area-weighted
+% average is used for k_yy. Flow-based upscaling consists in imposing an
+% axial p-drop in each direction, while maintaining the other two
+% boundaries sealed.
+% Additionally, this function allows (1) comparing the outflux obtained 
+% between the fine grid with detailed permeability and the coarse grid with 
+% upscaled permeability, and (2) checking if the grid aspect ratio is too
+% high for accurate flow-based upscaling.
 %
+% INPUTS
+%   G: MRST grid structure obtained using makeFaultGrid
+%   permG: nx3 array of full (symmetric) tensor permeability. n is the
+%          number of grid cells in G, columns are xx, xz, and zz.
+%   kz_loc: nx1 array with permeability along the fault materials (before
+%           tensor transformation applied in setGridPoroPerm.m)
+%   U: structure with options for flow-based upscaling.
+%   faultDisp: fault displacement
+%   faultThick: fault thickness
 %
-%mrstModule add mpfa  coarsegrid upscaling incomp; 
+% OUTPUTS
+%   Perm: 1x3 array with upscaled permeabilities [k_xx, k_yy, k_zz]
+%   axialDropVals: fluxes at the outflow boundaries 
+%                  [fine grid, coarse (upscaling) grid] 
+%                  (U.outflux must be set to 1).
+%   K2: Upscaled permeability obtained with a grid with low cell aspect
+%       ratio. U.ARcheck must be set to 1.
+% 
 
 % Initial variables
 L = max(G.faces.centroids) - min(G.faces.centroids);
@@ -30,6 +56,9 @@ elseif strcmp(U.method, 'mpfa')
     psolver = @(state0, G, fluid, bc) incompMPFA(state0, G, hTmp, ...
                                                  fluid, 'bc', bc);
     K = diag(myupscalePermeabilityFixed(G, Dp{1}, psolver, fluid, L));
+%     psolver = @(state0, G, fluid, bc, rock) incompMPFA(state0, G, hTmp, ...
+%                                                  fluid, 'bc', bc);
+%     K = diag(upscalePermeabilityFixed(G, Dp{1}, psolver, fluid, rock, L));
 
 else
     error("U.method not supported. Choose 'tpfa' or 'mpfa'.")

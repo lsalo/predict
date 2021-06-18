@@ -5,7 +5,9 @@ function G = makeFaultGrid(thick, disp, targetCellDim, makeplot)
 %   thick: fault thickness (grid x dimension) [m]
 %   disp: fault displacement (grid y (z) dimension) [m]
 %   targetCellDim: target cell dimensions (thickness and length). An array
-%                  of 1x2 elements [m]. Note that 
+%                  of 1x2 elements [m]. Note that the output grid must be 
+%                  square, so only the targetCellDim leading to higher
+%                  resolution (more cells) is respected.
 %   makeplot: [optional] pass 1 to generate grid plot coloring cells by
 %             index.
 %
