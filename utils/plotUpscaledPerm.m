@@ -57,12 +57,12 @@ if nargin > 1 && strcmp(plotOpt, 'histOnly')
     nexttile(2)
     rr = [255, 125, 125]/255;
     plot(repelem(logkStrikeBounds(1), 2), [0 1], '-', ...
-         'color', rr, 'lineWidth', 1);
+         'color', 'k', 'lineWidth', 1);
     hold on
-    plot(logkStrikeBounds(1), 0.3, 'ok', 'markerFacecolor', rr, 'markerSize', 6)
+    plot(logkStrikeBounds(1), 0.3, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
     plot(repelem(logkStrikeBounds(2), 2), [0 1], '-', ...
-         'color', rr, 'lineWidth', 1);
-    plot(logkStrikeBounds(2), 0.3, 'ok', 'markerFacecolor', rr, 'markerSize', 6)
+         'color', 'k', 'lineWidth', 1);
+    plot(logkStrikeBounds(2), 0.3, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
     histogram(K(:, 2), edges, 'Normalization', 'probability', ...
         'FaceColor', rr, 'FaceAlpha', 1)
     xlabel('$\hat{k}_{yy}$ [mD]', latx{:}, 'fontSize', sz(2))

@@ -11,7 +11,7 @@ for n=1:numel(opt)
    if strcmp(opt{n}, 'ha')                  % harmonic-arithmetic avging
        out(n) = mean(harmmean(vals, 2));
    elseif strcmp(opt{n}, 'ah')              % arithmetic-harmonic avging
-       out(n) = harmmean(mean(vals));
+       out(n) = harmmean(mean(vals, 1));
    else
        error('method not supported')
    end
