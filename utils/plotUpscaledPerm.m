@@ -10,6 +10,8 @@ latx = {'Interpreter', 'latex'};
 sz = [14, 12];
 
 % Fault MatProps
+kAlongStrike = cell2mat(cellfun(@(x) x.Grid.permy, faults, ...
+                                'UniformOutput', false)')./(milli*darcy);
 perms = cell2mat(cellfun(@(x) x.Perm, faults, ...
                          'UniformOutput', false)) ./ (milli*darcy);
 thick = cell2mat(cellfun(@(x) x.MatProps.thick, faults, ...
@@ -19,10 +21,12 @@ if any(any(perms < 0))
     id = unique([find(perms(:, 1)<0), find(perms(:, 2)<0), find(perms(:, 3)<0)]);
     warning(['Negative upscaled perms found in ' num2str(numel(id))...
              ' simulations (ignored).'])
+    kAlongStrike(:, id) = [];
     perms(id, :) = [];
     thick(id, :) = [];
     vcl(id, :) = [];
 end
+logkStrikeBounds = log10(getAveragingPerm(kAlongStrike, {'ha', 'ah'}));
     
 % Hist params
 K = log10(perms);
@@ -52,6 +56,13 @@ if nargin > 1 && strcmp(plotOpt, 'histOnly')
     
     nexttile(2)
     rr = [255, 125, 125]/255;
+    plot(repelem(logkStrikeBounds(1), 2), [0 1], '-', ...
+         'color', rr, 'lineWidth', 1);
+    hold on
+    plot(logkStrikeBounds(1), 0.3, 'ok', 'markerFacecolor', rr, 'markerSize', 6)
+    plot(repelem(logkStrikeBounds(2), 2), [0 1], '-', ...
+         'color', rr, 'lineWidth', 1);
+    plot(logkStrikeBounds(2), 0.3, 'ok', 'markerFacecolor', rr, 'markerSize', 6)
     histogram(K(:, 2), edges, 'Normalization', 'probability', ...
         'FaceColor', rr, 'FaceAlpha', 1)
     xlabel('$\hat{k}_{yy}$ [mD]', latx{:}, 'fontSize', sz(2))
@@ -60,6 +71,7 @@ if nargin > 1 && strcmp(plotOpt, 'histOnly')
     ylim([0 0.6]); yticks(0:.2:.6)
     grid on
     %xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
+    hold off
     
     nexttile(3)
     bb = [125, 125, 255]/255;
@@ -175,6 +187,13 @@ else
     
     nexttile(2)
     rr = [255, 125, 125]/255;
+    plot(repelem(logkStrikeBounds(1), 2), [0 1], '-', ...
+         'color', 'k', 'lineWidth', 1);
+    hold on
+    plot(logkStrikeBounds(1), 0.3, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
+    plot(repelem(logkStrikeBounds(2), 2), [0 1], '-', ...
+         'color', 'k', 'lineWidth', 1);
+    plot(logkStrikeBounds(2), 0.3, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
     histogram(K(:, 2), edges, 'Normalization', 'probability', ...
         'FaceColor', rr, 'FaceAlpha', 1)
     xlabel('$\hat{k}_{yy}$ [mD]', latx{:}, 'fontSize', sz(2))
@@ -183,6 +202,7 @@ else
     ylim([0 0.6]); yticks(0:.2:.6)
     grid on
     %xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
+    hold off
     
     nexttile(3)
     bb = [125, 125, 255]/255;

@@ -255,8 +255,8 @@ classdef Fault
             end
             
             % Assign vcl, porosity and permeability
-            [obj.Grid.poro, obj.Grid.perm, kz_loc, obj.Grid.vcl] = ...
-                                               setGridPoroPerm(obj, G, FS);
+            [obj.Grid.poro, obj.Grid.perm, obj.Grid.permy, ...
+                                obj.Grid.vcl] = setGridPoroPerm(obj, G, FS);
             
             % Upscale Vcl (additive)
             obj.Vcl = mean(obj.Grid.vcl);
@@ -273,7 +273,8 @@ classdef Fault
             obj.Poro = mean(obj.Grid.poro);
             
             % Upscale Permeability (not an additive property)
-            obj.Perm = computeCoarsePerm(G, obj.Grid.perm, kz_loc, U, ...
+            obj.Perm = computeCoarsePerm(G, obj.Grid.perm, ...
+                                         obj.Grid.permy, U, ...
                                          obj.Disp, obj.MatProps.thick);
         end
         
