@@ -59,13 +59,13 @@ if nargin > 1 && strcmp(plotOpt, 'histOnly')
     plot(repelem(logkStrikeBounds(1), 2), [0 1], '-', ...
          'color', 'k', 'lineWidth', 1);
     hold on
-    plot(logkStrikeBounds(1), 0.3, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
+    plot(logkStrikeBounds(1), 0.5, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
     plot(repelem(logkStrikeBounds(2), 2), [0 1], '-', ...
          'color', 'k', 'lineWidth', 1);
-    plot(logkStrikeBounds(2), 0.3, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
+    plot(logkStrikeBounds(2), 0.5, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
     histogram(K(:, 2), edges, 'Normalization', 'probability', ...
         'FaceColor', rr, 'FaceAlpha', 1)
-    xlabel('$\hat{k}_{yy}$ [mD]', latx{:}, 'fontSize', sz(2))
+    xlabel(labls(2), latx{:}, 'fontSize', sz(2))
     %ylabel('P [-]', latx{:}, 'fontSize', sz(2))
     xlim([fix(logMinP)-1 fix(logMaxP)+1])
     ylim([0 0.6]); yticks(0:.2:.6)
