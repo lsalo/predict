@@ -192,7 +192,7 @@ if faults{1}.MatMap.isclayIn(id) == 1
     
     nexttile
     histogram(sfrac, edg_sfrac, 'Normalization', 'probability','FaceColor', [0.3 0.3 0.3])
-    xlabel('$s_\mathrm{L} / f_\mathrm{L}$ [-]', latx{:}, 'fontSize', sz(2))
+    xlabel('$\mathrm{s}_\chi^{\mathrm{obj}}$ [-]', latx{:}, 'fontSize', sz(2))
     %ylabel('P [-]', latx{:}, 'fontSize', sz(2))
     %title('Residual friction', 'fontsize', sz(2))
     xlim([0, 1])
@@ -203,7 +203,7 @@ if faults{1}.MatMap.isclayIn(id) == 1
     nexttile
     histogram(segLenFrac, edg_segLenFrac, 'Normalization', ...
               'probability','FaceColor', [0.3 0.3 0.3])
-    xlabel('$s_\mathrm{l} / s_\mathrm{L}$ [-]', latx{:}, 'fontSize', sz(2))
+    xlabel('$s_\mathrm{l}^{\mathrm{max}} / s_\mathrm{L}$ [-]', latx{:}, 'fontSize', sz(2))
     %ylabel('P [-]', latx{:}, 'fontSize', sz(2))
     %title('Residual friction', 'fontsize', sz(2))
     xlim([0, 1])

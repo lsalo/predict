@@ -20,7 +20,7 @@ f.throw = 100;
 f.dip = 60;
 f.disp = f.throw/sind(f.dip);
 
-Nsim = 1000;
+Nsim = 5000;
 
 % Plotting utils
 latx = {'Interpreter', 'latex'};
@@ -40,7 +40,7 @@ edg_T = logspace(1, 3, nbins);
 fh1 = figure(1);
 histogram(DTratios, edg_T, 'Normalization', 'probability','FaceColor', ...
           [0.3 0.3 0.3])
-xlabel('$f_\mathrm{D} / f_\mathrm{T}$ [-]', latx{:}, 'fontSize', sz(2))
+xlabel('f$_\mathrm{D} / \mathrm{f}_\mathrm{T}$ [-]', latx{:}, 'fontSize', sz(2))
 ylabel('P [-]', latx{:}, 'fontSize', sz(2))
 title(['$N_\mathrm{sim} =$ ' num2str(Nsim)], latx{:}, 'fontSize', sz(1))
 xlim([8 1100]); ylim([0 1]); grid on; set(gca,'XScale','log')
@@ -73,7 +73,7 @@ for n = 1:numel(vcl)
         title(['$V_\mathrm{cl}$ = ' num2str(round(vcl(n), 2))], latx{:}, ...
                'fontSize', sz(2))
     end
-    xlim([0, 35]); ylim([0 1]); grid on; xticks([0 10 20 30]);
+    xlim([0, 35]); ylim([0 1]); grid on; xticks([0 10 20 30]); yticks(0:.2:1)
 end
 set(fh2, 'position', [500, 200, 150*numel(vcl), 175]);
 
@@ -112,7 +112,7 @@ for n = 1:numel(id)
         if j <= numel(thick) && n == 1
                 histogram(SSFcVals(:, id(n), j), edg_SSFc, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
-                  ['$T / f.D =$ ' num2str(rat(j), '%1.2f')], 'EdgeColor', ...
+                  ['$T / \mathrm{f}_\mathrm{D} =$ ' num2str(rat(j), '%1.2f')], 'EdgeColor', ...
                   colrs(j, :));
             xlabel('SSFc [-]', latx{:}, 'fontSize', sz(2))
             ylabel('P [-]', latx{:}, 'fontSize', sz(2))
@@ -134,7 +134,7 @@ for n = 1:numel(id)
     end
 end
 hold off
-set(fh3, 'position', [500, 200, 225*numel(id), 150*numel(zf)]);
+set(fh3, 'position', [500, 100, 225*numel(id), 150*numel(zf)]);
 
 
 %% Porosity
@@ -348,7 +348,7 @@ for n = 1:numel(vcls)
                   'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
                   ['$z_\mathrm{max} =$ ' num2str(zmax_all(j, 1))], 'EdgeColor', ...
                   colrs(j, :));
-            xlabel('$k_\mathrm{xx}$ [mD]', latx{:}, 'fontSize', sz(2))
+            xlabel('$\hat{k}_\mathrm{xx}$ [mD]', latx{:}, 'fontSize', sz(2))
             ylabel('P [-]', latx{:}, 'fontSize', sz(2))
             title(['$V_\mathrm{cl}$ = ' num2str(vcls(n)) ...
                    ' $\vert$ $z_\mathrm{f}$ = ' num2str(zf_all(j)) ' m'], ...
@@ -405,9 +405,9 @@ for n = 1:numel(vclc)
         if n == 1
             histogram(permc(:, n, j), edg_permc, 'Normalization', ...
                   'probability', 'DisplayStyle', 'stairs', 'DisplayName', ...
-                  ['$z_\mathrm{m} =$ ' num2str(zmax(j))], 'EdgeColor', ...
+                  ['$z_\mathrm{max} =$ ' num2str(zmax(j))], 'EdgeColor', ...
                   colrs(j, :));
-            xlabel('$k_\mathrm{xx}$ [$\mu$D]', latx{:}, 'fontSize', sz(2))
+            xlabel('$\hat{k}_\mathrm{xx}$ [$\mu$D]', latx{:}, 'fontSize', sz(2))
             ylabel('P [-]', latx{:}, 'fontSize', sz(2))
             title(['$V_\mathrm{cl}$ = ' num2str(vclc(n))], ...
                    latx{:}, 'fontSize', sz(2))
