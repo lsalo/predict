@@ -64,7 +64,7 @@ In addition, PREDICT uses the following MATLAB add-on toolboxes:
 ## Download
 * **MATLAB**: Can be installed following the instructions <a href="https://www.mathworks.com/products/get-matlab.html?s_tid=gn_getml">on the website</a>, and your academic institution likely provides campus-wide access free of charge.
 * **MRST**: The latest public release of MRST can be downloaded <a href="https://www.sintef.no/projectweb/mrst/download/">here</a>:
-* **PREDICT**: The repository can be cloned or downloaded from <a href="https://github.mit.edu/lsalo/predict">here</a> (green button "clone or download"). [Public repo TBD]
+* **PREDICT**: The repository can be cloned or downloaded from <a href="https://github.mit.edu/lsalo/predict">here</a> (green button "clone or download"). [This repository is private.]
 
 ## Installation
 We show installation steps for both MRST and PREDICT.
@@ -84,7 +84,7 @@ Examples are provided in the folder <a href="https://github.mit.edu/lsalo/predic
 
 
 ## License
-PREDICT incorporates MRST functionality, so it legally becomes an extension of MRST. This means that, when publicly released, it should be done under the terms of the GPL license.
+PREDICT incorporates MRST functionality, so it legally becomes an extension of MRST. This means that, if publicly released, it should be done under the terms of the GPL license.
 
 ## Acknowledgements
 This work was funded by **ExxonMobil** through the project *"Modeling and Mitigation of Induced Seismicity and Fault Leakage during CO2 storage"*. L.S. and R.J. greatly appreciate the numerous, productive discussions with the ExxonMobil team participating in the project. 
