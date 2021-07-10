@@ -92,32 +92,33 @@ for n=1:N
     
     else                % (II) Vcl >= threshold for smearing
         % Clay volume fraction to mass fraction
-        % Unless the mineralogy of the sand and clay is very diff,
-        % the density of sand and clay is dependent on their poro
-        % difference only. This porosity difference will rarely be
-        % larger than ~0.2, hence the clay volume fraction and mass
-        % volume fraction are similar.
-        sandPoro = 0.49 / (exp(zmax(n)/(3.7*1000)));
-        rho_s = 2650;                           % "avg" density of solid part.
-        rho_w = 1040;                           % "avg" formation water density
-        rho_clay = @(p) p*rho_w + (1-p)*rho_s;  % p = poro
-        rho_mat  = @(p) (1-vcl(n))*(sandPoro*rho_w + (1-sandPoro)*rho_s) + ...
-                        vcl(n)*(rho_clay(p));
-        mcl = @(p) vcl(n) * rho_clay(p) ./ rho_mat(p);
+        %sandPoro = 0.49 / (exp(zmax(n)/(3.7*1000)));
+        %rho_s = 2650;                           % bulk density of solid part.
+        %rho_w = 1040;                           % "avg" formation water density
+        %rho_clay = @(p) p*rho_w + (1-p)*rho_s;  % p = poro
+        %rho_mat  = @(p) (1-vcl(n))*(sandPoro*rho_w + (1-sandPoro)*rho_s) + ...
+        %                vcl(n)*(rho_clay(p));
+        %mcl = @(p) vcl(n) * rho_clay(p) ./ rho_mat(p);
+        %mcl = @(p) vcl(n) * rho_clay ./ rho_mat(p);
+        
+        rho_s_bulk = 2600;          % dens. of solid grains (all)
+        rho_s_clay = 2700;          % dens. of clay grains. This varies
+        %                             between ~2 and ~3 depending on clay 
+        %                             mineral and hydration. We assume dry.
+        mcl = vcl(n) * rho_s_clay / rho_s_bulk;     % very similar to vcl.
         
         % Get permeability fcns
         e = @(plim) plim ./ (1 - plim);         % plim = upper or lower bound              
-        f1 = @(p) -69.59 -26.79*mcl(p) + 44.07*mcl(p).^0.5;
-        f2 = @(p, plim) (-53.61 -80.03*mcl(p) + 132.78*mcl(p).^0.5)*e(plim).^1;
-        f3 = @(p, plim) (86.61 + 81.91*mcl(p) -163.61*mcl(p).^0.5)*e(plim).^0.5;
-        permc = @(p, plim) f1(p) + f2(p, plim) + f3(p, plim); % ln(perm [m^2])
+        f1 = -69.59 -26.79*mcl + 44.07*mcl.^0.5;
+        f2 = @(plim) (-53.61 -80.03*mcl + 132.78*mcl.^0.5)*e(plim).^1;
+        f3 = @(plim) (86.61 + 81.91*mcl -163.61*mcl.^0.5)*e(plim).^0.5;
+        permc = @(plim) f1 + f2(plim) + f3(plim); % ln(perm [m^2])
         
         perm.type{n} = 'unif';
-        perm.fcn{n} = @(p, pmin, pmax) exp(permc(p, pmin) + ...
+        perm.fcn{n} = @(p, pmin, pmax) exp(permc(pmin) + ...
                                            rand(numel(p), 1) .* ...
-                                           (permc(p, pmax) - permc(p, pmin)));
-        perm.range{n} = @(pmin, pmax) exp([permc(pmin, pmin) ...
-                                           permc(pmax, pmax)]);
+                                           (permc(pmax) - permc(pmin)));
+        perm.range{n} = @(pmin, pmax) exp([permc(pmin) permc(pmax)]);
                                        
     end
 
