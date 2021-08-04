@@ -159,7 +159,7 @@ classdef FaultedSection
             
         end
         
-        function plotStrati(obj, faultThick, faultDip)
+        function plotStrati(obj, faultThick, faultDip, fontSize)
            %
            %
            % This plot considers that dip is constant for all layers in FW
@@ -198,7 +198,13 @@ classdef FaultedSection
            % Utils
            colrs = flipud(copper(16));
            latx = {'Interpreter', 'latex'};
-           sz = [14, 12];
+           if nargin < 4
+               sz = [14, 12, 11];
+               distTextVcl = [2, 8];
+           elseif strcmp(fontSize, 'large')
+               sz = [20, 20, 20]; 
+               distTextVcl = [5, 11];
+           end
            
            % Plot
            figure(1)
@@ -210,22 +216,14 @@ classdef FaultedSection
                  idc = 1 + round((obj.FW.Vcl(n) - obj.FW.IsClayVcl) / ...
                                   (1 - obj.FW.IsClayVcl)*5);
                  colr = colrs(10+idc, :);
-                 colrtx = 'w';
               else
                   idc = 1 + (5 - round((obj.FW.IsClayVcl - obj.FW.Vcl(n)) / ...
                                   (obj.FW.IsClayVcl - 0)*5));
                   colr = colrs(idc, :);
-                  colrtx = 'k';
               end
               fill(x, z, colr); 
-              if n == 1
-                  str = ['$V_\mathrm{cl}$ = ' num2str(obj.FW.Vcl(n))];
-              else
-                  str = num2str(obj.FW.Vcl(n));
-              end
-              text(limx(1) + 2, zFW(n) + (zFW(n+1) - zFW(n))/2, str, latx{:}, ...
-                   'fontSize', 11, 'color', colrtx)
            end
+              
            for n=1:numel(obj.HW.Thickness)
               x =  [limx(2), xHWf(n), xHWf(n+1), limx(2), limx(2)];
               z = [zHW(n), zHWf(n), zHWf(n+1), zHW(n+1), zHW(n)];
@@ -233,27 +231,47 @@ classdef FaultedSection
                   idc = 1 + round((obj.HW.Vcl(n) - obj.HW.IsClayVcl) / ...
                                   (1 - obj.HW.IsClayVcl)*5);
                   colr = colrs(10+idc, :);
-                  colrtx = 'w';
               else
                   idc = 1 + (5 - round((obj.HW.IsClayVcl - obj.HW.Vcl(n)) / ...
                                   (obj.HW.IsClayVcl - 0)*5));
                   colr = colrs(idc, :);
-                  colrtx = 'k';
               end
               fill(x, z, colr); 
-              text(limx(2) - 8, zHW(n) + (zHW(n+1) - zHW(n))/2, ...
+           end
+           
+           for n=1:numel(obj.FW.Thickness)
+               if obj.FW.Vcl(n) >= obj.FW.IsClayVcl
+                   colrtx = 'w';
+               else
+                   colrtx = 'k';
+               end
+               if n == 1
+                  str = ['$V_\mathrm{cl}$ = ' num2str(obj.FW.Vcl(n))];
+              else
+                  str = num2str(obj.FW.Vcl(n));
+              end
+               text(limx(1) + distTextVcl(1), zFW(n) + (zFW(n+1) - zFW(n))/2, str, latx{:}, ...
+                   'fontSize', sz(3), 'color', colrtx)
+           end
+           for n=1:numel(obj.HW.Thickness)
+               if obj.HW.Vcl(n) >= obj.HW.IsClayVcl
+                   colrtx = 'w';
+               else
+                   colrtx = 'k';
+               end
+               text(limx(2) - distTextVcl(2), zHW(n) + (zHW(n+1) - zHW(n))/2, ...
                    num2str(obj.HW.Vcl(n)), latx{:}, ...
-                   'fontSize', 11, 'color', colrtx)
+                   'fontSize', sz(3), 'color', colrtx)
            end
            hold off
            axis equal
            h = gca; h.XAxis.Visible = 'off';
+           h.FontSize = sz(3);
            xlim([min([limx', xFWf, xHWf]), max([limx', xFWf, xHWf])])
            ylim([min([zFW, zHW, zFWf, zHWf]) max([zFW, zHW, zFWf, zHWf])])
            ylabel('$z$ [m]', 'fontSize', sz(2), latx{:})
-           title(['$z_\mathrm{f} =$ ' num2str(unique(obj.DepthFaulting)) ...
-                  ' m $\mid$ $z_\mathrm{max} =$ ' num2str(unique(obj.FW.DepthBurial)) ...
-                  ' m'], latx{:}, 'fontSize', sz(1))
+           title(['$z_\mathrm{f}$,  $z_\mathrm{max} =$ ' num2str(unique(obj.DepthFaulting)) ...
+                  ', ' num2str(unique(obj.FW.DepthBurial)) ' m'], latx{:}, 'fontSize', sz(1))
         end
     end
 end
