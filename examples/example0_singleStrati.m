@@ -48,10 +48,10 @@ Nsim              = 1000;       % Number of simulations/realizations
 % FaultedSection object which contains all required information.
 % FW and HW
 footwall = Stratigraphy(thickness{1}, vcl{1}, 'Dip', dip(1), ...
-                        'DepthFaulting', zf(1), 'DepthBurial', repelem(2000, 1, 4));
+                        'DepthFaulting', zf(1), 'DepthBurial', zmax{1});
 hangingwall = Stratigraphy(thickness{2}, vcl{2}, 'Dip', dip(2), 'IsHW', 1, ...
                            'NumLayersFW', footwall.NumLayers, ...
-                           'DepthFaulting', zf(2), 'DepthBurial', repelem(2000, 9));
+                           'DepthFaulting', zf(2), 'DepthBurial', zmax{2});
 
 % Instantiate FaultedSection object (Strati in Faulted Section)
 mySect = FaultedSection(footwall, hangingwall, faultDip, 'maxPerm', maxPerm);
