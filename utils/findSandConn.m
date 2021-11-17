@@ -40,7 +40,8 @@ end
 % Get bounding box
 L = labelmatrix(bwconncomp(M, conn2D));
 B = regionprops(L, 'BoundingBox');
-imshow(label2rgb(L,'jet'), 'InitialMagnification','fit');
+%imshow(label2rgb(repelem(L, 10, 1),'jet'), 'InitialMagnification','fit');
+%axis on
 
 % Find extension of each object
 dim = size(M);
