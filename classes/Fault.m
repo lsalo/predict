@@ -222,7 +222,7 @@ classdef Fault
                                                    obj.MatProps.thick);
         end
         
-        function obj = upscaleSmearPerm(obj, FS, smear, U)
+        function [obj, G] = upscaleSmearPerm(obj, FS, smear, U)
             %
             % Place materials in the fault zone, assign permeabilities to
             % each fault material, and upscale permeability. See
