@@ -299,7 +299,7 @@ classdef Fault
            % SUBPLOTS
            % 1. Parent Ids
            hh = figure(randi(1000, 1));
-           tiledlayout(1, 6, 'Padding', 'compact', 'TileSpacing', 'none');
+           tiledlayout(1, 6, 'Padding', 'tight', 'TileSpacing', 'tight');
            nexttile
            set(gca, 'colormap', hot(max(M.unit)));
            plotToolbar(G, reshape(transpose(flipud(M.units)), G.cells.num, 1), ...
@@ -484,7 +484,7 @@ classdef Fault
                                              'PoroMin', 'PoroMax', ...
                                              'PermMin', 'PermMax', ...
                                              'PermAniso'}; 
-           fig = uifigure(randi(1000, 1), 'Position', [500 500 620 30*N]);
+           fig = uifigure(randi(1000, 1), 'Position', [500 500 700 30*N]);
            uit = uitable(fig);
            uit.Position = [20 20 550 30*N-40];
            uit.Data = tdata;
