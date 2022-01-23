@@ -256,6 +256,7 @@ else
         xlabel(labls{x(n)}, latx{:}, 'fontSize', sz(2))
         ylabel(labls{y(n)}, latx{:}, 'fontSize', sz(2))
     end
-    set(fh, 'position', [200, 200, 500, 300]);
+    %set(fh, 'position', [200, 200, 500, 300]);
+    set(fh, 'position', [200, 200, 1400, 700]);
 end
 end
