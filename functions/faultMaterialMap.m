@@ -190,7 +190,7 @@ end
 %     with respect to source layer in HW or FW (only in case of overlaps).
 
 % Find all units potentially present in each diagonal
-nDiag = sum(G.cartDims) - 1;
+nDiag = sum(G.cartDims(1:2)) - 1;
 nc = sum(M.isclay);
 Omap = zeros(nDiag, nc);
 for n = 1:nc
@@ -430,18 +430,18 @@ for n = 1:numel(M.nDiag)
         % Top and bottom ids of smear window
         if ismember(M.unit(n), FS.FW.Id)
             idTop = round(( M.layerTop(M.unit(n))/...
-                            (G.cartDims(2)*G.cellDim(2)) ) * G.cartDims(2));
-            idTop(idTop > G.cartDims(2)) = G.cartDims(2);
+                            (G.cartDims(end)*G.cellDim(end)) ) * G.cartDims(end));
+            idTop(idTop > G.cartDims(end)) = G.cartDims(end);
             idBot = 1;
         else
-            idTop = G.cartDims(2);
+            idTop = G.cartDims(end);
             idBot = round(( M.layerBot(M.unit(n))/...
-                            (G.cartDims(2)*G.cellDim(2)) ) * G.cartDims(2)); 
+                            (G.cartDims(end)*G.cellDim(end)) ) * G.cartDims(end)); 
             idBot(idBot == 0) = 1;
         end
         M.windowTop(n) = idTop;
         M.windowBot(n) = idBot;     
-        diagVals = false(G.cartDims(2), M.nDiag(n));        % unitInClayGaps (sand)
+        diagVals = false(G.cartDims(end), M.nDiag(n));        % unitInClayGaps (sand)
         diagVals(idBot:idTop, :) = true;                    % clay
         diagVals = flipud(diagVals);                        % for spdiags
         
@@ -451,10 +451,10 @@ for n = 1:numel(M.nDiag)
         
     else
         % Populate mapping matrix directly
-        M.vals = full(spdiags(false(G.cartDims(2), M.nDiag(n)), ...
+        M.vals = full(spdiags(false(G.cartDims(end), M.nDiag(n)), ...
                               -M.DiagTop(n):-M.DiagBot(n), M.vals));
     end
-    M.units = full(spdiags(M.unit(n)*ones(G.cartDims(2), M.nDiag(n)), ...
+    M.units = full(spdiags(M.unit(n)*ones(G.cartDims(end), M.nDiag(n)), ...
                    -M.DiagTop(n):-M.DiagBot(n), M.units));
 end
 M.units = transpose(M.units);

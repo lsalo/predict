@@ -133,6 +133,9 @@ classdef FaultedSection
            clayMine = {obj.FW.ClayMine, obj.HW.ClayMine};
            Disp = sum(obj.Tap(obj.FW.Id));
            
+           % Fault length (just for testing)
+           obj.MatPropDistr.length.fcn = @(D) D;
+           
            % Fault thickness
            obj.MatPropDistr.thick = getFaultThickness();
            

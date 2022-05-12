@@ -45,6 +45,7 @@ classdef Fault
     
     properties (SetAccess = protected)
        Disp                             % Fault displacement [m]
+       Length                           % Fault length [m]
        Poro                             % Final upscaled Poro (Nsim, 1)
        Perm                             % Final upscaled Perm (Nsim, 3)
        Vcl                              % Final upscaled Vcl (Nsim, 1)
@@ -64,7 +65,7 @@ classdef Fault
     end
     
     methods
-        function obj = Fault(FS, dip, targetCellDim)
+        function obj = Fault(FS, dip, dim)
             %
             % We instantiate a Fault object with the fundamental 
             % dimensions.
@@ -73,16 +74,8 @@ classdef Fault
             % Geometry
             obj.Dip    = dip;
             obj.Disp   = sum(FS.Tap(FS.FW.Id));   
-            
-            % User can pass different grid resolution
-            if nargin < 3
-                obj.Grid.targetCellDim = [obj.Disp/1000, obj.Disp/100];     % [m], [thick., disp.]
-            else
-                assert(isa(targetCellDim, 'double') && numel(targetCellDim) == 2, ...
-                       ['If grid resolution is passed, it must be a ', ...
-                       'double array with 2 elements: ', ...
-                       '[res. in thick. dir. (x), res. in displ. dir (y)]'])
-                obj.Grid.targetCellDim = targetCellDim;
+            if dim == 3
+                obj.Length = obj.Disp;
             end
         end
         
@@ -222,16 +215,13 @@ classdef Fault
                                                    obj.MatProps.thick);
         end
         
-        function [obj, G] = upscaleSmearPerm(obj, FS, smear, U)
+        function obj = upscaleSmearPerm(obj, FS, smear, G, U)
             %
             % Place materials in the fault zone, assign permeabilities to
             % each fault material, and upscale permeability. See
             % documentation in used functions below for details.
             %
-            
-            % Generate Grid
-            G = makeFaultGrid(obj.MatProps.thick, obj.Disp, ...
-                              obj.Grid.targetCellDim);
+            dim = G.griddim;
             obj.Grid.cellDim = G.cellDim;
             
             % Mapping matrix (material in each grid cell)
@@ -239,19 +229,35 @@ classdef Fault
             obj.MatMap = faultMaterialMap(G, FS, smear);
             
             % Smear placement (object simulation)
-            if any(obj.MatMap.Psmear < 1)
-                tol = 0.025;
-                obj.MatMap = placeSmearObjects(obj.MatMap, smear, FS, ...
-                                               G, tol, 0);
-            else
-                if isempty(obj.MatMap.Psmear)
-                    disp('No smear: P(smear) = 0')
-                %else
-                %    disp('Continuous smears: P(smear) = 1')
+            if dim == 2
+                if any(obj.MatMap.Psmear < 1)
+                    tol = 0.025;
+                    obj.MatMap = placeSmearObjects(obj.MatMap, smear, FS, ...
+                                                   G, tol, 0);
+                else
+                    if isempty(obj.MatMap.Psmear)
+                        disp('No smear: P(smear) = 0')
+                    %else
+                    %    disp('Continuous smears: P(smear) = 1')
+                    end
+                    obj.MatMap.vals = transpose(obj.MatMap.vals);
+                    obj.MatMap.P = [obj.MatMap.Psmear; ...  % desired (calculated)
+                                    obj.MatMap.Psmear];     % obtained
                 end
-                obj.MatMap.vals = transpose(obj.MatMap.vals);
-                obj.MatMap.P = [obj.MatMap.Psmear; ...  % desired (calculated)
-                                obj.MatMap.Psmear];     % obtained
+                
+            elseif dim == 3
+                if any(obj.MatMap.Psmear < 1)
+                    tol = 0.025;
+                    obj.MatMap = placeSmearObjects(obj.MatMap, smear, FS, ...
+                                                   G, tol, 0);
+                else
+                    if isempty(obj.MatMap.Psmear)
+                        disp('No smear: P(smear) = 0')
+                    end
+                    obj.MatMap.vals = transpose(obj.MatMap.vals);
+                    obj.MatMap.P = [obj.MatMap.Psmear; ...  % desired (calculated)
+                                    obj.MatMap.Psmear];     % obtained
+                end
             end
             
             % Assign vcl, porosity and permeability

@@ -21,13 +21,14 @@ mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
 % dip angle, faulting depth, and burial depth. Further details about input parameter 
 % formatting, etc can always be checked from the documentation in the classes 
 % and functions.
-thickness = {repelem(25, 1, 4), [5 10 15 10 20 10 10 5 15]};                % [m]
-vcl       = {[0.1 0.4 0.2 0.5], ...
-             [0.3 0.6 0.1 0.7 0.2 0.8 0.3 0.9 0.1]};                        % fraction [-]
+thickness = {repelem(25, 1, 4), [50 50]};                % [m]
+vcl       = {[0.1 0.7 0.2 0.8], ...
+             [0.3 0.5]};                        % fraction [-]
 dip       = [0, -5];                                                        % [deg.]
 faultDip  = 70;                                                             % [deg.]
 zf        = [500, 500];                                                     % [FW, HW], [m]
 zmax      = {repelem(2000, numel(vcl{1})), repelem(2000, numel(vcl{2}))};   % {FW, HW}
+dim       = 3;                    % dimensions (2 = 2D, 3 = 3D)
 
 % 2.2 Optional input parameters
 % In this case, we indicate a maximum fault material permeability of and a correlation 
@@ -62,7 +63,18 @@ mySect = FaultedSection(footwall, hangingwall, faultDip, 'maxPerm', maxPerm);
 % Get material property distributions
 mySect = mySect.getMatPropDistr();
 
-% 2.6 Generate intermediate variable samples, calculate smear dimensions and upscale permeability
+% 2.6 Get base grid
+% We generate a base grid with arbitrary thickness, to be modified at each
+% realization (much faster than generating n grids from scratch)
+D = sum(mySect.Tap(mySect.FW.Id));
+L  = mySect.MatPropDistr.length.fcn(D);    %  equal to disp for now
+T0 = 1;
+disp('Constructing initial grid...')
+if dim == 2,        G = makeFaultGrid(T0, D);
+elseif dim == 3,    G = makeFaultGrid(T0, D, L);
+end
+
+% 2.7 Generate intermediate variable samples, calculate smear dimensions and upscale permeability
 % We create two container variables (faults and smears) where we'll save all 
 % data for each realization. For each realization, the code defines a Fault object, 
 % generates intermediate variable samples, calculates the smear dimensions, and, 
@@ -71,26 +83,29 @@ mySect = mySect.getMatPropDistr();
 % Generate fault object with properties for each realization
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
-tstart = tic;
-parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
-    myFault = Fault(mySect, faultDip);
+%tstart = tic;
+%parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+    myFault = Fault(mySect, faultDip, dim);
     
     % Get material property (intermediate variable) samples
     myFault = myFault.getMaterialProperties(mySect, 'corrCoef', rho);
+    
+    % Update grid dimensions with sampled fault thickness
+    G = updateGrid(G, myFault.MatProps.thick);
     
     % Generate smear object with T, Tap, L, Lmax
     smear = Smear(mySect, myFault, 1);
     
     % Compute upscaled permeability distribution
-    myFault = myFault.upscaleSmearPerm(mySect, smear, U);
+    myFault = myFault.upscaleSmearPerm(mySect, smear, G, U);
     
     % Save result
     faults{n} = myFault;
     smears{n} = smear;
     if mod(n, 100) == 0
-        disp(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])
+        D(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])
     end
-end
+%end
 telapsed = toc(tstart);
 
 %% 3. Output Analysis
