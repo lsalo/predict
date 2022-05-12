@@ -12,6 +12,7 @@ close all force
 % First, navigate to the mrst folder and run |startup.m|. We can then load the 
 % appropriate modules for generating MRST grids and upscale the permeability:
 mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
+mrstVerbose on
 
 %% 2. Define Model and Upscale Permeability
 
