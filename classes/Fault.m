@@ -284,14 +284,13 @@ classdef Fault
                                          obj.Disp, obj.MatProps.thick);
         end
         
-        function plotMaterials(obj, FS)
+        function plotMaterials(obj, FS, G0)
            %
            %
            %
            
            % Generate Grid (Must be same as grid used within Fault)
-            G = makeFaultGrid(obj.MatProps.thick, obj.Disp, ...
-                              obj.Grid.targetCellDim);
+           G = updateGrid(G0, obj.MatProps.thick);
            
            % utils
            M = obj.MatMap;

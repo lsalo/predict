@@ -70,8 +70,8 @@ D = sum(mySect.Tap(mySect.FW.Id));
 L  = mySect.MatPropDistr.length.fcn(D);    %  equal to disp for now
 T0 = 1;
 disp('Constructing initial grid...')
-if dim == 2,        G = makeFaultGrid(T0, D);
-elseif dim == 3,    G = makeFaultGrid(T0, D, L);
+if dim == 2,        G0 = makeFaultGrid(T0, D);
+elseif dim == 3,    G0 = makeFaultGrid(T0, D, L);
 end
 
 % 2.7 Generate intermediate variable samples, calculate smear dimensions and upscale permeability
@@ -91,10 +91,10 @@ smears = cell(Nsim, 1);
     myFault = myFault.getMaterialProperties(mySect, 'corrCoef', rho);
     
     % Update grid dimensions with sampled fault thickness
-    G = updateGrid(G, myFault.MatProps.thick);
+    G = updateGrid(G0, myFault.MatProps.thick);
     
     % Generate smear object with T, Tap, L, Lmax
-    smear = Smear(mySect, myFault, 1);
+    smear = Smear(mySect, myFault, G, 1);
     
     % Compute upscaled permeability distribution
     myFault = myFault.upscaleSmearPerm(mySect, smear, G, U);
@@ -115,7 +115,7 @@ mySect.plotStrati(faults{1}.MatProps.thick, faultDip);
 % 3.2 Visualize intermediate variables
 % We define a given parent material (id from 1 to n of materials in stratigraphy), 
 % and generate histograms and correlation matrix plots.
-layerId = 8;                                            
+layerId = 4;                                            
 plotMatPropsHist(faults, smears, mySect, layerId) 
 % MatProps correlations
 [R, P] = plotMatPropsCorr(faults, mySect, layerId);
@@ -126,7 +126,7 @@ plotMatPropsHist(faults, smears, mySect, layerId)
 % 'maxZ' or 'minZ'.
 % General fault materials and perm view
 plotId = selectSimId('randm', faults, Nsim);                % simulation index
-faults{plotId}.plotMaterials(mySect) 
+faults{plotId}.plotMaterials(mySect, G0) 
 
 % 3.4. Visualize upscaled permeability
 % Plot upscaled permeability distributions (all simulations)

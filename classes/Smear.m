@@ -49,7 +49,7 @@ classdef Smear
     end
     
     methods
-        function smear = Smear(FS, fault, Nsim)
+        function smear = Smear(FS, fault, G, Nsim)
             % Key references:
             %   Childs et al., GSLSP (2007)
             %   Egholm et al., Geology (2008)
@@ -159,9 +159,9 @@ classdef Smear
                 % length or 2 times the grid resolution in the length
                 % dimension, whichever is larger.
                 minVal(zf > 50) = max(0.1*smear.Length(n, zf>50), ...
-                                      3*fault.Grid.targetCellDim(2));
+                                      3*G.cellDim(end));
                 minVal(zf <= 50) = max(0.05*smear.Length(n, zf<=50), ...
-                                       2*fault.Grid.targetCellDim(2));
+                                       2*G.cellDim(end));
                 idBelowLim = smear.SegLenMax(n, :) < minVal;
                 smear.SegLenMax(n, idBelowLim) = minVal(idBelowLim);
                 
