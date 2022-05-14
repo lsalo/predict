@@ -53,6 +53,18 @@ unitPoro = fault.MatProps.poro;
 unitPerm = fault.MatProps.perm;
 permAnisoRatio = fault.MatProps.permAnisoRatio;
 
+% Griddim
+if G.griddim == 3
+    assert(~isfield(G, 'cartDims'))
+    assert(mod(sqrt(G.layerSize), 1) == 0)
+    G.cartDims = [G.numLayers sqrt(G.layerSize) sqrt(G.layerSize)];
+    ncell = G.layerSize;
+    id_dim = 2;
+elseif G.griddim == 2
+    ncell = G.cells.num;
+    id_dim = 1;
+end
+
 
 % 1) Map diagonals to Grid indexing: Grid indexing starts at bottom left,
 %    columns (x) move faster. Matrix starts counting at top left and rows
@@ -61,8 +73,8 @@ permAnisoRatio = fault.MatProps.permAnisoRatio;
 
 % figure(9); spy(sparse(M.vals))       % check that smears are correctly placed in M.
 % 2D grid (xy) mapping
-isSmear = reshape(transpose(flipud(M.vals)), G.cells.num, 1);
-%whichUnit = reshape(transpose(flipud(M.units)), G.cells.num, 1);
+isSmear = reshape(transpose(flipud(M.vals)), ncell, 1);
+%whichUnit = reshape(transpose(flipud(M.units)), ncell, 1);
 
 % 2) Assign permeability and porosity based on parent unit(s) in each 
 %    domain. This is assumed to be the permeability across the clay/sand 
@@ -75,11 +87,11 @@ isSmear = reshape(transpose(flipud(M.vals)), G.cells.num, 1);
 % Poro
 % Assign based on endMemberPoro to corresponding cells. Random sampling for
 % clay.     
-poroG = nan(G.cells.num, 1);                            % sand poro default
-permG = nan(G.cells.num, 3);                            % [kxx, kxz, kzz]
-vcl   = nan(G.cells.num, 1);
-kx_loc = nan(G.cells.num, 1);
-kz_loc = nan(G.cells.num, 1);
+poroG = nan(ncell, 1);                            % sand poro default
+permG = nan(ncell, 3);                            % [kxx, kxz, kzz]
+vcl   = nan(ncell, 1);
+kx_loc = nan(ncell, 1);
+kz_loc = nan(ncell, 1);
 T = [cosd(alpha) sind(alpha); ...
      -sind(alpha) cosd(alpha)];                         % Transform. mat
 fn = 0.01;                                              % porosity var factor
@@ -88,9 +100,9 @@ fk = 0.2;                                               % log perm var factor
 for n=1:numel(M.unit)
     % To get cellIds, we use idsUnitBlock instead of whichUnit == M.unit(n)
     % since same unit can appear more than once, in separate blocks.
-    idsUnitBlock = ~full(spdiags(zeros(G.cartDims(1),M.nDiag(n)), ...
+    idsUnitBlock = ~full(spdiags(zeros(G.cartDims(id_dim),M.nDiag(n)), ...
                                  M.DiagBot(n):M.DiagTop(n), M.units));
-    idsUnitBlock = reshape(transpose(flipud(idsUnitBlock)), G.cells.num, 1);
+    idsUnitBlock = reshape(transpose(flipud(idsUnitBlock)), ncell, 1);
     cellIds = [all([isSmear, idsUnitBlock], 2), ...
                all([~isSmear, idsUnitBlock], 2)];
     cellNum = [sum(cellIds(:, 1)), sum(cellIds(:, 2))];

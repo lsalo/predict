@@ -215,11 +215,11 @@ classdef Fault
                                                    obj.MatProps.thick);
         end
         
-        function obj = upscaleSmearPerm(obj, FS, smear, G, U)
+        function obj = placeMaterials(obj, FS, smear, G)
             %
             % Place materials in the fault zone, assign permeabilities to
-            % each fault material, and upscale permeability. See
-            % documentation in used functions below for details.
+            % each fault material. See documentation in used functions 
+            % below for details.
             %
             dim = G.griddim;
             obj.Grid.cellDim = G.cellDim;
@@ -229,8 +229,7 @@ classdef Fault
             obj.MatMap = faultMaterialMap(G, FS, smear);
             
             % Smear placement (object simulation)
-            if dim == 2
-                if any(obj.MatMap.Psmear < 1)
+            if any(obj.MatMap.Psmear < 1)
                     tol = 0.025;
                     obj.MatMap = placeSmearObjects(obj.MatMap, smear, FS, ...
                                                    G, tol, 0);
@@ -243,26 +242,17 @@ classdef Fault
                     obj.MatMap.vals = transpose(obj.MatMap.vals);
                     obj.MatMap.P = [obj.MatMap.Psmear; ...  % desired (calculated)
                                     obj.MatMap.Psmear];     % obtained
-                end
-                
-            elseif dim == 3
-                if any(obj.MatMap.Psmear < 1)
-                    tol = 0.025;
-                    obj.MatMap = placeSmearObjects(obj.MatMap, smear, FS, ...
-                                                   G, tol, 0);
-                else
-                    if isempty(obj.MatMap.Psmear)
-                        disp('No smear: P(smear) = 0')
-                    end
-                    obj.MatMap.vals = transpose(obj.MatMap.vals);
-                    obj.MatMap.P = [obj.MatMap.Psmear; ...  % desired (calculated)
-                                    obj.MatMap.Psmear];     % obtained
-                end
             end
             
             % Assign vcl, porosity and permeability
             [obj.Grid.poro, obj.Grid.perm, obj.Grid.permy, ...
                                 obj.Grid.vcl] = setGridPoroPerm(obj, G, FS);
+        end
+        
+        function obj = upscaleProps(obj, G, U)
+            %
+            % Upscale Vcl, Poro and Perm
+            %
             
             % Upscale Vcl (additive)
             obj.Vcl = mean(obj.Grid.vcl);
@@ -282,6 +272,7 @@ classdef Fault
             obj.Perm = computeCoarsePerm(G, obj.Grid.perm, ...
                                          obj.Grid.permy, U, ...
                                          obj.Disp, obj.MatProps.thick);
+            
         end
         
         function plotMaterials(obj, FS, G0)

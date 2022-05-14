@@ -112,8 +112,16 @@ function M = faultMaterialMap(G, FS, smear)
 %__________________________________________________________________________
 
 % Initial values to Matrix structure
-M.nDiagTot    = 2*G.cartDims(1) - 1;            % total number of diagonals
-M.vals        = false(G.cartDims(1));           % actual matrix of 0s and 1s
+if G.griddim == 3
+    assert(~isfield(G, 'cartDims'))
+    assert(mod(sqrt(G.layerSize), 1) == 0)
+    G.cartDims = [G.numLayers sqrt(G.layerSize) sqrt(G.layerSize)];
+    id_dim = 2;
+elseif G.griddim == 2
+    id_dim = 1;
+end
+M.nDiagTot    = 2*G.cartDims(id_dim) - 1;            % total number of diagonals
+M.vals        = false(G.cartDims(id_dim));           % actual matrix of 0s and 1s
 M.units       = zeros(size(M.vals));            % Unit domain of each cell  (parent Id)
 M.unit        = FS.ParentId;                    % Unit domain of each group (parent Id)
 M.isclay      = [FS.FW.IsClay, FS.HW.IsClay];   % total units and clay or not  
@@ -137,9 +145,9 @@ M.layerCenter = [cumsum(FS.Tap(FS.FW.Id))-FS.Tap(FS.FW.Id)/2 ...
 M.layerTop    = [cumsum(FS.Tap(FS.FW.Id)) cumsum(FS.Tap(FS.HW.Id))];
 M.layerBot    = [0 M.layerTop(FS.FW.Id(1:end-1)) ...
                  0 M.layerTop(FS.HW.Id(1:end-1))];
-M.layerDiagCenter = round(M.layerCenter.*(G.cartDims(1)/faultDisp)) - ...
-                          G.cartDims(1);
-M.layerDiagCenter(FS.HW.Id) = M.layerDiagCenter(FS.HW.Id) + G.cartDims(1);
+M.layerDiagCenter = round(M.layerCenter.*(G.cartDims(id_dim)/faultDisp)) - ...
+                          G.cartDims(id_dim);
+M.layerDiagCenter(FS.HW.Id) = M.layerDiagCenter(FS.HW.Id) + G.cartDims(id_dim);
 
 % Assign initial DiagTop and DiagBot
 M.DiagTop = M.layerDiagCenter + fix((M.nDiag-1)/2);
@@ -148,20 +156,20 @@ M.DiagTop(~M.isclay) = 0;
 M.DiagBot(~M.isclay) = 0;
 
 % Just for convenience in plotting, etc.
-M.layerDiagTop = round(M.layerTop.*(G.cartDims(1)/faultDisp)) - ...
-                       G.cartDims(1);
-M.layerDiagTop(FS.HW.Id) = M.layerDiagTop(FS.HW.Id) + G.cartDims(1);
+M.layerDiagTop = round(M.layerTop.*(G.cartDims(id_dim)/faultDisp)) - ...
+                       G.cartDims(id_dim);
+M.layerDiagTop(FS.HW.Id) = M.layerDiagTop(FS.HW.Id) + G.cartDims(id_dim);
 M.layerDiagTop(M.layerDiagTop>0) = M.layerDiagTop(M.layerDiagTop>0)-1;
-M.layerDiagBot = round(M.layerBot.*(G.cartDims(1)/faultDisp)) - ...
-                       G.cartDims(1);
-M.layerDiagBot(FS.HW.Id) = M.layerDiagBot(FS.HW.Id) + G.cartDims(1)+1;
+M.layerDiagBot = round(M.layerBot.*(G.cartDims(id_dim)/faultDisp)) - ...
+                       G.cartDims(id_dim);
+M.layerDiagBot(FS.HW.Id) = M.layerDiagBot(FS.HW.Id) + G.cartDims(id_dim)+1;
 M.layerDiagBot(M.layerDiagBot==0) = 1;
-M.layerDiagBot(1) = -(G.cartDims(1)-1);
+M.layerDiagBot(1) = -(G.cartDims(id_dim)-1);
 M.nDiagLayer = (M.layerDiagTop - M.layerDiagBot)+1;
 
 
 % 1.3. Adjust nDiag to within -G.cartDims and +G.cartDims
-diagEnd = G.cartDims(1) - 1;
+diagEnd = G.cartDims(id_dim) - 1;
 M.DiagBot(M.DiagBot < -diagEnd) = -diagEnd;
 M.DiagTop(M.DiagTop > diagEnd) = diagEnd;
 M.nDiag(idc) = abs(M.DiagTop(idc) - M.DiagBot(idc)) + 1;
@@ -171,7 +179,7 @@ M.nDiag(idc) = abs(M.DiagTop(idc) - M.DiagBot(idc)) + 1;
 %     not add overlapping areas)
 smearThickAsFault = 0;
 if sum(M.nDiag) >= sum(M.nDiagTot) % smear may occupy the full fault area
-    diagIds = -G.cartDims(1)+1:G.cartDims(1)-1;
+    diagIds = -G.cartDims(id_dim)+1:G.cartDims(id_dim)-1;
     clayDiag = cell2mat(arrayfun(@(x,y) x:y, M.DiagBot(idc), ...
                                  M.DiagTop(idc),'uniformoutput',false));
     clayDiag = unique(clayDiag);
@@ -194,8 +202,8 @@ nDiag = sum(G.cartDims(1:2)) - 1;
 nc = sum(M.isclay);
 Omap = zeros(nDiag, nc);
 for n = 1:nc
-   id0 = [M.DiagBot(idc(n)) + G.cartDims(1), ...
-          M.DiagTop(idc(n)) + G.cartDims(1)]; 
+   id0 = [M.DiagBot(idc(n)) + G.cartDims(id_dim), ...
+          M.DiagTop(idc(n)) + G.cartDims(id_dim)]; 
    Omap(id0(1):id0(2), n) = idc(n);
 end
 %Omap(~any(Omap, 2), : ) = [];
@@ -218,13 +226,13 @@ for n = 1:size(diagsGroup, 1)
     idSelectedUnit = randi(numel(vals), 1);
     unitGroup(n) = vals(idSelectedUnit);
     if isnan(DiagBot(unitGroup(n)))                     % new unit
-        DiagBot(unitGroup(n)) = diagsGroup(n, 1) - G.cartDims(1);
-        DiagTop(unitGroup(n)) = diagsGroup(n, 2) - G.cartDims(1);
+        DiagBot(unitGroup(n)) = diagsGroup(n, 1) - G.cartDims(id_dim);
+        DiagTop(unitGroup(n)) = diagsGroup(n, 2) - G.cartDims(id_dim);
         
     else  % Unit was already assigned to a group of diags, so we need to
           % check what limits (DiagBot and/or DiagTop) we need to extend.
-        itBot = diagsGroup(n, 1) - G.cartDims(1);
-        itTop = diagsGroup(n, 2) - G.cartDims(1);
+        itBot = diagsGroup(n, 1) - G.cartDims(id_dim);
+        itTop = diagsGroup(n, 2) - G.cartDims(id_dim);
         idsThisUnit = unitGroup == unitGroup(n);
         assert(itBot > DiagBot(unitGroup(n))) 
             %error('Check what is going on.')
@@ -312,7 +320,7 @@ M.Psmear = M.Psmear(pos);
 
 %% 2. Diagonals with sand
 idc     = find(M.isclay);
-diagIds = -G.cartDims(1)+1:G.cartDims(1)-1;
+diagIds = -G.cartDims(id_dim)+1:G.cartDims(id_dim)-1;
 clayDiag = cell2mat(arrayfun(@(x,y) x:y, M.DiagBot(idc), ...
                              M.DiagTop(idc),'uniformoutput',false));
 clayDiag = unique(clayDiag);

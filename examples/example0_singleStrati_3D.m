@@ -22,14 +22,14 @@ mrstVerbose on
 % dip angle, faulting depth, and burial depth. Further details about input parameter 
 % formatting, etc can always be checked from the documentation in the classes 
 % and functions.
-thickness = {repelem(25, 1, 4), [5 10 15 10 20 10 10 5 15]};                % [m]
-vcl       = {[0.1 0.4 0.2 0.5], ...
-             [0.3 0.6 0.1 0.7 0.2 0.8 0.3 0.9 0.1]};                        % fraction [-]
+thickness = {repelem(25, 1, 4), [50 50]};                % [m]
+vcl       = {[0.1 0.7 0.2 0.8], ...
+             [0.3 0.5]};                        % fraction [-]
 dip       = [0, -5];                                                        % [deg.]
 faultDip  = 70;                                                             % [deg.]
 zf        = [500, 500];                                                     % [FW, HW], [m]
 zmax      = {repelem(2000, numel(vcl{1})), repelem(2000, numel(vcl{2}))};   % {FW, HW}
-dim       = 2;                    % dimensions (2 = 2D, 3 = 3D)
+dim       = 3;                    % dimensions (2 = 2D, 3 = 3D)
 
 % 2.2 Optional input parameters
 % In this case, we indicate a maximum fault material permeability of and a correlation 
@@ -43,7 +43,7 @@ U.method          = 'mpfa';     % 'tpfa' recommended if useAcceleration = 0
 U.outflux         = 0;          % compare outflux of fine and upscaled model
 U.ARcheck         = 0;          % check if Perm obtained with grid with aspect ratio of 
                                 % only 5 gives same output.
-Nsim              = 1000;       % Number of simulations/realizations
+Nsim              = 100;        % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
 % Organize the input parameters in HW and FW, and use that info to create a 
@@ -85,30 +85,43 @@ end
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
 tstart = tic;
+assert(dim==3);
 parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
-    myFault = Fault(mySect, faultDip, dim);
     
-    % Get material property (intermediate variable) samples, and fix 
-    % along-strike thickness of current realization if 3D.
-    myFault = myFault.getMaterialProperties(mySect, 'corrCoef', rho);
+    % TBD: get segmentation for this realization
+
+    for k=1:nSeg
+        myFault = Fault(mySect, faultDip, dim);
+        
+        % Get material property (intermediate variable) samples, and fix
+        % along-strike thickness of current realization if 3D.
+        myFault = myFault.getMaterialProperties(mySect, 'corrCoef', rho);
+        if k==1
+            thick3D = myFault.MatProps.thick;
+            % Update grid dimensions with sampled fault thickness
+            G = updateGrid(G0, myFault.MatProps.thick);
+        else
+            myFault.MatProps.thick = thick3D;
+        end
+        
+        % Generate smear object with T, Tap, L, Lmax
+        smear = Smear(mySect, myFault, G, 1);
+        
+        % Place fault materials and assign cell-based properties in 2D
+        % section
+        myFault = myFault.placeMaterials(mySect, smear, G);
+        
+        % TBD: Extrude 2D section to fill current segment
+    end
     
-    % Update grid dimensions with sampled fault thickness
-    G = updateGrid(G0, myFault.MatProps.thick);
-    
-    % Generate smear object with T, Tap, L, Lmax
-    smear = Smear(mySect, myFault, G, 1);
-    
-    % Place fault materials and assign cell-based properties
-    myFault = myFault.placeMaterials(mySect, smear, G);
-    
-    % Compute upscaled permeability distribution
+    % Compute 3D upscaled permeability distribution
     myFault = myFault.upscaleProps(G, U);
     
     % Save result
     faults{n} = myFault;
     smears{n} = smear;
     if mod(n, 100) == 0
-        disp(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])
+        D(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])
     end
 end
 telapsed = toc(tstart);
