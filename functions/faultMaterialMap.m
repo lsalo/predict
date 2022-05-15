@@ -113,10 +113,8 @@ function M = faultMaterialMap(G, FS, smear)
 
 % Initial values to Matrix structure
 if G.griddim == 3
-    assert(~isfield(G, 'cartDims'))
-    assert(mod(sqrt(G.layerSize), 1) == 0)
-    G.cartDims = [G.numLayers sqrt(G.layerSize) sqrt(G.layerSize)];
-    id_dim = 2;
+    %id_dim = 2; % extruded grid
+    id_dim = 1;
 elseif G.griddim == 2
     id_dim = 1;
 end

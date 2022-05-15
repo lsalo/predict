@@ -40,9 +40,6 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 % 2.3 Flow upscaling options and number of simulations
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
 U.method          = 'mpfa';     % 'tpfa' recommended if useAcceleration = 0
-U.outflux         = 0;          % compare outflux of fine and upscaled model
-U.ARcheck         = 0;          % check if Perm obtained with grid with aspect ratio of 
-                                % only 5 gives same output.
 Nsim              = 100;        % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
@@ -72,9 +69,7 @@ D = sum(mySect.Tap(mySect.FW.Id));
 L  = mySect.MatPropDistr.length.fcn(D);    %  equal to disp for now
 T0 = 1;
 disp('Constructing initial grid...')
-if dim == 2,        G0 = makeFaultGrid(T0, D);
-elseif dim == 3,    G0 = makeFaultGrid(T0, D, L);
-end
+G0 = makeFaultGrid(T0, D, L);
 
 % 2.7 Generate intermediate variable samples, calculate smear dimensions and upscale permeability
 % We create two container variables (faults and smears) where we'll save all 
@@ -87,13 +82,14 @@ faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
 tstart = tic;
 assert(dim==3);
-parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+%parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+for n=1
     
     % TBD: get segmentation for this realization
     segLen = [5 10 5 15 10 20 5 10 20]; 
     nSeg = numel(segLen);
     
-    extrudedPerm = zeros(G.cells.num, 6);   %[kxx, kxy, kxz, kyy, kyz, kzz]
+    extrudedPerm = zeros(G0.cells.num, 6);   %[kxx, kxy, kxz, kyy, kyz, kzz]
     for k=1:nSeg
         myFaultSection = Fault(mySect, faultDip, dim);
         
@@ -103,7 +99,7 @@ parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
         if k==1
             thick3D = myFaultSection.MatProps.thick;
             % Update grid dimensions with sampled fault thickness
-            G = updateGrid(G0, myFaultSection.MatProps.thick);
+            G = updateGrid(G0, thick3D);
         else
             myFaultSection.MatProps.thick = thick3D;
         end
@@ -118,8 +114,8 @@ parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
         % Extrude 2D section to fill current segment
         % TBD: we want to know material type, issmear, etc for each cell in
         %      extruded grid, so change extrudedPerm for extrudedVals.
-        extrudedPerm = assignExtrudedPerm(extrudedPerm, myFaultSection, ...
-                                          segLen(k), G.cellDim(1));
+        extrudedPerm = assignExtrudedPerm(G, extrudedPerm, myFaultSection, ...
+                                          segLen(k), G.cellDim(2));
         
         % Save results
         faults{n, k} = myFaultSection;
@@ -127,7 +123,7 @@ parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     end
     
     % Compute 3D upscaled permeability distribution
-    myFault = myFaultSection.upscaleProps(G, U);
+    upscaledPerm = computeCoarsePerm3D(G, extrudedPerm, [1 1], U);
     
     if mod(n, 100) == 0
         D(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])

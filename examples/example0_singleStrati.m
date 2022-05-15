@@ -85,7 +85,7 @@ end
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
 tstart = tic;
-parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+for n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     myFault = Fault(mySect, faultDip, dim);
     
     % Get material property (intermediate variable) samples, and fix 

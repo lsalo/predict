@@ -54,15 +54,13 @@ unitPerm = fault.MatProps.perm;
 permAnisoRatio = fault.MatProps.permAnisoRatio;
 
 % Griddim
+id_dim = 1;
 if G.griddim == 3
-    assert(~isfield(G, 'cartDims'))
-    assert(mod(sqrt(G.layerSize), 1) == 0)
-    G.cartDims = [G.numLayers sqrt(G.layerSize) sqrt(G.layerSize)];
-    ncell = G.layerSize;
-    id_dim = 2;
+    %ncell = G.layerSize;    % extruded
+    %id_dim = 2;
+    ncell = G.cartDims(1)*G.cartDims(3); 
 elseif G.griddim == 2
     ncell = G.cells.num;
-    id_dim = 1;
 end
 
 

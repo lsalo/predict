@@ -44,27 +44,30 @@ else
         '[res. in thick. dir. (x), (res in len. dir. (y)), res. in displ. dir (y/z)]'])
 end
 
-
-
-nelem = max([round(T / targetCellDim(1)), ...
-             round(D / targetCellDim(2))]);
-G = cartGrid([nelem, nelem], [T, D]);
-G.cellDim = [T/nelem, D/nelem];
 if dim == 2
-    G = computeGeometry(G);
-elseif dim == 3     % extrude 2D cartesian grid
-    nelem = [round(T / targetCellDim(1)), ...
-             round(L / targetCellDim(2)), ...
-             round(D / targetCellDim(3))];
-    nelem_max = max(nelem);
-    G.cellDim = [L/nelem_max, T/nelem_max, D/nelem_max];        % L units
-    nLayers = nelem_max;   % Number of layers
-    strikeLayerThickness = G.cellDim(1);
-    G = makeLayeredGrid(G, ones(nLayers, 1)*strikeLayerThickness);
-    G.nodes.coords(G.nodes.coords(:, 3) == 1, 3) = strikeLayerThickness;
-    G.nodes.coords = G.nodes.coords(:, [3 1 2]); % x -> y, y -> z, along-strike = x
-    G = computeGeometry(G);
-    G.xySwap = true;
+    nelem = max([round(T / targetCellDim(1)), ...
+                 round(D / targetCellDim(2))]);
+    G = computeGeometry(cartGrid([nelem, nelem], [T, D]));
+    G.cellDim = [T/nelem, D/nelem];
+elseif dim == 3
+    nelem = max([round(T / targetCellDim(1)), ...
+                 round(L / targetCellDim(2)), ...
+                 round(D / targetCellDim(3))]);
+    G = computeGeometry(cartGrid([nelem, nelem, nelem], [T, L, D]));
+    G.cellDim = [T/nelem, L/nelem, D/nelem];
+% elseif dim == 3     % extrude 2D cartesian grid
+%     nelem = [round(T / targetCellDim(1)), ...
+%              round(L / targetCellDim(2)), ...
+%              round(D / targetCellDim(3))];
+%     nelem_max = max(nelem);
+%     G.cellDim = [L/nelem_max, T/nelem_max, D/nelem_max];        % L units
+%     nLayers = nelem_max;   % Number of layers
+%     strikeLayerThickness = G.cellDim(1);
+%     G = makeLayeredGrid(G, ones(nLayers, 1)*strikeLayerThickness);
+%     G.nodes.coords(G.nodes.coords(:, 3) == 1, 3) = strikeLayerThickness;
+%     G.nodes.coords = G.nodes.coords(:, [3 1 2]); % x -> y, y -> z, along-strike = x
+%     G = computeGeometry(G);
+%     G.xySwap = true;
 end
 
 if nargin > 4 && makeplot == 1
@@ -83,9 +86,9 @@ if nargin > 4 && makeplot == 1
         xlabel('x [m]'), ylabel('y [m]');
         view([-30, 75])
     elseif dim == 3
-        ax.DataAspectRatio = [1 0.1 1];
-        xlabel('y [m]'), ylabel('x [m]'); zlabel('z [m]');
-        view([-60 20])
+        ax.DataAspectRatio = [0.1 1 1];
+        xlabel('x [m]'), ylabel('y [m]'); zlabel('z [m]');
+        view([30 20])
         ax.ZDir = 'normal';
     end
 end
