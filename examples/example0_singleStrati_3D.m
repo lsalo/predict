@@ -66,7 +66,8 @@ mySect = mySect.getMatPropDistr();
 
 % 2.6 Get base grid
 % We generate a base grid with arbitrary thickness, to be modified at each
-% realization (much faster than generating n grids from scratch)
+% realization (much faster than generating n grids from scratch). Note that
+% the 3D grid is an extruded grid, where the x dimension is along-strike.
 D = sum(mySect.Tap(mySect.FW.Id));
 L  = mySect.MatPropDistr.length.fcn(D);    %  equal to disp for now
 T0 = 1;
@@ -89,37 +90,45 @@ assert(dim==3);
 parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     
     % TBD: get segmentation for this realization
-
+    segLen = [5 10 5 15 10 20 5 10 20]; 
+    nSeg = numel(segLen);
+    
+    extrudedPerm = zeros(G.cells.num, 6);   %[kxx, kxy, kxz, kyy, kyz, kzz]
     for k=1:nSeg
-        myFault = Fault(mySect, faultDip, dim);
+        myFaultSection = Fault(mySect, faultDip, dim);
         
         % Get material property (intermediate variable) samples, and fix
         % along-strike thickness of current realization if 3D.
-        myFault = myFault.getMaterialProperties(mySect, 'corrCoef', rho);
+        myFaultSection = myFaultSection.getMaterialProperties(mySect, 'corrCoef', rho);
         if k==1
-            thick3D = myFault.MatProps.thick;
+            thick3D = myFaultSection.MatProps.thick;
             % Update grid dimensions with sampled fault thickness
-            G = updateGrid(G0, myFault.MatProps.thick);
+            G = updateGrid(G0, myFaultSection.MatProps.thick);
         else
-            myFault.MatProps.thick = thick3D;
+            myFaultSection.MatProps.thick = thick3D;
         end
         
         % Generate smear object with T, Tap, L, Lmax
-        smear = Smear(mySect, myFault, G, 1);
+        smear = Smear(mySect, myFaultSection, G, 1);
         
         % Place fault materials and assign cell-based properties in 2D
         % section
-        myFault = myFault.placeMaterials(mySect, smear, G);
+        myFaultSection = myFaultSection.placeMaterials(mySect, smear, G);
         
-        % TBD: Extrude 2D section to fill current segment
+        % Extrude 2D section to fill current segment
+        % TBD: we want to know material type, issmear, etc for each cell in
+        %      extruded grid, so change extrudedPerm for extrudedVals.
+        extrudedPerm = assignExtrudedPerm(extrudedPerm, myFaultSection, ...
+                                          segLen(k), G.cellDim(1));
+        
+        % Save results
+        faults{n, k} = myFaultSection;
+        smears{n, k} = smear;
     end
     
     % Compute 3D upscaled permeability distribution
-    myFault = myFault.upscaleProps(G, U);
+    myFault = myFaultSection.upscaleProps(G, U);
     
-    % Save result
-    faults{n} = myFault;
-    smears{n} = smear;
     if mod(n, 100) == 0
         D(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])
     end

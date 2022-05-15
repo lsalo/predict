@@ -53,11 +53,12 @@ G.cellDim = [T/nelem, D/nelem];
 if dim == 2
     G = computeGeometry(G);
 elseif dim == 3     % extrude 2D cartesian grid
-    nelem = max([round(T / targetCellDim(1)), ...
-                 round(L / targetCellDim(2)), ...
-                 round(D / targetCellDim(3))]);
-    G.cellDim = [L/nelem, T/nelem, D/nelem];  
-    nLayers = nelem;   % Number of layers
+    nelem = [round(T / targetCellDim(1)), ...
+             round(L / targetCellDim(2)), ...
+             round(D / targetCellDim(3))];
+    nelem_max = max(nelem);
+    G.cellDim = [L/nelem_max, T/nelem_max, D/nelem_max];        % L units
+    nLayers = nelem_max;   % Number of layers
     strikeLayerThickness = G.cellDim(1);
     G = makeLayeredGrid(G, ones(nLayers, 1)*strikeLayerThickness);
     G.nodes.coords(G.nodes.coords(:, 3) == 1, 3) = strikeLayerThickness;
