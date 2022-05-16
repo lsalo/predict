@@ -14,6 +14,7 @@ fluid = initSingleFluid('mu' , 1, 'rho', 1);
 rock.perm = permG;
 
 % Compute equivalent/upscaled perm according to input method
+gravity reset off
 if strcmp(U.method, 'tpfa')
     p2 = partitionCartGrid(G.cartDims, partDims);
     CG2 = generateCoarseGrid(G, p2);
@@ -29,9 +30,7 @@ elseif strcmp(U.method, 'mpfa')
     hTmp = computeMultiPointTrans(G, rock, 'invertBlocks', inB);
     psolver = @(state0, G, fluid, bc) incompMPFA(state0, G, hTmp, ...
                                                  fluid, 'bc', bc);
-    tic
     K = diag(myupscalePermeabilityFixed(G, Dp{1}, psolver, fluid, L));
-    toc
 %     psolver = @(state0, G, fluid, bc, rock) incompMPFA(state0, G, hTmp, ...
 %                                                  fluid, 'bc', bc);
 %     K = diag(upscalePermeabilityFixed(G, Dp{1}, psolver, fluid, rock, L));
@@ -42,5 +41,51 @@ end
 
 % Pass the 3 independent components   
 Perm = [K(1), K(5), K(9)];
+
+% Plot
+% cmap = copper;
+% f2 = figure(2);
+% colormap(cmap);
+% plotCellData(G, log10(extrudedPerm(:,1)/(milli*darcy)), 'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0.1)
+% ax = gca;
+% colorbar;
+% %xlim([0 T]); ylim([0 D]);
+% title(['Number of cells = ' num2str(G.cells.num)])
+% set(f2, 'position', [400, 100, 600, 600]);
+% ax.DataAspectRatio = [0.2 1 1];
+% xlabel('x [m]'), ylabel('y [m]'); zlabel('z [m]');
+% view([30 20])
+% ax.ZDir = 'normal';
+% 
+% f3 = figure(3);
+% subplot(1,2,1)
+% plotCellData(G, log10(extrudedPerm(isSmear,1)/(milli*darcy)), isSmear, ...
+%              'EdgeColor', [0.8 0.8 0.8], 'EdgeAlpha', 0.1)
+% ax = gca;
+% colormap(ax, cmap(1:100, :));
+% colorbar;
+% %xlim([0 T]); ylim([0 D]);
+% title(['Clay smear perm'])
+% set(f3, 'position', [100, 100, 500, 600]);
+% ax.DataAspectRatio = [0.2 1 1];
+% xlabel('x [m]'), ylabel('y [m]'); zlabel('z [m]');
+% view([30 20])
+% ax.ZDir = 'normal';
+% grid on
+% 
+% subplot(1,2,2)
+% plotCellData(G, log10(extrudedPerm(~isSmear,1)/(milli*darcy)), ~isSmear, ...
+%              'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0.1)
+% ax = gca;
+% colormap(ax, cmap(156:end,:));
+% colorbar;
+% %xlim([0 T]); ylim([0 D]);
+% title(['Sand smear perm'])
+% set(f3, 'position', [100, 100, 900, 500]);
+% ax.DataAspectRatio = [0.2 1 1];
+% %xlabel('x [m]'), ylabel('y [m]'); zlabel('z [m]');
+% view([30 20])
+% ax.ZDir = 'normal';
+% grid on
 
 end

@@ -66,7 +66,7 @@ mySect = mySect.getMatPropDistr();
 
 % 2.6 Get base grid
 % We generate a base grid with arbitrary thickness, to be modified at each
-% realization (much faster than generating n grids from scratch)
+% realization (faster than generating n grids from scratch)
 D = sum(mySect.Tap(mySect.FW.Id));
 L  = mySect.MatPropDistr.length.fcn(D);    %  equal to disp for now
 T0 = 1;
@@ -85,7 +85,7 @@ end
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
 tstart = tic;
-for n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     myFault = Fault(mySect, faultDip, dim);
     
     % Get material property (intermediate variable) samples, and fix 

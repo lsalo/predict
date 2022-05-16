@@ -53,6 +53,7 @@ vmat = zeros(G.griddim, 1);
 dp_mat = vmat;
 
 for i=1:G.griddim
+   %if G.griddim == 3, disp(['it ' num2str(i) '/' num2str(3)]), end
    bc = addBC([], bcl{i}.face, 'pressure', dp_scale);
    bc = addBC(bc, bcr{i}.face, 'pressure', 0);
 

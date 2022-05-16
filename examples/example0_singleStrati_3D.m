@@ -11,8 +11,8 @@ close all force
 %% 1. Load Required MRST Modules
 % First, navigate to the mrst folder and run |startup.m|. We can then load the 
 % appropriate modules for generating MRST grids and upscale the permeability:
-mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
-mrstVerbose on
+mrstModule add mrst-gui coarsegrid upscaling incomp mpfa mimetic
+mrstVerbose off
 
 %% 2. Define Model and Upscale Permeability
 
@@ -22,9 +22,9 @@ mrstVerbose on
 % dip angle, faulting depth, and burial depth. Further details about input parameter 
 % formatting, etc can always be checked from the documentation in the classes 
 % and functions.
-thickness = {repelem(25, 1, 4), [50 50]};                % [m]
-vcl       = {[0.1 0.7 0.2 0.8], ...
-             [0.3 0.5]};                        % fraction [-]
+thickness = {repelem(25, 1, 4), [20 30 25 25]};                % [m]
+vcl       = {[0.1 0.4 0.2 0.5], ...
+             [0.3 0.6 0.1 0.7]};                        % fraction [-]
 dip       = [0, -5];                                                        % [deg.]
 faultDip  = 70;                                                             % [deg.]
 zf        = [500, 500];                                                     % [FW, HW], [m]
@@ -39,8 +39,8 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 
 % 2.3 Flow upscaling options and number of simulations
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
-U.method          = 'mpfa';     % 'tpfa' recommended if useAcceleration = 0
-Nsim              = 100;        % Number of 3D simulations/realizations
+U.method          = 'tpfa';     % 'tpfa' recommended if useAcceleration = 0
+Nsim              = 1000;        % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
 % Organize the input parameters in HW and FW, and use that info to create a 
@@ -66,10 +66,10 @@ mySect = mySect.getMatPropDistr();
 % realization (much faster than generating n grids from scratch). Note that
 % the 3D grid is an extruded grid, where the x dimension is along-strike.
 D = sum(mySect.Tap(mySect.FW.Id));
-L  = mySect.MatPropDistr.length.fcn(D);    %  equal to disp for now
-T0 = 1;
-disp('Constructing initial grid...')
-G0 = makeFaultGrid(T0, D, L);
+% L  = mySect.MatPropDistr.length.fcn(D);    %  equal to disp for now
+% T0 = 1;
+% disp('Constructing initial grid...')
+% G0 = makeFaultGrid(T0, D, L);
 
 % 2.7 Generate intermediate variable samples, calculate smear dimensions and upscale permeability
 % We create two container variables (faults and smears) where we'll save all 
@@ -78,30 +78,34 @@ G0 = makeFaultGrid(T0, D, L);
 % within upscaleSmearPerm, generates a fault material distribution consistent 
 % with the inputs and upscales the permeability.
 % Generate fault object with properties for each realization
+assert(dim==3);
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
+thick_fcn = mySect.MatPropDistr.thick.fcn;
 tstart = tic;
-assert(dim==3);
-%parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
-for n=1
+upscaledPerm = zeros(Nsim, 3);
+parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+%for n=1
     
     % TBD: get segmentation for this realization
-    segLen = [5 10 5 15 10 20 5 10 20]; 
+    segLen = repelem(25,1,4); 
     nSeg = numel(segLen);
-    
-    extrudedPerm = zeros(G0.cells.num, 6);   %[kxx, kxy, kxz, kyy, kyz, kzz]
+    thick3D = thick_fcn(D);                                                 %#ok
+    G = [];
+    extrudedPerm = [];
+    isSmear = [];
     for k=1:nSeg
         myFaultSection = Fault(mySect, faultDip, dim);
         
         % Get material property (intermediate variable) samples, and fix
         % along-strike thickness of current realization if 3D.
         myFaultSection = myFaultSection.getMaterialProperties(mySect, 'corrCoef', rho);
-        if k==1
-            thick3D = myFaultSection.MatProps.thick;
+        myFaultSection.MatProps.thick = thick3D;
+        if isempty(G)
+            G = makeFaultGrid(thick3D, myFaultSection.Disp, ...
+                              myFaultSection.Length, segLen);
             % Update grid dimensions with sampled fault thickness
-            G = updateGrid(G0, thick3D);
-        else
-            myFaultSection.MatProps.thick = thick3D;
+            %G = updateGrid(G0, thick3D);
         end
         
         % Generate smear object with T, Tap, L, Lmax
@@ -114,43 +118,92 @@ for n=1
         % Extrude 2D section to fill current segment
         % TBD: we want to know material type, issmear, etc for each cell in
         %      extruded grid, so change extrudedPerm for extrudedVals.
-        extrudedPerm = assignExtrudedPerm(G, extrudedPerm, myFaultSection, ...
-                                          segLen(k), G.cellDim(2));
+        [extrudedPerm, isSmear] = assignExtrudedPerm(G, extrudedPerm, isSmear, ...
+                                                     myFaultSection, ...
+                                                     segLen(k), G.cellDim(2));
         
         % Save results
-        faults{n, k} = myFaultSection;
-        smears{n, k} = smear;
+        faults{n}{k} = myFaultSection;
+        smears{n}{k} = smear;
     end
     
     % Compute 3D upscaled permeability distribution
-    upscaledPerm = computeCoarsePerm3D(G, extrudedPerm, [1 1], U);
+    upscaledPerm(n, :) = computeCoarsePerm3D(G, extrudedPerm, [1 1 1], U);
     
-    if mod(n, 100) == 0
-        D(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])
+    if mod(n, 50) == 0
+        disp(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])
     end
 end
 telapsed = toc(tstart);
 
 %% 3. Output Analysis
 % 3.1 Visualize stratigraphy and fault (with thickness corresponding to 1st realization)
-mySect.plotStrati(faults{1}.MatProps.thick, faultDip);  
+%mySect.plotStrati(faults{1}.MatProps.thick, faultDip);  
 
-% 3.2 Visualize intermediate variables
-% We define a given parent material (id from 1 to n of materials in stratigraphy), 
-% and generate histograms and correlation matrix plots.
-layerId = 4;                                            
-plotMatPropsHist(faults, smears, mySect, layerId) 
-% MatProps correlations
-[R, P] = plotMatPropsCorr(faults, mySect, layerId);
+% % 3.2 Visualize intermediate variables
+% % We define a given parent material (id from 1 to n of materials in stratigraphy), 
+% % and generate histograms and correlation matrix plots.
+% layerId = 4;                                            
+% plotMatPropsHist(faults, smears, mySect, layerId) 
+% % MatProps correlations
+% [R, P] = plotMatPropsCorr(faults, mySect, layerId);
+% 
+% % 3.3 Visualize fault materials
+% % Visualization for one realization. Choice can be 'randm' (random), 'maxX' 
+% % (realization with maximum upscaled permeability in across the fault), 'minX', 
+% % 'maxZ' or 'minZ'.
+% % General fault materials and perm view
+% plotId = selectSimId('randm', faults, Nsim);                % simulation index
+% faults{plotId}.plotMaterials(mySect, G0) 
+% 
+% % 3.4. Visualize upscaled permeability
+% % Plot upscaled permeability distributions (all simulations)
+% plotUpscaledPerm(faults)
 
-% 3.3 Visualize fault materials
-% Visualization for one realization. Choice can be 'randm' (random), 'maxX' 
-% (realization with maximum upscaled permeability in across the fault), 'minX', 
-% 'maxZ' or 'minZ'.
-% General fault materials and perm view
-plotId = selectSimId('randm', faults, Nsim);                % simulation index
-faults{plotId}.plotMaterials(mySect, G0) 
+% Histograms
+latx = {'Interpreter', 'latex'};
+sz = [14, 12];
+K = log10(upscaledPerm/(milli*darcy));
+nbins = 25;
+logMinP = min(min(K));
+logMaxP = max(max(K));
+edges = linspace(fix(logMinP)-1, fix(logMaxP)+1, nbins);
 
-% 3.4. Visualize upscaled permeability
-% Plot upscaled permeability distributions (all simulations)
-plotUpscaledPerm(faults)
+fh = figure(5);
+tiledlayout(3, 1, 'Padding', 'compact', 'TileSpacing', 'compact');
+labls = ["$\log_{10}(k_{xx}$ [mD])", ...
+    "$\log_{10}(k_{yy}$ [mD])", ...
+    "$\log_{10}(k_{zz}$ [mD])"];
+nexttile(1)
+histogram(K(:, 1), edges, 'Normalization', 'probability', ...
+    'FaceColor', [0.5 0.5 0.5], 'FaceAlpha', 1)
+xlabel(labls(1), latx{:}, 'fontSize', sz(2))
+ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+xlim([fix(logMinP)-1 fix(logMaxP)+1])
+ylim([0 0.6]); yticks(0:.2:.6)
+grid on
+%xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
+
+nexttile(2)
+rr = [255, 125, 125]/255;
+histogram(K(:, 2), edges, 'Normalization', 'probability', ...
+    'FaceColor', rr, 'FaceAlpha', 1)
+xlabel(labls(2), latx{:}, 'fontSize', sz(2))
+%ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+xlim([fix(logMinP)-1 fix(logMaxP)+1])
+ylim([0 0.6]); yticks(0:.2:.6)
+grid on
+%xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
+hold off
+
+nexttile(3)
+bb = [125, 125, 255]/255;
+histogram(K(:, 3), edges, 'Normalization', 'probability', ...
+    'FaceColor', bb, 'FaceAlpha', 1)
+xlabel(labls(3), latx{:}, 'fontSize', sz(2))
+%ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+xlim([fix(logMinP)-1 fix(logMaxP)+1])
+ylim([0 0.6]); yticks(0:.2:.6)
+grid on
+%xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
+set(fh, 'position', [200, 200, 150, 350])

@@ -1,12 +1,22 @@
-function extrudedPerm = assignExtrudedPerm(G, extrudedPerm, faultSection, ...
-                                           segLen, cellDim)
+function [extrudedPerm, isSmear] = assignExtrudedPerm(G, extrudedPerm, isSmear, ...
+                                                      faultSection, ...
+                                                      segLen, cellDim)
 %
 %
 %
 
 % Initial checks
-assert(mod(segLen/cellDim, 1)==0)
-nklayers = segLen/cellDim;              % repeat 2D section for nklayers
+if ~isnan(G.cellDim(2))
+    assert(mod(segLen/cellDim, 1)==0)
+    nklayers = segLen/cellDim;              % repeat 2D section for nklayers
+else
+    nklayers = 1;
+end
+if isempty(extrudedPerm)
+    extrudedPerm = zeros(G.cells.num, 6);   %[kxx, kxy, kxz, kyy, kyz, kzz]
+    isSmear = false(G.cells.num, 1);
+end
+idFirst0 = find(all(extrudedPerm==0, 2), 1); 
 
 % cartGrid
 kxx = faultSection.Grid.perm(:,1);
@@ -15,16 +25,18 @@ kyy = faultSection.Grid.permy;
 kzz = faultSection.Grid.perm(:,3);
 idPerm3D = [1 3 4 6];                       % rotated about the y axis (along-strike)
 [nx, ny, nz] = deal(G.cartDims(1), G.cartDims(2), G.cartDims(3));
-idLayer1 = repmat((1:nx)', nz, 1);
-idLayer1 = idLayer1 + repelem(nx*ny*(0:nz-1)', nx, 1);
-idLayers = repmat(idLayer1, 1, nklayers);
-idLayers(:,2:end) = idLayers(:,2:end) + ...
-              repelem(repelem(nx, numel(idLayer1), 1), 1, nklayers-1) + ...
-              ((nx:nx:(nklayers-1)*nx) - nx);
-idLayers = reshape(idLayers, nx*nz*nklayers, 1);
-extrudedPerm(idLayers, idPerm3D) = repmat([kxx, kyy, kyz, kzz], nklayers, 1); 
+idCellsLayer1 = repmat((1:nx)', nz, 1) + idFirst0-1;
+idCellsLayer1 = idCellsLayer1 + repelem(nx*ny*(0:nz-1)', nx, 1);
+idCellsLayers = repmat(idCellsLayer1, 1, nklayers);
+if nklayers > 1
+    idCellsLayers(:,2:end) = idCellsLayers(:,2:end) + ...
+                  repelem(repelem(nx, numel(idCellsLayer1), 1), 1, nklayers-1) + ...
+                  ((nx:nx:(nklayers-1)*nx) - nx);
+    idCellsLayers = reshape(idCellsLayers, nx*nz*nklayers, 1);
+end
+extrudedPerm(idCellsLayers, idPerm3D) = repmat([kxx, kxz, kyy, kzz], nklayers, 1); 
+
 % extruded
-% idFirst0 = find(extrudedPerm==0, 1); 
 % kyy = faultSection.Grid.perm(:,1);
 % kyz = faultSection.Grid.perm(:,2);
 % kzz = faultSection.Grid.perm(:,3);
@@ -33,6 +45,12 @@ extrudedPerm(idLayers, idPerm3D) = repmat([kxx, kyy, kyz, kzz], nklayers, 1);
 % layerSize = size(kyy, 1);
 % extrudedPerm(idFirst0:(idFirst0-1)+nklayers*layerSize, idPerm3D) = ...
 %             repmat([kxx, kyy, kyz, kzz], nklayers, 1); 
+
+% isSmear
+M = faultSection.MatMap;
+nCellsLayer = G.cartDims(1)*G.cartDims(3);
+isSmear(idCellsLayers) = repmat(reshape(transpose(flipud(M.vals)), ...
+                                        nCellsLayer, 1), nklayers, 1);
 
 end
      
