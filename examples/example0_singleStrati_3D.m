@@ -40,6 +40,7 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 % 2.3 Flow upscaling options and number of simulations
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
 U.method          = 'tpfa';     % 'tpfa' recommended for 3D
+U.coarseDims      = [1 1 1];    % number of cells [x, y, z] in coarse grid
 Nsim              = 1000;       % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
@@ -70,8 +71,9 @@ mySect = mySect.getMatPropDistr();
 % with the inputs and upscales the permeability.
 % Generate fault object with properties for each realization
 assert(dim==3);
-faults = cell(Nsim, 1);
+faultSections = cell(Nsim, 1);
 smears = cell(Nsim, 1);
+faults = cell(Nsim, 1);
 upscaledPerm = zeros(Nsim, 3);
 D = sum(mySect.Tap(mySect.FW.Id));      % displacement
 tstart = tic;
@@ -101,13 +103,15 @@ parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
         myFault = myFault.assignExtrudedVals(G, myFaultSection, k);
         
         % Save results
-        faults{n}{k} = myFaultSection;
+        faultSections{n}{k} = myFaultSection;
         smears{n}{k} = smear;
     end
     
     % Compute 3D upscaled permeability distribution
-    upscaledPerm(n, :) = computeCoarsePerm3D(G, myFault.Grid.perm, [1 1 1], U);
+    myFault = myFault.upscaleProps(G, U);
     
+    % Save results
+    faults{n} = myFault;
     if mod(n, 50) == 0
         disp(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])
     end

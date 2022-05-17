@@ -151,6 +151,28 @@ classdef ExtrudedFault
                                  repmat([kxx, kxz, kyy, kzz], nklayers, 1);
         end
         
+        function [obj, CG] = upscaleProps(obj, G, U)
+            %
+            %
+            %
+            
+            % Upscale Vcl and Porosity (additive)
+            p = partitionCartGrid(G.cartDims, U.coarseDims);
+            if all(U.coarseDims == 1)
+                obj.Vcl = mean(obj.Grid.vcl);
+                obj.Poro = mean(obj.Grid.poro);
+            else    % upscaled grid has more than one cell
+                CG = generateCoarseGrid(G, p);
+                % The following is correct for grids with uniform cell size
+                obj.Vcl = accumarray(p, obj.Grid.vcl)./accumarray(p,1);
+                obj.Poro = accumarray(p, obj.Grid.poro)./accumarray(p,1);
+            end
+            
+            % Upscale Permeability (not an additive property)
+            obj.Perm = computeCoarsePerm3D(G, obj.Grid.perm, U, p);
+               
+        end
+        
         function plotMaterials(obj, FS, G0)
            %
            %

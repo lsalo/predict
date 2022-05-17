@@ -1,4 +1,4 @@
-function [Perm] = computeCoarsePerm3D(G, permG, partDims, U)
+function [Perm] = computeCoarsePerm3D(G, permG, U, p)
 %
 % SUMMARY
 % Obtain the permeability of a single-cell grid equivalent to that of the
@@ -16,11 +16,12 @@ rock.perm = permG;
 % Compute equivalent/upscaled perm according to input method
 gravity reset off
 if strcmp(U.method, 'tpfa')
-    p2 = partitionCartGrid(G.cartDims, partDims);
-    CG2 = generateCoarseGrid(G, p2);
-    K = diag(myUpscalePerm(G, CG2, rock, 'method', U.method));
+    CG2 = generateCoarseGrid(G, p);
+    Perm = myUpscalePerm(G, CG2, rock, 'method', U.method);
     
 elseif strcmp(U.method, 'mpfa')
+    assert(all(U.coarseDims==1), ...
+           "mpfa not implemented for upscaled grids with ncells > 1")
     Dp{1} = 5*barsa;
     if U.useAcceleration == 1
         inB = 'mex';
@@ -30,7 +31,7 @@ elseif strcmp(U.method, 'mpfa')
     hTmp = computeMultiPointTrans(G, rock, 'invertBlocks', inB);
     psolver = @(state0, G, fluid, bc) incompMPFA(state0, G, hTmp, ...
                                                  fluid, 'bc', bc);
-    K = diag(myupscalePermeabilityFixed(G, Dp{1}, psolver, fluid, L));
+    Perm = myupscalePermeabilityFixed(G, Dp{1}, psolver, fluid, L);
 %     psolver = @(state0, G, fluid, bc, rock) incompMPFA(state0, G, hTmp, ...
 %                                                  fluid, 'bc', bc);
 %     K = diag(upscalePermeabilityFixed(G, Dp{1}, psolver, fluid, rock, L));
@@ -38,9 +39,6 @@ elseif strcmp(U.method, 'mpfa')
 else
     error("U.method not supported. Choose 'tpfa' or 'mpfa'.")
 end
-
-% Pass the 3 independent components   
-Perm = [K(1), K(5), K(9)];
 
 % Plot
 % cmap = copper;

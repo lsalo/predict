@@ -83,7 +83,7 @@ faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
 tstart = tic;
 parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
-    myFault = Fault(mySect, faultDip, dim);
+    myFault = Fault(mySect, faultDip);
     
     % Get material property (intermediate variable) samples, and fix 
     % along-strike thickness of current realization if 3D.
