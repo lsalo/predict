@@ -12,7 +12,7 @@ close all force
 % First, navigate to the mrst folder and run |startup.m|. We can then load the 
 % appropriate modules for generating MRST grids and upscale the permeability:
 mrstModule add mrst-gui coarsegrid upscaling incomp mpfa
-mrstVerbose on
+mrstVerbose off
 
 %% 2. Define Model and Upscale Permeability
 
@@ -68,12 +68,9 @@ mySect = mySect.getMatPropDistr();
 % We generate a base grid with arbitrary thickness, to be modified at each
 % realization (faster than generating n grids from scratch)
 D = sum(mySect.Tap(mySect.FW.Id));
-L  = mySect.MatPropDistr.length.fcn(D);    %  equal to disp for now
 T0 = 1;
-disp('Constructing initial grid...')
-if dim == 2,        G0 = makeFaultGrid(T0, D);
-elseif dim == 3,    G0 = makeFaultGrid(T0, D, L);
-end
+G0 = makeFaultGrid(T0, D);
+
 
 % 2.7 Generate intermediate variable samples, calculate smear dimensions and upscale permeability
 % We create two container variables (faults and smears) where we'll save all 

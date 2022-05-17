@@ -12,7 +12,7 @@ close all force
 % First, navigate to the mrst folder and run |startup.m|. We can then load the 
 % appropriate modules for generating MRST grids and upscale the permeability:
 mrstModule add mrst-gui coarsegrid upscaling incomp mpfa mimetic
-mrstVerbose off
+mrstVerbose off     % set to on for more insight in the command window
 
 %% 2. Define Model and Upscale Permeability
 
@@ -39,8 +39,8 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 
 % 2.3 Flow upscaling options and number of simulations
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
-U.method          = 'tpfa';     % 'tpfa' recommended if useAcceleration = 0
-Nsim              = 1000;        % Number of 3D simulations/realizations
+U.method          = 'tpfa';     % 'tpfa' recommended for 3D
+Nsim              = 1000;       % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
 % Organize the input parameters in HW and FW, and use that info to create a 
@@ -61,17 +61,8 @@ mySect = FaultedSection(footwall, hangingwall, faultDip, 'maxPerm', maxPerm);
 % Get material property distributions
 mySect = mySect.getMatPropDistr();
 
-% 2.6 Get base grid
-% We generate a base grid with arbitrary thickness, to be modified at each
-% realization (much faster than generating n grids from scratch). Note that
-% the 3D grid is an extruded grid, where the x dimension is along-strike.
-D = sum(mySect.Tap(mySect.FW.Id));
-% L  = mySect.MatPropDistr.length.fcn(D);    %  equal to disp for now
-% T0 = 1;
-% disp('Constructing initial grid...')
-% G0 = makeFaultGrid(T0, D, L);
-
-% 2.7 Generate intermediate variable samples, calculate smear dimensions and upscale permeability
+% 2.6 Generate intermediate variable samples, calculate smear dimensions 
+%     and upscale permeability.
 % We create two container variables (faults and smears) where we'll save all 
 % data for each realization. For each realization, the code defines a Fault object, 
 % generates intermediate variable samples, calculates the smear dimensions, and, 
@@ -81,46 +72,33 @@ D = sum(mySect.Tap(mySect.FW.Id));
 assert(dim==3);
 faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
-thick_fcn = mySect.MatPropDistr.thick.fcn;
-tstart = tic;
 upscaledPerm = zeros(Nsim, 3);
+D = sum(mySect.Tap(mySect.FW.Id));      % displacement
+tstart = tic;
 parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
-%for n=1
-    
-    % TBD: get segmentation for this realization
-    segLen = repelem(25,1,4); 
-    nSeg = numel(segLen);
-    thick3D = thick_fcn(D);                                                 %#ok
+    % Instantiate fault section and get segmentation for this realization
+    myFaultSection = Fault(mySect, faultDip);
+    myFault = ExtrudedFault(myFaultSection, mySect);
+    myFault = myFault.getSegmentationLength(mySect, 4);
     G = [];
-    extrudedPerm = [];
-    isSmear = [];
-    for k=1:nSeg
-        myFaultSection = Fault(mySect, faultDip, dim);
-        
+    for k=1:numel(myFault.SegLen)
         % Get material property (intermediate variable) samples, and fix
-        % along-strike thickness of current realization if 3D.
+        % fault thickness of current realization (3D only).
         myFaultSection = myFaultSection.getMaterialProperties(mySect, 'corrCoef', rho);
-        myFaultSection.MatProps.thick = thick3D;
+        myFaultSection.MatProps.thick = myFault.Thick;
         if isempty(G)
-            G = makeFaultGrid(thick3D, myFaultSection.Disp, ...
-                              myFaultSection.Length, segLen);
-            % Update grid dimensions with sampled fault thickness
-            %G = updateGrid(G0, thick3D);
+            G = makeFaultGrid(myFault.Thick, myFault.Disp, ...
+                              myFault.Length, myFault.SegLen);
         end
         
         % Generate smear object with T, Tap, L, Lmax
         smear = Smear(mySect, myFaultSection, G, 1);
         
-        % Place fault materials and assign cell-based properties in 2D
-        % section
+        % Place fault materials and assign cell-based properties in 2D section
         myFaultSection = myFaultSection.placeMaterials(mySect, smear, G);
         
         % Extrude 2D section to fill current segment
-        % TBD: we want to know material type, issmear, etc for each cell in
-        %      extruded grid, so change extrudedPerm for extrudedVals.
-        [extrudedPerm, isSmear] = assignExtrudedPerm(G, extrudedPerm, isSmear, ...
-                                                     myFaultSection, ...
-                                                     segLen(k), G.cellDim(2));
+        myFault = myFault.assignExtrudedVals(G, myFaultSection, k);
         
         % Save results
         faults{n}{k} = myFaultSection;
@@ -128,7 +106,7 @@ parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     end
     
     % Compute 3D upscaled permeability distribution
-    upscaledPerm(n, :) = computeCoarsePerm3D(G, extrudedPerm, [1 1 1], U);
+    upscaledPerm(n, :) = computeCoarsePerm3D(G, myFault.Grid.perm, [1 1 1], U);
     
     if mod(n, 50) == 0
         disp(['Simulation ' num2str(n) ' / ' num2str(Nsim) ' completed.'])

@@ -43,7 +43,7 @@ rock.perm = permG;
 if strcmp(U.method, 'tpfa')
     p2 = partitionCartGrid(G.cartDims, [1 1]);
     CG2 = generateCoarseGrid(G, p2);
-    K = diag(upscalePerm(G, CG2, rock, 'method', U.method));
+    K = diag(myUpscalePerm(G, CG2, rock, 'method', U.method));
     
 elseif strcmp(U.method, 'mpfa')
     Dp{1} = 5*barsa;

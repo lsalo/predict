@@ -1,4 +1,4 @@
-function [poroG, permG, kz_loc, vcl] = setGridPoroPerm(fault, G, FS)
+function [poroG, permG, kz_loc, vcl, units] = setGridPoroPerm(fault, G, FS)
 % Assign permeability and porosity to each grid cell, based on the material
 % mapping outcome.
 %
@@ -90,6 +90,7 @@ permG = nan(ncell, 3);                            % [kxx, kxz, kzz]
 vcl   = nan(ncell, 1);
 kx_loc = nan(ncell, 1);
 kz_loc = nan(ncell, 1);
+units = nan(ncell, 1);
 T = [cosd(alpha) sind(alpha); ...
      -sind(alpha) cosd(alpha)];                         % Transform. mat
 fn = 0.01;                                              % porosity var factor
@@ -118,6 +119,7 @@ for n=1:numel(M.unit)
         % Give a factor of about 3 max variation in permeability (already
         % correlated to fault thickness through shear strain), and 0.03 to
         % porosity.
+        units(cellIds) = M.unit(n);
         unitPoroCorrRange = [unitPoro(M.unit(n))-fn unitPoro(M.unit(n))+fn];
         assert(all(unitPoroCorrRange > 0))
         unitPermCorrRangeLog = log10(unitPerm(M.unit(n))) + [-fk, fk];
@@ -144,6 +146,10 @@ for n=1:numel(M.unit)
         permG(cellIds, :) = reshape(kmat(idk), 3, cellNum)';
     
     else                                % clay domain, disc. smear
+         units(cellIds(:, 1)) = M.unit(n);
+         assert(~isnan(M.unitInClayGaps(n)))
+         units(cellIds(:, 2)) = M.unitInClayGaps(n);
+         
         % Get sand/clay values        
         % Clay porosity
         unitPoroCorrRange = [unitPoro(M.unit(n))-fn unitPoro(M.unit(n))+fn];

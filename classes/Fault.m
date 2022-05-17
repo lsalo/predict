@@ -45,10 +45,9 @@ classdef Fault
     
     properties (SetAccess = protected)
        Disp                             % Fault displacement [m]
-       Length                           % Fault length [m]
-       Poro                             % Final upscaled Poro (Nsim, 1)
-       Perm                             % Final upscaled Perm (Nsim, 3)
-       Vcl                              % Final upscaled Vcl (Nsim, 1)
+       Poro                             % Final upscaled Poro (1, 1)
+       Perm                             % Final upscaled Perm (1, 3)
+       Vcl                              % Final upscaled Vcl (1, 1)
        Grid                             % contains resolution, cell Poro and Perm (G.cells.num, Nsim)
     end
     
@@ -65,7 +64,7 @@ classdef Fault
     end
     
     methods
-        function obj = Fault(FS, dip, dim)
+        function obj = Fault(FS, dip)
             %
             % We instantiate a Fault object with the fundamental 
             % dimensions.
@@ -74,9 +73,6 @@ classdef Fault
             % Geometry
             obj.Dip    = dip;
             obj.Disp   = sum(FS.Tap(FS.FW.Id));   
-            if dim == 3
-                obj.Length = obj.Disp;
-            end
         end
         
         function throw = get.Throw(obj)
@@ -221,7 +217,6 @@ classdef Fault
             % each fault material. See documentation in used functions 
             % below for details.
             %
-            dim = G.griddim;
             obj.Grid.cellDim = G.cellDim;
             
             % Mapping matrix (material in each grid cell)
@@ -245,8 +240,9 @@ classdef Fault
             end
             
             % Assign vcl, porosity and permeability
+            
             [obj.Grid.poro, obj.Grid.perm, obj.Grid.permy, ...
-                                obj.Grid.vcl] = setGridPoroPerm(obj, G, FS);
+             obj.Grid.vcl, obj.Grid.units] = setGridPoroPerm(obj, G, FS);
         end
         
         function obj = upscaleProps(obj, G, U)
