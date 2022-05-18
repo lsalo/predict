@@ -1,4 +1,4 @@
-function [R, P] = plotMatPropsCorr(faults, FS, idPlot)
+function [R, P] = plotMatPropsCorr(faults, FS, idPlot, dim)
 %
 %
 %
@@ -6,6 +6,9 @@ function [R, P] = plotMatPropsCorr(faults, FS, idPlot)
 %% Preparations
 % Fault MatProps
 layerId = FS.ParentId;
+if nargin > 3 && dim == 3
+   faults = horzcat(faults{:})'; 
+end
 thick = cell2mat(cellfun(@(x) x.MatProps.thick, faults, ...
                  'UniformOutput', false));
 %DTratios = faults{1}.Disp ./ thick;

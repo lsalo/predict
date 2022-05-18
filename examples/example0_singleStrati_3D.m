@@ -22,9 +22,9 @@ mrstVerbose off     % set to on for more insight in the command window
 % dip angle, faulting depth, and burial depth. Further details about input parameter 
 % formatting, etc can always be checked from the documentation in the classes 
 % and functions.
-thickness = {repelem(25, 1, 4), [20 30 25 25]};                % [m]
-vcl       = {[0.1 0.4 0.2 0.5], ...
-             [0.3 0.6 0.1 0.7]};                        % fraction [-]
+thickness = {[20 10 20 10 40], [5 20 5 20 5 20 5 20]};                % [m]
+vcl       = {[0.2 0.4 0.1 0.5 0.1], ...
+             [0.5 0.2 0.4 0.1 0.5 0.3 0.4 0.05]};                        % fraction [-]
 dip       = [0, -5];                                                        % [deg.]
 faultDip  = 70;                                                             % [deg.]
 zf        = [500, 500];                                                     % [FW, HW], [m]
@@ -81,7 +81,7 @@ parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     % Instantiate fault section and get segmentation for this realization
     myFaultSection = Fault(mySect, faultDip);
     myFault = ExtrudedFault(myFaultSection, mySect);
-    myFault = myFault.getSegmentationLength(mySect, 4);
+    myFault = myFault.getSegmentationLength(mySect, 8);
     G = [];
     for k=1:numel(myFault.SegLen)
         % Get material property (intermediate variable) samples, and fix
@@ -120,72 +120,24 @@ telapsed = toc(tstart);
 
 %% 3. Output Analysis
 % 3.1 Visualize stratigraphy and fault (with thickness corresponding to 1st realization)
-%mySect.plotStrati(faults{1}.MatProps.thick, faultDip);  
+mySect.plotStrati(faults{1}.Thick, faultDip);  
 
 % % 3.2 Visualize intermediate variables
 % % We define a given parent material (id from 1 to n of materials in stratigraphy), 
 % % and generate histograms and correlation matrix plots.
-% layerId = 4;                                            
-% plotMatPropsHist(faults, smears, mySect, layerId) 
-% % MatProps correlations
-% [R, P] = plotMatPropsCorr(faults, mySect, layerId);
-% 
-% % 3.3 Visualize fault materials
-% % Visualization for one realization. Choice can be 'randm' (random), 'maxX' 
-% % (realization with maximum upscaled permeability in across the fault), 'minX', 
-% % 'maxZ' or 'minZ'.
-% % General fault materials and perm view
-% plotId = selectSimId('randm', faults, Nsim);                % simulation index
-% faults{plotId}.plotMaterials(mySect, G0) 
-% 
-% % 3.4. Visualize upscaled permeability
-% % Plot upscaled permeability distributions (all simulations)
-% plotUpscaledPerm(faults)
+layerId = 4;                                            
+plotMatPropsHist(faultSections, smears, mySect, layerId, dim) 
+% MatProps correlations
+[R, P] = plotMatPropsCorr(faultSections, mySect, layerId, dim);
 
-% Histograms
-latx = {'Interpreter', 'latex'};
-sz = [14, 12];
-K = log10(upscaledPerm/(milli*darcy));
-nbins = 25;
-logMinP = min(min(K));
-logMaxP = max(max(K));
-edges = linspace(fix(logMinP)-1, fix(logMaxP)+1, nbins);
+% 3.3 Visualize fault materials
+% Visualization for one realization. Choice can be 'randm' (random), 'maxX' 
+% (realization with maximum upscaled permeability in across the fault), 'minX', 
+% 'maxZ' or 'minZ'.
+% General fault materials and perm view
+plotId = selectSimId('randm', faults, Nsim);                % simulation index
+faults{plotId}.plotMaterials(faultSections{1}{1}, mySect) 
 
-fh = figure(5);
-tiledlayout(3, 1, 'Padding', 'compact', 'TileSpacing', 'compact');
-labls = ["$\log_{10}(k_{xx}$ [mD])", ...
-    "$\log_{10}(k_{yy}$ [mD])", ...
-    "$\log_{10}(k_{zz}$ [mD])"];
-nexttile(1)
-histogram(K(:, 1), edges, 'Normalization', 'probability', ...
-    'FaceColor', [0.5 0.5 0.5], 'FaceAlpha', 1)
-xlabel(labls(1), latx{:}, 'fontSize', sz(2))
-ylabel('P [-]', latx{:}, 'fontSize', sz(2))
-xlim([fix(logMinP)-1 fix(logMaxP)+1])
-ylim([0 0.6]); yticks(0:.2:.6)
-grid on
-%xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
-
-nexttile(2)
-rr = [255, 125, 125]/255;
-histogram(K(:, 2), edges, 'Normalization', 'probability', ...
-    'FaceColor', rr, 'FaceAlpha', 1)
-xlabel(labls(2), latx{:}, 'fontSize', sz(2))
-%ylabel('P [-]', latx{:}, 'fontSize', sz(2))
-xlim([fix(logMinP)-1 fix(logMaxP)+1])
-ylim([0 0.6]); yticks(0:.2:.6)
-grid on
-%xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
-hold off
-
-nexttile(3)
-bb = [125, 125, 255]/255;
-histogram(K(:, 3), edges, 'Normalization', 'probability', ...
-    'FaceColor', bb, 'FaceAlpha', 1)
-xlabel(labls(3), latx{:}, 'fontSize', sz(2))
-%ylabel('P [-]', latx{:}, 'fontSize', sz(2))
-xlim([fix(logMinP)-1 fix(logMaxP)+1])
-ylim([0 0.6]); yticks(0:.2:.6)
-grid on
-%xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
-set(fh, 'position', [200, 200, 150, 350])
+% 3.4. Visualize upscaled permeability
+% Plot upscaled permeability distributions (all simulations)
+plotUpscaledPerm(faults, dim, 'all')

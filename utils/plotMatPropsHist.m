@@ -1,4 +1,4 @@
-function plotMatPropsHist(faults, smears, FS, id)
+function plotMatPropsHist(faults, smears, FS, id, dim)
 %
 %
 %
@@ -10,19 +10,23 @@ latx = {'Interpreter', 'latex'};
 sz = [14, 12];
 
 % Fault MatProps
+if nargin > 4 && dim == 3
+    faults = horzcat(faults{:});
+    smears = horzcat(smears{:});
+end
 thick = cell2mat(cellfun(@(x) x.MatProps.thick, faults, ...
-                         'UniformOutput', false));
+    'UniformOutput', false));
 DTratios = faults{1}.Disp ./ thick;
 phi = cell2mat(cellfun(@(x) x.MatProps.resFric(id), faults, ...
-                         'UniformOutput', false));
+    'UniformOutput', false));
 SSFc = cell2mat(cellfun(@(x) x.MatProps.ssfc(id), faults, ...
-                         'UniformOutput', false));
+    'UniformOutput', false));
 kprime = cell2mat(cellfun(@(x) x.MatProps.permAnisoRatio(id), faults, ...
-                         'UniformOutput', false));
+    'UniformOutput', false));
 perm = cell2mat(cellfun(@(x) x.MatProps.perm(id), faults, ...
-                         'UniformOutput', false))./(milli*darcy);
+    'UniformOutput', false))./(milli*darcy);
 poro = cell2mat(cellfun(@(x) x.MatProps.poro(id), faults, ...
-                         'UniformOutput', false));
+    'UniformOutput', false));
 %N = 1000;
 %perm = faults{1}.MatProps.perm{id}(N)/(milli*darcy);
 %poro = faults{1}.MatProps.poro(id, :);

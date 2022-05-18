@@ -1,4 +1,4 @@
-function plotUpscaledPerm(faults, plotOpt)
+function plotUpscaledPerm(faults, dim, plotOpt)
 %
 %
 %
@@ -10,12 +10,18 @@ latx = {'Interpreter', 'latex'};
 sz = [14, 12];
 
 % Fault MatProps
-kAlongStrike = cell2mat(cellfun(@(x) x.Grid.permy, faults, ...
-                                'UniformOutput', false)')./(milli*darcy);
+if nargin < 2 || dim == 2
+    kAlongStrike = cell2mat(cellfun(@(x) x.Grid.permy, faults, ...
+                                    'UniformOutput', false)')./(milli*darcy);
+end
 perms = cell2mat(cellfun(@(x) x.Perm, faults, ...
                          'UniformOutput', false)) ./ (milli*darcy);
-thick = cell2mat(cellfun(@(x) x.MatProps.thick, faults, ...
-                         'UniformOutput', false));
+if nargin < 2 || dim == 2
+    thick = cell2mat(cellfun(@(x) x.MatProps.thick, faults, ...
+                             'UniformOutput', false));
+elseif dim == 3
+    thick = cell2mat(cellfun(@(x) x.Thick, faults, 'UniformOutput', false));
+end
 vcl = cell2mat(cellfun(@(x) x.Vcl, faults, 'UniformOutput', false));
 if any(any(perms < 0))
     id = unique([find(perms(:, 1)<0), find(perms(:, 2)<0), find(perms(:, 3)<0)]);
@@ -26,7 +32,9 @@ if any(any(perms < 0))
     thick(id, :) = [];
     vcl(id, :) = [];
 end
-logkStrikeBounds = log10(getAveragingPerm(kAlongStrike, {'ha', 'ah'}));
+if nargin < 2 || dim == 2
+    logkStrikeBounds = log10(getAveragingPerm(kAlongStrike, {'ha', 'ah'}));
+end
     
 % Hist params
 K = log10(perms);
@@ -37,7 +45,7 @@ edges = linspace(fix(logMinP)-1, fix(logMaxP)+1, nbins);
 
 
 % Plot
-if nargin > 1 && strcmp(plotOpt, 'histOnly')
+if nargin > 2 && strcmp(plotOpt, 'histOnly')
     % Histograms
     fh = figure(randi(10000, 1, 1));
     tiledlayout(3, 1, 'Padding', 'compact', 'TileSpacing', 'compact');
@@ -56,6 +64,7 @@ if nargin > 1 && strcmp(plotOpt, 'histOnly')
     
     nexttile(2)
     rr = [255, 125, 125]/255;
+    if nargin < 2 || dim == 2
     plot(repelem(logkStrikeBounds(1), 2), [0 1], '-', ...
          'color', 'k', 'lineWidth', 1);
     hold on
@@ -63,6 +72,7 @@ if nargin > 1 && strcmp(plotOpt, 'histOnly')
     plot(repelem(logkStrikeBounds(2), 2), [0 1], '-', ...
          'color', 'k', 'lineWidth', 1);
     plot(logkStrikeBounds(2), 0.5, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
+    end
     histogram(K(:, 2), edges, 'Normalization', 'probability', ...
         'FaceColor', rr, 'FaceAlpha', 1)
     xlabel(labls(2), latx{:}, 'fontSize', sz(2))
@@ -86,7 +96,7 @@ if nargin > 1 && strcmp(plotOpt, 'histOnly')
     set(fh, 'position', [200, 200, 150, 350]);
     
 else
-    if nargin > 1 && strcmp(plotOpt, 'all')
+    if nargin > 2 && strcmp(plotOpt, 'all')
         % fault thickness  vs perm
         [Rx, Px] = corr(K(:,1), thick, 'Type', 'Spearman');         % corrcoeff and pval matrices
         [Ry, Py] = corr(K(:,2), thick, 'Type', 'Spearman');
@@ -107,25 +117,25 @@ else
         scatter(thick, K(:,1), 8, 'ok','MarkerEdgeAlpha', 0.6)
         scatter(thick, K(:,2), 8, 'sr','MarkerEdgeAlpha', 0.3)
         scatter(thick, K(:,3), 8, 'db','MarkerEdgeAlpha', 0.15)
-        if any(pvals ~= 0) && any(log10(pvals) > -10)
-            title({['$r_s = $ ' num2str(round(r(1), 3)) ', ' ...
-                   num2str(round(r(2), 3)) ', ' num2str(round(r(3), 3))]; ...
-                   ['$\log_{10} (p) = $' num2str(round(log10(pvals(1)))) ', ' ...
-                   num2str(round(log10(pvals(2)))) ', ' ...
-                   num2str(round(log10(pvals(3))))]}, ...
-                   latx{:}, 'fontSize', 10);
-        else
+%         if any(pvals ~= 0) && any(log10(pvals) > -10)
+%             title({['$r_s = $ ' num2str(round(r(1), 3)) ', ' ...
+%                    num2str(round(r(2), 3)) ', ' num2str(round(r(3), 3))]; ...
+%                    ['$\log_{10} (p) = $' num2str(round(log10(pvals(1)))) ', ' ...
+%                    num2str(round(log10(pvals(2)))) ', ' ...
+%                    num2str(round(log10(pvals(3))))]}, ...
+%                    latx{:}, 'fontSize', 10);
+%         else
             title({['$r_s = $ ' num2str(round(r(1), 3)) ', ' ...
                    num2str(round(r(2), 3)) ', ' num2str(round(r(3), 3))]}, ...
                    latx{:}, 'fontSize', 10);
-        end
+        %end
         xlabel('f$_\mathrm{T}$ [m]', latx{:}, 'fontSize', sz(2))
         ylabel('$\log_{10}(k$ [mD])', latx{:}, 'fontSize', sz(2))
         ylim([fix(logMinP)-1 fix(logMaxP)+1])
         xlim([0 fix(max(thick))+1])
         h = legend({'$k_{xx}$', '$k_{yy}$', '$k_{zz}$'}, latx{:}, 'fontSize', 10);
         set(h.BoxFace, 'ColorType','truecoloralpha', ...
-            'ColorData', uint8(255*[1;1;1;.5])); 
+            'ColorData', uint8(255*[1;1;1;.9])); 
         grid on
         hold off
         
@@ -147,18 +157,18 @@ else
         scatter(vcl, K(:,1), 8, 'ok','MarkerEdgeAlpha', 0.6)
         scatter(vcl, K(:,2), 8, 'sr','MarkerEdgeAlpha', 0.3)
         scatter(vcl, K(:,3), 8, 'db','MarkerEdgeAlpha', 0.15)
-        if any(pvals ~= 0) && any(log10(pvals) > -10)
-            title({['$r_s = $ ' num2str(round(r(1), 3)) ', ' ...
-                   num2str(round(r(2), 3)) ', ' num2str(round(r(3), 3))]; ...
-                   ['$\log_{10} (p) = $' num2str(round(log10(pvals(1)))) ', ' ...
-                   num2str(round(log10(pvals(2)))) ', ' ...
-                   num2str(round(log10(pvals(3))))]}, ...
-                   latx{:}, 'fontSize', 10);
-        else
+%         if any(pvals ~= 0) && any(log10(pvals) > -10)
+%             title({['$r_s = $ ' num2str(round(r(1), 3)) ', ' ...
+%                    num2str(round(r(2), 3)) ', ' num2str(round(r(3), 3))]; ...
+%                    ['$\log_{10} (p) = $' num2str(round(log10(pvals(1)))) ', ' ...
+%                    num2str(round(log10(pvals(2)))) ', ' ...
+%                    num2str(round(log10(pvals(3))))]}, ...
+%                    latx{:}, 'fontSize', 10);
+%         else
             title({['$r_s = $ ' num2str(round(r(1), 3)) ', ' ...
                    num2str(round(r(2), 3)) ', ' num2str(round(r(3), 3))]}, ...
                    latx{:}, 'fontSize', 10);
-        end
+%        end
         xlabel('f$_{V_\mathrm{cl}}$', latx{:}, 'fontSize', sz(2))
         ylabel('$\log_{10}(k$ [mD])', latx{:}, 'fontSize', sz(2))
         ylim([fix(logMinP)-1 fix(logMaxP)+1])
@@ -187,13 +197,15 @@ else
     
     nexttile(2)
     rr = [255, 125, 125]/255;
-    plot(repelem(logkStrikeBounds(1), 2), [0 1], '-', ...
-         'color', 'k', 'lineWidth', 1);
-    hold on
-    plot(logkStrikeBounds(1), 0.3, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
-    plot(repelem(logkStrikeBounds(2), 2), [0 1], '-', ...
-         'color', 'k', 'lineWidth', 1);
-    plot(logkStrikeBounds(2), 0.3, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
+    if nargin < 2 || dim == 2
+        plot(repelem(logkStrikeBounds(1), 2), [0 1], '-', ...
+             'color', 'k', 'lineWidth', 1);
+        hold on
+        plot(logkStrikeBounds(1), 0.3, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
+        plot(repelem(logkStrikeBounds(2), 2), [0 1], '-', ...
+             'color', 'k', 'lineWidth', 1);
+        plot(logkStrikeBounds(2), 0.3, 'dk', 'markerFacecolor', rr, 'markerSize', 4)
+    end
     histogram(K(:, 2), edges, 'Normalization', 'probability', ...
         'FaceColor', rr, 'FaceAlpha', 1)
     xlabel('$\hat{k}_{yy}$ [mD]', latx{:}, 'fontSize', sz(2))
@@ -229,7 +241,7 @@ else
     markr = ['+', 'x', '^'];
     for n=1:numel(tidss)
         nexttile(tidss(n))
-        colormap(hot);
+        colormap(turbo);
 %        scatter(K(:,x(n)), K(:,y(n)), 4, 'k.', 'MarkerEdgeAlpha', 0.2)
         histogram2(K(:,x(n)), K(:,y(n)), edges, edges, ...
             'Normalization', 'Probability', 'DisplayStyle','tile', ...

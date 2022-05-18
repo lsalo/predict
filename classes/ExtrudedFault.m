@@ -173,38 +173,40 @@ classdef ExtrudedFault
                
         end
         
-        function plotMaterials(obj, FS, G0)
+        function plotMaterials(obj, faultSection, FS)
            %
            %
            %
-           
-           % Generate Grid (Must be same as grid used within Fault)
-           G = updateGrid(G0, obj.MatProps.thick);
            
            % utils
-           M = obj.MatMap;
+           M = faultSection.MatMap;
            latx = {'Interpreter', 'latex'};
            sz = [14, 11];
-           %ydim = max(G.faces.centroids(:,2));
-           rock.poro = obj.Grid.poro;
-           rock.perm = obj.Grid.perm;
-           idGrid = reshape(transpose(flipud(M.vals)), G.cells.num, 1);
+           
+           % Create grid
+           G = makeFaultGrid(obj.Thick, obj.Disp, obj.Length, obj.SegLen);
            
            % SUBPLOTS
            % 1. Parent Ids
            hh = figure(randi(1000, 1));
-           tiledlayout(1, 6, 'Padding', 'tight', 'TileSpacing', 'tight');
+           tiledlayout(1, 3, 'Padding', 'tight', 'TileSpacing', 'tight');
            nexttile
-           set(gca, 'colormap', hot(max(M.unit)));
-           plotToolbar(G, reshape(transpose(flipud(M.units)), G.cells.num, 1), ...
-                       'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0.1);
-           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); c = colorbar;
-           set(c,'YTick', sort(unique(M.unit)));
-           xticks([0 obj.MatProps.thick])
-           xticklabels([0 round(obj.MatProps.thick, 2)])
-           xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
+           set(gca, 'colormap', hot(max(obj.Grid.units)));
+           plotToolbar(G, obj.Grid.units, 'EdgeColor', [0.2 0.2 0.2], ...
+                       'EdgeAlpha', 0.1);
+           xlim([0 obj.Thick]); ylim([0 obj.Disp]); c = colorbar;
+           set(c,'YTick', unique(obj.Grid.units));
+           xticks([0 obj.Thick])
+           xticklabels([0 round(obj.Thick, 1)])
+           xlabel('$x$ [m]', latx{:}); 
+           ylabel('$y$ [m]', latx{:})
+           zlabel('$z$ [m]', latx{:})
+           ax = gca;
+           ax.DataAspectRatio = [0.1 1 1];
+           ax.ZDir = 'normal';
            set(gca,'fontSize', 10)
            title('Parent Id', latx{:}, 'fontSize', sz(2));
+           view([30 20])
            
            
            % 2. Smear vs sand
@@ -213,167 +215,194 @@ classdef ExtrudedFault
            layerBots = M.layerBot;
            layerCtrs = M.layerCenter;
            cmap = copper(2);
-           if unique(idGrid) == 0
+           if unique(obj.Grid.isSmear) == 0
                cmap = cmap(2, :);
                set(gca, 'colormap', cmap);
-           elseif unique(idGrid) == 1
+           elseif unique(obj.Grid.isSmear) == 1
                cmap = cmap(1, :);
                set(gca, 'colormap', cmap);
            else
                set(gca, 'colormap', flipud(cmap));
            end 
-           plotToolbar(G, idGrid, 'EdgeColor', [0.2 0.2 0.2], ...
-                       'EdgeAlpha', 0);
+           plotToolbar(G, obj.Grid.isSmear, 'EdgeColor', [0.2 0.2 0.2], ...
+                       'EdgeAlpha', 0.1);
            hold on
            for n=FS.FW.Id
-               plot(0,layerTops(n), '+r', 'MarkerSize', 4, 'LineWidth', 1)
-               plot(0,layerCtrs(n), 'or', 'MarkerSize', 3, ...
-                    'LineWidth', 1, 'MarkerFaceColor', 'r')
+               plot3([0 0],[0 obj.Length],[layerTops(n) layerTops(n)], ...
+                     '-w', 'LineWidth', 1)
+               plot3([0 0],[0 obj.Length],[layerCtrs(n) layerCtrs(n)], ...
+                     '-', 'color', [0.7 0.7 0.7], 'LineWidth', 1)
            end
-           plot(0, layerBots(1), '+r', 'MarkerSize', 4, 'LineWidth', 1)
+           plot3([0 0], [0 obj.Length], [layerBots(1) layerBots(1)], ...
+                 '-w', 'LineWidth', 1)
            for n=FS.HW.Id
-               plot(obj.MatProps.thick, layerTops(n), '+r', ...
-                    'MarkerSize', 4, 'LineWidth', 1)
-               plot(obj.MatProps.thick, layerCtrs(n), 'or', ...
-                    'MarkerSize', 3, 'LineWidth', 1, 'MarkerFaceColor', 'r')
+               plot3([obj.Thick obj.Thick], [0 obj.Length], ...
+                    [layerTops(n) layerTops(n)], '-w', 'LineWidth', 1)
+               plot3([obj.Thick obj.Thick], [0 obj.Length], ...
+                     [layerCtrs(n) layerCtrs(n)], '-', ...
+                     'color', [0.7 0.7 0.7], 'LineWidth', 1)
            end
-           plot(obj.MatProps.thick, layerBots(1), '+r', 'MarkerSize', ...
+           plot3([obj.Thick obj.Thick], [0 obj.Length], ...
+                [layerBots(1) layerBots(1)], '-w', 'MarkerSize', ...
                 4, 'LineWidth', 1)
            hold off
-           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); ...
+           xlim([0 obj.Thick]); ylim([0 obj.Length]); zlim([0 obj.Disp])
            axis off
            c = colorbar;
            set(c,'YTick', [0 1]);
-           if unique(idGrid) == 0
+           if unique(obj.Grid.isSmear) == 0
                caxis([0 0.1]);
-           elseif unique(idGrid) == 1
+           elseif unique(obj.Grid.isSmear) == 1
                caxis([0.9 1]);
            end
-           %xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
+           ax = gca;
+           ax.DataAspectRatio = [0.1 1 1];
+           ax.ZDir = 'normal';
            set(gca,'fontSize', 10)
-           title('Material', latx{:}, 'fontSize', sz(2));
+           view([30 20])
+           title('Material (all)', latx{:}, 'fontSize', sz(2));
            
-           % 3. Cell and upscaled Vcl
+           % 3. Only smears, coloured by vcl
+           nexttile
+           cmap = copper;
+           set(gca, 'colormap', flipud(cmap(1:128, :)));
+           plotToolbar(G, obj.Grid.vcl, obj.Grid.isSmear, ...
+                       'EdgeColor', [0.8 0.8 0.8], 'EdgeAlpha', 0.1);
+           xlim([0 obj.Thick]); ylim([0 obj.Length]); zlim([0 obj.Disp])
+           axis off
+           c = colorbar;
+           ax = gca;
+           ax.DataAspectRatio = [0.1 1 1];
+           ax.ZDir = 'normal';
+           set(gca,'fontSize', 10)
+           view([30 20])
+           title('Vcl, smears only', latx{:}, 'fontSize', sz(2));
+           set(hh, 'position', [200, 0, 900, 350]);
+           
+           % 4. Cell and upscaled Vcl
+           hf = figure(randi(1000, 1));
+           tiledlayout(1, 4, 'Padding', 'tight', 'TileSpacing', 'tight');
            nexttile
            set(gca, 'colormap', flipud(copper))
            plotToolbar(G, obj.Grid.vcl, 'EdgeColor', [0.2 0.2 0.2], ...
-                       'EdgeAlpha', 0);
-           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); 
-           axis off
+                       'EdgeAlpha', 0.1);
+           xlim([0 obj.Thick]); ylim([0 obj.Disp]); 
            c = colorbar;
-           caxis([0 1]);
+           caxis([min(obj.Grid.vcl) max(obj.Grid.vcl)]);
            set(gca,'fontSize', 10)
            %c.Label.Interpreter = 'latex'; 
            %c.Label.String = '$n$ [-]';
            %c.Label.FontSize = 12;
-           %xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
+           xlabel('$x$ [m]', latx{:}); ylabel('$y$ [m]', latx{:});
+           zlabel('$z$ [m]', latx{:})
+           ax = gca;
+           ax.DataAspectRatio = [0.1 1 1];
+           ax.ZDir = 'normal';
+           view([30 20])
+           xticks([0 obj.Thick])
+           xticklabels([0 round(obj.Thick, 1)])
            title(['f$_{V_\mathrm{cl}} =$ ' num2str(obj.Vcl, ' %1.2f') ' [-]'], latx{:}, ...
-                 'fontSize', sz(2));
+                  'fontSize', sz(2));
            
-           
-           % 4. Cell and upscaled porosity
+           % 5. Cell and upscaled porosity
            nexttile
            set(gca, 'colormap', copper)
-           plotToolbar(G, rock.poro, 'EdgeColor', [0.2 0.2 0.2], ...
-                       'EdgeAlpha', 0);
-           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); 
-           axis off
+           plotToolbar(G, obj.Grid.poro, 'EdgeColor', [0.2 0.2 0.2], ...
+                       'EdgeAlpha', 0.1);
+           xlim([0 obj.Thick]); ylim([0 obj.Disp]); 
            c = colorbar;
-           caxis([0 max([max(rock.poro), 0.25])]);
+           caxis([0 max([max(obj.Grid.poro), 0.25])]);
            set(gca,'fontSize', 10)
            %c.Label.Interpreter = 'latex'; 
            %c.Label.String = '$n$ [-]';
            %c.Label.FontSize = 12;
            %xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
+           ax = gca;
+           ax.DataAspectRatio = [0.1 1 1];
+           ax.ZDir = 'normal';
+           view([30 20])
            title(['$n =$ ' num2str(obj.Poro, ' %1.2f') ' [-]'], latx{:}, ...
                  'fontSize', sz(2));
            
-           % 5. Cell and upscaled permeability
+           % 6. Cell and upscaled permeability
            nexttile
-           set(gca, 'colormap', copper)
-           plotToolbar(G, log10(rock.perm(:,1)/(milli*darcy)), ...
-                       'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0);
-           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); %axis off
+           cmap = copper;
+           set(gca, 'colormap', cmap(1:128, :))
+           plotToolbar(G, log10(obj.Grid.perm(:,1)/(milli*darcy)), ...
+                       obj.Grid.isSmear, 'EdgeColor', [0.8 0.8 0.8], ...
+                       'EdgeAlpha', 0.1);
+           xlim([0 obj.Thick]); zlim([0 obj.Disp]); ylim([0 obj.Length]);
            c = colorbar;
-           %if ~any(obj.MatMap.isclay)
-                caxis([min(log10(rock.perm(:,1)/(milli*darcy))) ...
-                       max(log10(rock.perm(:,3)/(milli*darcy)))]);
-           %else
-           %    caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 2]);
-           %end
+           %caxis([min(log10(obj.Grid.perm(:,1)/(milli*darcy))) ...
+           %       max(log10(obj.Grid.perm(:,4)/(milli*darcy)))]);
            c.Label.Interpreter = 'latex'; 
-           c.Label.String = '$\log_{10} k_{xx}$ [mD]';
+           c.Label.String = '$\log_{10} k_{xx}$ [mD] (Clay smears)';
            c.Label.FontSize = 12;
-           set(gca,'fontSize', 10)
-           xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
-           xticks([0 obj.MatProps.thick])
-           xticklabels([0 round(obj.MatProps.thick, 2)])
-           val = obj.Perm(1)/(milli*darcy);
-           if val < 1e-3
-               val = val*1000;
-               units = ' [$\mu$D]';
-               form = ' %1.3f';
-           elseif val > 999
-               val = val/1000;
-               units = ' [D]';
-               form = ' %1.2f';
-           else
-               units = ' [mD]';
-               form = ' %3.3f';
+           set(gca,'fontSize', 10)  
+           val = zeros(1,3);
+           units = cell(1,3);
+           form = cell(1,3);
+           for n=1:3
+               val(n) = obj.Perm(n)/(milli*darcy);
+               if val(n) < 1e-3
+                   val(n) = val(n)*1000;
+                   units{n} = ' [$\mu$D]';
+                   form{n} = ' %1.3f';
+               elseif val(n) > 999
+                   val(n) = val(n)/1000;
+                   units{n} = ' [D]';
+                   form{n} = ' %1.2f';
+               else
+                   units{n} = ' [mD]';
+                   form{n} = ' %3.3f';
+               end
            end
-           title(['$k_{xx} =$ ' num2str(val, form) units], latx{:}, ...
-                 'fontSize', sz(2));
+           ax = gca;
+           ax.DataAspectRatio = [0.1 1 1];
+           ax.ZDir = 'normal';
+           view([30 20])
+           title(['$k_{jj} =$ ' num2str(val(1), form{1}) units{1}, ...
+                  ' $\vert$ ' num2str(val(2), form{2}) units{2}, ...
+                  ' $\vert$ ' num2str(val(3), form{3}) units{3}], latx{:}, ...
+                  'fontSize', sz(2));
+           grid on
            
-           % 6. kzz
+           % 7 Cell permeability (sands)
            nexttile
-           set(gca, 'colormap', copper)
-           plotToolbar(G, log10(rock.perm(:,3)/(milli*darcy)), ...
-                       'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0);
-           xlim([0 obj.MatProps.thick]); ylim([0 obj.Disp]); 
-           axis off
+           cmap = copper;
+           set(gca, 'colormap', cmap(156:end, :))
+           plotToolbar(G, log10(obj.Grid.perm(:,1)/(milli*darcy)), ...
+                       ~obj.Grid.isSmear, 'EdgeColor', [0.2 0.2 0.2], ...
+                       'EdgeAlpha', 0.1);
+           xlim([0 obj.Thick]); zlim([0 obj.Disp]); ylim([0 obj.Length]);
            c = colorbar;
-           %if ~any(obj.MatMap.isclay) % if there is sand
-               caxis([min(log10(rock.perm(:,1)/(milli*darcy))) ...
-                      max(log10(rock.perm(:,3)/(milli*darcy)))]);
-           %else
-           %   caxis([min(log10(rock.perm(:,1)/(milli*darcy))) 2]);
-           %end
+           %caxis([min(log10(obj.Grid.perm(:,1)/(milli*darcy))) ...
+           %       max(log10(obj.Grid.perm(:,4)/(milli*darcy)))]);
            c.Label.Interpreter = 'latex'; 
-           c.Label.String = '$\log_{10} k_{zz}$ [mD]';
+           c.Label.String = '$\log_{10} k_{xx}$ [mD] (Sand smears)';
            c.Label.FontSize = 12;
            set(gca,'fontSize', 10)
-           %xlabel('$x$ [m]', latx{:}, 'fontSize', 14); 
-           %ylabel('$z$ [m]', latx{:}, 'fontSize', 14)
-           val = obj.Perm(3)/(milli*darcy);
-           if val < 1e-3
-               val = val*1000;
-               units = ' [$\mu$D]';
-               form = ' %1.3f';
-           elseif val > 999
-               val = val/1000;
-               units = ' [D]';
-               form = ' %1.2f';
-           else
-               units = ' [mD]';
-               form = ' %3.3f';
-           end
-           title(['$k_{zz} =$ ' num2str(val, form) units], latx{:}, ...
-                 'fontSize', sz(2));
-           set(hh, 'position', [200, 0, 900, 350]);       
+           ax = gca;
+           ax.DataAspectRatio = [0.1 1 1];
+           ax.ZDir = 'normal';
+           view([30 20])
+           grid on
+           set(hf, 'position', [200, 0, 1200, 350]);
+            
            
            % MatProps 
            %Thick = repelem(obj.MatProps.thick, numel(obj.MatProps.resFric));
            %bounds = cell2mat(FS.MatPropDistr.ssfc.range(idc)');
            %SSFcMin = bounds(:, 1);
            %SSFcMax = bounds(:, 2);
-           PoroMin = obj.MatProps.poroRange(1, :);
-           PoroMax = obj.MatProps.poroRange(2, :);
+           PoroMin = faultSection.MatProps.poroRange(1, :);
+           PoroMax = faultSection.MatProps.poroRange(2, :);
            N = max(FS.HW.Id);
-           PermMin = obj.MatProps.permRange(1, :);
-           PermMax = obj.MatProps.permRange(2, :);
-           tdata = table(obj.MatProps.resFric', obj.MatProps.ssfc', ...
+           PermMin = faultSection.MatProps.permRange(1, :);
+           PermMax = faultSection.MatProps.permRange(2, :);
+           tdata = table(faultSection.MatProps.resFric', faultSection.MatProps.ssfc', ...
                          PoroMin', PoroMax', PermMin', PermMax', ...
-                         obj.MatProps.permAnisoRatio');
+                         faultSection.MatProps.permAnisoRatio');
            tdata.Properties.VariableNames = {'ResFric', 'SSFc', ...
                                              'PoroMin', 'PoroMax', ...
                                              'PermMin', 'PermMax', ...
