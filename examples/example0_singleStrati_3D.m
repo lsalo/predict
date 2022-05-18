@@ -7,7 +7,7 @@
 % We first make sure that the workspace is clean:
 clear
 close all force
-rng('default')          % check repeatability
+%rng('default')          % check repeatability
 
 %% 1. Load Required MRST Modules
 % First, navigate to the mrst folder and run |startup.m|. We can then load the 
