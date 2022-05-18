@@ -34,6 +34,8 @@ if nargin < 5 || isempty(targetCellDim)
         dim = 2;
     else
         dim = 3;
+        % Uncomment following line for full along-strike resolution
+        % (much slower, results are not significantly different)
         %targetCellDim = [D/1000, D/100, D/100];   % [thick, length, disp.]
     end
 else
@@ -52,18 +54,28 @@ if dim == 2
 elseif dim == 3
     nSeg = numel(segLen);
     cumSegLen = cumsum(segLen);
-    nelem = [round(T / targetCellDim(1)), ...
-             nSeg, ...
-             round(L / targetCellDim(2))];
-    nelem_max = max(nelem);
-    G = cartGrid([nelem_max, nelem(2), nelem_max], [T, 1, D]);
-    yNodesVals = unique(G.nodes.coords(:,2));
-    for n=1:nSeg
-        idNodes = G.nodes.coords(:,2) == yNodesVals(n+1);
-        G.nodes.coords(idNodes, 2) = cumSegLen(n);
+    if numel(targetCellDim) == 2
+        nelem = [round(T / targetCellDim(1)), ...
+                 nSeg, ...
+                 round(L / targetCellDim(2))];
+        nelem_max = max(nelem);
+        G = cartGrid([nelem_max, nelem(2), nelem_max], [T, 1, D]);
+        yNodesVals = unique(G.nodes.coords(:,2));
+        for n=1:nSeg
+            idNodes = G.nodes.coords(:,2) == yNodesVals(n+1);
+            G.nodes.coords(idNodes, 2) = cumSegLen(n);
+        end
+        G = computeGeometry(G);
+        G.cellDim = [T/nelem_max, nan, D/nelem_max];
+    else
+         nelem = max([round(T / targetCellDim(1)), ...
+                  round(L / targetCellDim(2)), ...
+                  round(D / targetCellDim(3))]);
+         G = computeGeometry(cartGrid([nelem, nelem, nelem], ...
+                                      [T, L, D]));
+         G.cellDim = [T/nelem, L/nelem, D/nelem];
     end
-    G = computeGeometry(G);
-    G.cellDim = [T/nelem_max, nan, D/nelem_max];
+    
 % elseif dim == 3     % extrude 2D cartesian grid
 %     nelem = [round(T / targetCellDim(1)), ...
 %              round(L / targetCellDim(2)), ...

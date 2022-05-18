@@ -7,12 +7,13 @@
 % We first make sure that the workspace is clean:
 clear
 close all force
+rng('default')          % check repeatability
 
 %% 1. Load Required MRST Modules
 % First, navigate to the mrst folder and run |startup.m|. We can then load the 
 % appropriate modules for generating MRST grids and upscale the permeability:
 mrstModule add mrst-gui coarsegrid upscaling incomp mpfa mimetic
-mrstVerbose off     % set to on for more insight in the command window
+mrstVerbose on     % set to on for more insight in the command window
 
 %% 2. Define Model and Upscale Permeability
 
@@ -22,12 +23,12 @@ mrstVerbose off     % set to on for more insight in the command window
 % dip angle, faulting depth, and burial depth. Further details about input parameter 
 % formatting, etc can always be checked from the documentation in the classes 
 % and functions.
-thickness = {[20 10 20 10 40], [5 20 5 20 5 20 5 20]};                % [m]
-vcl       = {[0.2 0.4 0.1 0.5 0.1], ...
-             [0.5 0.2 0.4 0.1 0.5 0.3 0.4 0.05]};                        % fraction [-]
-dip       = [0, -5];                                                        % [deg.]
+thickness = {repelem(25, 1, 4), [5 10 15 10 20 10 10 5 15]};                % [m]
+vcl       = {[0.1 0.4 0.2 0.5], ...
+             [0.3 0.6 0.1 0.7 0.2 0.8 0.3 0.9 0.1]};                        % fraction [-]
+dip       = [0, 0];                                                        % [deg.]
 faultDip  = 70;                                                             % [deg.]
-zf        = [500, 500];                                                     % [FW, HW], [m]
+zf        = [1000, 1000];                                                     % [FW, HW], [m]
 zmax      = {repelem(2000, numel(vcl{1})), repelem(2000, numel(vcl{2}))};   % {FW, HW}
 dim       = 3;                    % dimensions (2 = 2D, 3 = 3D)
 
@@ -77,11 +78,12 @@ faults = cell(Nsim, 1);
 upscaledPerm = zeros(Nsim, 3);
 D = sum(mySect.Tap(mySect.FW.Id));      % displacement
 tstart = tic;
-parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+%parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+for n=1
     % Instantiate fault section and get segmentation for this realization
     myFaultSection = Fault(mySect, faultDip);
     myFault = ExtrudedFault(myFaultSection, mySect);
-    myFault = myFault.getSegmentationLength(mySect, 8);
+    myFault = myFault.getSegmentationLength(mySect, 12);
     G = [];
     for k=1:numel(myFault.SegLen)
         % Get material property (intermediate variable) samples, and fix
@@ -106,7 +108,7 @@ parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
         faultSections{n}{k} = myFaultSection;
         smears{n}{k} = smear;
     end
-    
+
     % Compute 3D upscaled permeability distribution
     myFault = myFault.upscaleProps(G, U);
     
@@ -125,19 +127,20 @@ mySect.plotStrati(faults{1}.Thick, faultDip);
 % % 3.2 Visualize intermediate variables
 % % We define a given parent material (id from 1 to n of materials in stratigraphy), 
 % % and generate histograms and correlation matrix plots.
-layerId = 4;                                            
-plotMatPropsHist(faultSections, smears, mySect, layerId, dim) 
+%layerId = 4;                                            
+%plotMatPropsHist(faultSections, smears, mySect, layerId, dim) 
 % MatProps correlations
-[R, P] = plotMatPropsCorr(faultSections, mySect, layerId, dim);
+%[R, P] = plotMatPropsCorr(faultSections, mySect, layerId, dim);
 
 % 3.3 Visualize fault materials
 % Visualization for one realization. Choice can be 'randm' (random), 'maxX' 
 % (realization with maximum upscaled permeability in across the fault), 'minX', 
 % 'maxZ' or 'minZ'.
 % General fault materials and perm view
-plotId = selectSimId('randm', faults, Nsim);                % simulation index
+%plotId = selectSimId('randm', faults, Nsim);                % simulation index
+plotId = 1;
 faults{plotId}.plotMaterials(faultSections{1}{1}, mySect) 
 
 % 3.4. Visualize upscaled permeability
 % Plot upscaled permeability distributions (all simulations)
-plotUpscaledPerm(faults, dim, 'all')
+%plotUpscaledPerm(faults, dim)

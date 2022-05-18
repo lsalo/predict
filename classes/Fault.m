@@ -239,8 +239,7 @@ classdef Fault
                                     obj.MatMap.Psmear];     % obtained
             end
             
-            % Assign vcl, porosity and permeability
-            
+            % Assign vcl, porosity and permeability          
             [obj.Grid.poro, obj.Grid.perm, obj.Grid.permy, ...
              obj.Grid.vcl, obj.Grid.units] = setGridPoroPerm(obj, G, FS);
         end

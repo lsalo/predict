@@ -69,7 +69,13 @@ classdef ExtrudedFault
             else            % Determine from material properties
                 % TBD
             end
-            
+            if sum(obj.SegLen) ~= obj.Length
+                warning('Modified length of one along-strike segment to match fault length')
+                vdif = obj.Length - sum(obj.SegLen);
+                assert(vdif > 0);
+                [~, id_min_dif] = min(abs(obj.SegLen - vdif));
+                obj.SegLen(id_min_dif) = obj.SegLen(id_min_dif) + vdif;
+            end   
         end
         
         function obj = assignExtrudedVals(obj, G, faultSection, k)
@@ -81,8 +87,8 @@ classdef ExtrudedFault
             [nx, ny, nz] = deal(G.cartDims(1), G.cartDims(2), G.cartDims(3));
             % Initial checks
             if ~isnan(G.cellDim(2))
-                assert(mod(segLen/cellDim, 1)==0)
-                nklayers = segLen/cellDim;                  % repeat 2D section for nklayers
+                assert(mod(obj.SegLen(k)/G.cellDim(2), 1)==0)
+                nklayers = obj.SegLen(k)/G.cellDim(2);      % repeat 2D section for nklayers
             else
                 assert(G.cartDims(2) == numel(obj.SegLen))  % 1 cell per along-strike segment  
                 nklayers = 1;
@@ -95,12 +101,16 @@ classdef ExtrudedFault
                 obj.Grid.perm = zeros(G.cells.num, 6);      %[kxx, kxy, kxz, kyy, kyz, kzz]
                 idFirst0 = 1;
             else
-                if ~isnan(G.cellDim(2))     % constant along-strike cell L, layeredGrid
-                    assert(isfield(G, 'layerSize'))
+                if ~isnan(G.cellDim(2)) && isfield(G, 'layerSize')    % constant along-strike cell L, layeredGrid
                     idFirst0 = G.layerSize*sum(obj.SegLen(1:k-1)/G.cellDim(2)) + 1;
                 else
                     assert(~isfield(G, 'layerSize'))            % cartGrid
-                    idFirst0 = nx*(k-1) + 1;
+                    if G.cartDims(2) == numel(obj.SegLen)       % 1 cell layer per segment
+                        idFirst0 = nx*(k-1) + 1;
+                    else    % multiple cell layers per segment
+                        nklayers_prev = sum(obj.SegLen(1:k-1)/G.cellDim(2));
+                        idFirst0 = nx*(nklayers_prev) + 1;
+                    end
                 end
             end
             
