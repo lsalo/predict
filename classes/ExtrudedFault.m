@@ -65,7 +65,7 @@ classdef ExtrudedFault
             % Get length of material segments in the strike direction
             %
             if nargin > 2   % prescribe number of segments of equal length
-                obj.SegLen = repelem(round(obj.Length/nSeg), 1, nSeg);
+                obj.SegLen = repelem(floor(obj.Length/nSeg), 1, nSeg);
             else            % Determine from material properties
                 % TBD
             end
@@ -198,8 +198,10 @@ classdef ExtrudedFault
            G = makeFaultGrid(obj.Thick, obj.Disp, obj.Length, obj.SegLen);
            CG = [];
            if nargin > 3 && sum(coarseDims) > 3
-                p = partitionCartGrid(G.cartDims, U.coarseDims);
+                p = partitionCartGrid(G.cartDims, coarseDims);
                 CG = generateCoarseGrid(G, p);
+                %CG = rmfield(CG, 'parent');
+                %CG = computeGeometry(CG);
            end
            
            % SUBPLOTS
@@ -321,7 +323,7 @@ classdef ExtrudedFault
                title(['f$_{V_\mathrm{cl}} =$ ' num2str(obj.Vcl, ' %1.2f') ' [-]'], latx{:}, ...
                   'fontSize', sz(2));
            else
-               title('f$_{V_\mathrm{cl}}$', latx{:}, 'fontSize', sz(2));
+               title('$V_\mathrm{cl}$', latx{:}, 'fontSize', sz(2));
            end
            
            % 5. Cell and upscaled porosity
@@ -391,7 +393,7 @@ classdef ExtrudedFault
                   ' $\vert$ ' num2str(val(3), form{3}) units{3}], latx{:}, ...
                   'fontSize', sz(2));
            else
-               title('$k_{xx}', latx{:}, 'fontSize', sz(2));
+               title('$k_{xx}$', latx{:}, 'fontSize', sz(2));
            end
            grid on
            
@@ -417,7 +419,91 @@ classdef ExtrudedFault
            grid on
            set(hf, 'position', [200, 0, 1200, 350]);
 
+           % upscaled grid figure
            if ~isempty(CG)
+               hf = figure(randi(1000, 1));
+               tiledlayout(1, 4, 'Padding', 'tight', 'TileSpacing', 'tight');
+               nexttile
+               set(gca, 'colormap', flipud(copper))
+               plotToolbar(G, obj.Grid.vcl, 'EdgeColor', [0.2 0.2 0.2], ...
+                   'EdgeAlpha', 0.1);
+               xlim([0 obj.Thick]); ylim([0 obj.Disp]);
+               c = colorbar;
+               caxis([min(obj.Grid.vcl) max(obj.Grid.vcl)]);
+               set(gca,'fontSize', 10)
+               %c.Label.Interpreter = 'latex';
+               %c.Label.String = '$n$ [-]';
+               %c.Label.FontSize = 12;
+               xlabel('$x$ [m]', latx{:}); ylabel('$y$ [m]', latx{:});
+               zlabel('$z$ [m]', latx{:})
+               ax = gca;
+               ax.DataAspectRatio = [0.1 1 1];
+               ax.ZDir = 'normal';
+               view([30 20])
+               xticks([0 obj.Thick])
+               xticklabels([0 round(obj.Thick, 1)])
+               title('$V_\mathrm{cl}$', latx{:}, 'fontSize', sz(2));
+               
+               nexttile
+               set(gca, 'colormap', flipud(copper))
+               plotToolbar(CG, obj.Vcl, 'EdgeColor', [0.2 0.2 0.2], ...
+                           'EdgeAlpha', 0.1);
+               xlim([0 obj.Thick]); ylim([0 obj.Disp]);
+               c = colorbar;
+               caxis([min(obj.Grid.vcl) max(obj.Grid.vcl)]);
+               set(gca,'fontSize', 10)
+               %c.Label.Interpreter = 'latex';
+               %c.Label.String = '$n$ [-]';
+               %c.Label.FontSize = 12;
+               xlabel('$x$ [m]', latx{:}); ylabel('$y$ [m]', latx{:});
+               zlabel('$z$ [m]', latx{:})
+               ax = gca;
+               ax.DataAspectRatio = [0.1 1 1];
+               ax.ZDir = 'normal';
+               view([30 20])
+               xticks([0 obj.Thick])
+               xticklabels([0 round(obj.Thick, 1)])
+               title('Upscaled: f$_{V_\mathrm{cl}}$', latx{:}, 'fontSize', sz(2));
+               
+               nexttile
+               set(gca, 'colormap', copper)
+               plotToolbar(CG, obj.Poro, 'EdgeColor', [0.2 0.2 0.2], ...
+                   'EdgeAlpha', 0.1);
+               xlim([0 obj.Thick]); ylim([0 obj.Disp]);
+               c = colorbar;
+               caxis([0 max([max(obj.Grid.poro), 0.25])]);
+               set(gca,'fontSize', 10)
+               %c.Label.Interpreter = 'latex';
+               %c.Label.String = '$n$ [-]';
+               %c.Label.FontSize = 12;
+               %xlabel('$x$ [m]', latx{:}); ylabel('$z$ [m]', latx{:})
+               ax = gca;
+               ax.DataAspectRatio = [0.1 1 1];
+               ax.ZDir = 'normal';
+               view([30 20])
+               title('Upscaled: $n$', latx{:}, 'fontSize', sz(2));
+               
+               nexttile
+               cmap = copper;
+               set(gca, 'colormap', cmap)
+               plotToolbar(CG, log10(obj.Perm(:,1)/(milli*darcy)), ...
+                           'EdgeColor', [0.8 0.8 0.8], ...
+                           'EdgeAlpha', 0.1);
+               xlim([0 obj.Thick]); zlim([0 obj.Disp]); ylim([0 obj.Length]);
+               c = colorbar;
+               caxis([min(log10(obj.Grid.perm(:,1)/(milli*darcy))) ...
+                      max(log10(obj.Grid.perm(:,4)/(milli*darcy)))]);
+               c.Label.Interpreter = 'latex';
+               c.Label.String = '$\log_{10} k_{xx}$ [mD]';
+               c.Label.FontSize = 12;
+               set(gca,'fontSize', 10)
+               ax = gca;
+               ax.DataAspectRatio = [0.1 1 1];
+               ax.ZDir = 'normal';
+               view([30 20])
+               title('Upscaled: $k_{xx}$', latx{:}, 'fontSize', sz(2));
+               grid on
+               set(hf, 'position', [200, 0, 1200, 350]);
 
            end
             

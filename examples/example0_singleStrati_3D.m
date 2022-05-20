@@ -41,7 +41,7 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 % 2.3 Flow upscaling options and number of simulations
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
 U.method          = 'tpfa';     % 'tpfa' recommended for 3D
-U.coarseDims      = [1 2 2];    % number of cells [x, y, z] in coarse grid
+U.coarseDims      = [1 5 5];    % number of cells [x, y, z] in coarse grid
 Nsim              = 1000;       % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
@@ -83,7 +83,7 @@ for n=1
     % Instantiate fault section and get segmentation for this realization
     myFaultSection = Fault(mySect, faultDip);
     myFault = ExtrudedFault(myFaultSection, mySect);
-    myFault = myFault.getSegmentationLength(mySect, 12);
+    myFault = myFault.getSegmentationLength(mySect, 5);
     G = [];
     for k=1:numel(myFault.SegLen)
         % Get material property (intermediate variable) samples, and fix
