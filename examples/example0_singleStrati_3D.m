@@ -41,7 +41,7 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 % 2.3 Flow upscaling options and number of simulations
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
 U.method          = 'tpfa';     % 'tpfa' recommended for 3D
-U.coarseDims      = [1 1 1];    % number of cells [x, y, z] in coarse grid
+U.coarseDims      = [1 2 2];    % number of cells [x, y, z] in coarse grid
 Nsim              = 1000;       % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
@@ -139,7 +139,7 @@ mySect.plotStrati(faults{1}.Thick, faultDip);
 % General fault materials and perm view
 %plotId = selectSimId('randm', faults, Nsim);                % simulation index
 plotId = 1;
-faults{plotId}.plotMaterials(faultSections{1}{1}, mySect) 
+faults{plotId}.plotMaterials(faultSections{1}{1}, mySect, U.coarseDims) 
 
 % 3.4. Visualize upscaled permeability
 % Plot upscaled permeability distributions (all simulations)

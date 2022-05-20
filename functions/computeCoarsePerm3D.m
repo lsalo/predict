@@ -1,4 +1,4 @@
-function [Perm] = computeCoarsePerm3D(G, permG, U, p)
+function Perm = computeCoarsePerm3D(G, permG, U, CG)
 %
 % SUMMARY
 % Obtain the permeability of a single-cell grid equivalent to that of the
@@ -16,8 +16,8 @@ rock.perm = permG;
 % Compute equivalent/upscaled perm according to input method
 gravity reset off
 if strcmp(U.method, 'tpfa')
-    CG2 = generateCoarseGrid(G, p);
-    Perm = myUpscalePerm(G, CG2, rock, 'method', U.method);
+    %CG = generateCoarseGrid(G, p);
+    Perm = myUpscalePerm(G, CG, rock, 'method', U.method);
     
 elseif strcmp(U.method, 'mpfa')
     assert(all(U.coarseDims==1), ...

@@ -165,25 +165,26 @@ classdef ExtrudedFault
             %
             %
             %
+
+            % Generate coarse grid
+            p = partitionCartGrid(G.cartDims, U.coarseDims);
+            CG = generateCoarseGrid(G, p);
             
             % Upscale Vcl and Porosity (additive)
-            p = partitionCartGrid(G.cartDims, U.coarseDims);
             if all(U.coarseDims == 1)
                 obj.Vcl = mean(obj.Grid.vcl);
                 obj.Poro = mean(obj.Grid.poro);
             else    % upscaled grid has more than one cell
-                CG = generateCoarseGrid(G, p);
                 % The following is correct for grids with uniform cell size
                 obj.Vcl = accumarray(p, obj.Grid.vcl)./accumarray(p,1);
                 obj.Poro = accumarray(p, obj.Grid.poro)./accumarray(p,1);
             end
             
             % Upscale Permeability (not an additive property)
-            obj.Perm = computeCoarsePerm3D(G, obj.Grid.perm, U, p);
-               
+            obj.Perm = computeCoarsePerm3D(G, obj.Grid.perm, U, CG);      
         end
         
-        function plotMaterials(obj, faultSection, FS)
+        function plotMaterials(obj, faultSection, FS, coarseDims)
            %
            %
            %
@@ -193,8 +194,13 @@ classdef ExtrudedFault
            latx = {'Interpreter', 'latex'};
            sz = [14, 11];
            
-           % Create grid
+           % Create grids
            G = makeFaultGrid(obj.Thick, obj.Disp, obj.Length, obj.SegLen);
+           CG = [];
+           if nargin > 3 && sum(coarseDims) > 3
+                p = partitionCartGrid(G.cartDims, U.coarseDims);
+                CG = generateCoarseGrid(G, p);
+           end
            
            % SUBPLOTS
            % 1. Parent Ids
@@ -311,8 +317,12 @@ classdef ExtrudedFault
            view([30 20])
            xticks([0 obj.Thick])
            xticklabels([0 round(obj.Thick, 1)])
-           title(['f$_{V_\mathrm{cl}} =$ ' num2str(obj.Vcl, ' %1.2f') ' [-]'], latx{:}, ...
+           if isempty(CG)
+               title(['f$_{V_\mathrm{cl}} =$ ' num2str(obj.Vcl, ' %1.2f') ' [-]'], latx{:}, ...
                   'fontSize', sz(2));
+           else
+               title('f$_{V_\mathrm{cl}}$', latx{:}, 'fontSize', sz(2));
+           end
            
            % 5. Cell and upscaled porosity
            nexttile
@@ -331,8 +341,12 @@ classdef ExtrudedFault
            ax.DataAspectRatio = [0.1 1 1];
            ax.ZDir = 'normal';
            view([30 20])
-           title(['$n =$ ' num2str(obj.Poro, ' %1.2f') ' [-]'], latx{:}, ...
-                 'fontSize', sz(2));
+           if isempty(CG)
+               title(['$n =$ ' num2str(obj.Poro, ' %1.2f') ' [-]'], latx{:}, ...
+                       'fontSize', sz(2));
+           else
+               title('$n$', latx{:}, 'fontSize', sz(2));
+           end
            
            % 6. Cell and upscaled permeability
            nexttile
@@ -371,10 +385,14 @@ classdef ExtrudedFault
            ax.DataAspectRatio = [0.1 1 1];
            ax.ZDir = 'normal';
            view([30 20])
+           if isempty(CG)
            title(['$k_{jj} =$ ' num2str(val(1), form{1}) units{1}, ...
                   ' $\vert$ ' num2str(val(2), form{2}) units{2}, ...
                   ' $\vert$ ' num2str(val(3), form{3}) units{3}], latx{:}, ...
                   'fontSize', sz(2));
+           else
+               title('$k_{xx}', latx{:}, 'fontSize', sz(2));
+           end
            grid on
            
            % 7 Cell permeability (sands)
@@ -398,6 +416,10 @@ classdef ExtrudedFault
            view([30 20])
            grid on
            set(hf, 'position', [200, 0, 1200, 350]);
+
+           if ~isempty(CG)
+
+           end
             
            
            % MatProps 
