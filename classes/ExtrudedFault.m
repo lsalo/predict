@@ -60,22 +60,63 @@ classdef ExtrudedFault
             obj.Thick = FS.MatPropDistr.thick.fcn(obj.Disp);
         end
         
-        function obj = getSegmentationLength(obj, FS, nSeg)
+        function [obj, U] = getSegmentationLength(obj, FS, U, nSeg)
             %
             % Get length of material segments in the strike direction
             %
-            if nargin > 2   % prescribe number of segments of equal length
+            if nargin > 3   % prescribe number of segments of equal length
                 obj.SegLen = repelem(floor(obj.Length/nSeg), 1, nSeg);
             else            % Determine from material properties
                 % TBD
             end
+            
+            % Adjust partition (to be compatible with nSeg)?
+            ny = U.coarseDims(2);
+            res = mod(nSeg, ny);
+            if nSeg ~= ny && res ~= 0   
+                if nSeg < ny
+                    ny = nSeg;
+                    warning('U.coarseDims(2) set to nSeg (cannot be < than nSeg)')
+                else
+                    nysup = ny;
+                    nyinf = ny;
+                    its = 0;
+                    maxIts = 10;
+                    while its < maxIts && res ~= 0
+                        nysup = nysup+1;
+                        resup = mod(nSeg, nysup);
+                        if resup == 0
+                            ny = nysup;
+                            res = 0;
+                            break
+                        end
+                        nyinf = nyinf-1;
+                        resinf = mod(nSeg, nyinf);
+                        if resinf == 0
+                            ny = nyinf;
+                            res = 0;
+                            break
+                        end
+                        its = its + 1;
+                    end
+                    if its == maxIts && res ~= 0
+                        error('ny cannot be set, check U.coarseDims(2)')
+                    end
+                    warning(['U.coarseDims(2) set to closest nSeg integer divisor: ' ...
+                             num2str(ny)]) 
+                end
+                U.coarseDims(2) = ny;  
+            end
+            
+            % Adjust length of along-strike segments?
             if sum(obj.SegLen) ~= obj.Length
                 warning('Modified length of one along-strike segment to match fault length')
                 vdif = obj.Length - sum(obj.SegLen);
                 assert(vdif > 0);
                 [~, id_min_dif] = min(abs(obj.SegLen - vdif));
                 obj.SegLen(id_min_dif) = obj.SegLen(id_min_dif) + vdif;
-            end   
+            end  
+            
         end
         
         function obj = assignExtrudedVals(obj, G, faultSection, k)

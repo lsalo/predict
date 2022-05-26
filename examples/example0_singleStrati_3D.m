@@ -23,9 +23,9 @@ mrstVerbose on     % set to on for more insight in the command window
 % dip angle, faulting depth, and burial depth. Further details about input parameter 
 % formatting, etc can always be checked from the documentation in the classes 
 % and functions.
-thickness = {repelem(25, 1, 4), [5 10 15 10 20 10 10 5 15]};                % [m]
+thickness = {repelem(25, 1, 4), [20 20 20 20 20]};                % [m]
 vcl       = {[0.1 0.4 0.2 0.5], ...
-             [0.3 0.6 0.1 0.7 0.2 0.8 0.3 0.9 0.1]};                        % fraction [-]
+             [0.3 0.6 0.1 0.55 0.2]};                        % fraction [-]
 dip       = [0, 0];                                                        % [deg.]
 faultDip  = 70;                                                             % [deg.]
 zf        = [1000, 1000];                                                     % [FW, HW], [m]
@@ -41,7 +41,7 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 % 2.3 Flow upscaling options and number of simulations
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
 U.method          = 'tpfa';     % 'tpfa' recommended for 3D
-U.coarseDims      = [1 5 5];    % number of cells [x, y, z] in coarse grid
+U.coarseDims      = [2 5 6];    % number of cells [x, y, z] in coarse grid
 Nsim              = 1000;       % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
@@ -83,7 +83,7 @@ for n=1
     % Instantiate fault section and get segmentation for this realization
     myFaultSection = Fault(mySect, faultDip);
     myFault = ExtrudedFault(myFaultSection, mySect);
-    myFault = myFault.getSegmentationLength(mySect, 5);
+    [myFault, U] = myFault.getSegmentationLength(mySect, U, 10);
     G = [];
     for k=1:numel(myFault.SegLen)
         % Get material property (intermediate variable) samples, and fix
