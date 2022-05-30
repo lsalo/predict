@@ -53,63 +53,38 @@ nSeg.fcn   = [];
 
 % Mean vals
 zfm = mean(zf);
-vclm = mean(vcl(isClayVcl));
+vclm = mean(vcl(vcl > isClayVcl));
+assert(zfm <= 3000)
+assert(all([vclm >= isClayVcl, vclm <= 1]))
 
-% nSeg min and max based on data compiled from papers above
+% nSeg min and max based on data compiled from papers above (zf < 1m)
+endpoints = [1 16];
 
 % Modify endpoints to account for zf. Strong changes for sediments
 % faulted at very shallow depths ( < 500 m). Deeper, the changes become
 % less pronounced.
-
-% Compute mode based on average vcl
-
-% Generate fcn.
-
-for n = 1:N
-    if vcl(n) >= isClayVcl    
-        % 1. SSFc_min and SSFc_max (endpoints) for each layer
-        %    Values from Grant (2017), representative for shallow
-        %    faulting at around 500m (see Fig. 3b and Giger et al.,
-        %    2013).
-        if vcl(n) <= 0.5
-            endpoints = [2, 5];
-        elseif all([vcl(n)>0.5; vcl(n)<=0.6])
-            endpoints = [3, 7];
-        elseif all([vcl(n)>0.6; vcl(n)<=0.7])
-            endpoints = [5, 10];
-        else
-            endpoints = [7, 12];
-        end
-
-        % 2. Modify endpoints to account for zf. Strong changes
-        % for sediments faulted at very shallow depths (<500m) vs
-        % mid depth (1-1.5km). Deeper, the changes become less
-        % pronounced with depth.
-        if zf(n) <= 500
-            endpoints = endpoints - (500 - zf(n))/250;
-        elseif all([zf(n) > 500; zf(n) <= 1500])
-            endpoints = endpoints + (zf(n) - 500)/250;
-        else 
-            endpoints = endpoints + ((zf(n) - 1500)/1000 + 4);
-        end
-
-        % Assign to output
-        SSFc.range{n} = endpoints;
-
-        % 3. Compute mode of triangular distribution to sample from.
-        assert(thick(n) <= thickMax)
-        peak = (1 - min([1; ((thickMax - thick(n))/(thickMax - thickMin))])) ...
-               .* (endpoints(2) - endpoints(1)) + endpoints(1);
-        SSFc.param{n} = peak;
-
-        % 4. Generate fcn
-        SSFc.type{n} = 'tri';
-        SSFc.dist{n} = makedist('Triangular', 'a', endpoints(1), 'b', peak, ...
-                                'c', endpoints(2));
-        SSFc.fcn{n} = @(x) random(SSFc.dist{n}, x, 1);
+if zfm > 0
+    if  zfm <= 500
+        endpoints(2) = endpoints(2) - zfm/250;
+    elseif zfm <= 3000
+        v = zfm - 500;
+        endpoints(2) = endpoints(2) - 500/250 - v/500;
     end
 end
+endpoints = round(endpoints);
+nSeg.range = endpoints;
+    
+% Compute mode based on average vcl
+vcl_lim = [isClayVcl 1];
+peak = endpoints(1) + (vcl_lim(2) - vclm)/(diff(vcl_lim)) * ...
+                      (endpoints(2) - endpoints(1));
+nSeg.param = peak;
 
+% Generate fcn
+nSeg.type = 'tri';
+nSeg.dist = makedist('Triangular', 'a', endpoints(1), 'b', peak, ...
+                     'c', endpoints(2));
+nSeg.fcn = @(x) random(nSeg.dist, x, 1);
 end
 
         
