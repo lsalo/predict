@@ -53,7 +53,7 @@ nSeg.fcn   = [];
 
 % Mean vals
 zfm = mean(zf);
-vclm = mean(vcl(vcl > isClayVcl));
+vclm = mean(vcl(vcl >= isClayVcl));
 assert(zfm <= 3000)
 assert(all([vclm >= isClayVcl, vclm <= 1]))
 
@@ -84,7 +84,7 @@ nSeg.param = peak;
 nSeg.type = 'tri';
 nSeg.dist = makedist('Triangular', 'a', endpoints(1), 'b', peak, ...
                      'c', endpoints(2));
-nSeg.fcn = @(x) random(nSeg.dist, x, 1);
+nSeg.fcn = @(x) round(random(nSeg.dist, x, 1));
 end
 
         

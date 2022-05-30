@@ -64,18 +64,19 @@ classdef ExtrudedFault
             %
             % Get length of material segments in the strike direction
             %
-            if nargin > 3   % prescribe number of segments of equal length
-                obj.SegLen = repelem(floor(obj.Length/nSeg), 1, nSeg);
-            else            % Determine from material properties
-                % TBD
+            if isa(nSeg, 'double')   % prescribe number of segments (equal length)
+                nSegv = nSeg;
+            else                     % Fcn determined from material properties
+                nSegv = nSeg(1);  
             end
+            obj.SegLen = repelem(floor(obj.Length/nSegv), 1, nSegv);
             
             % Adjust partition (to be compatible with nSeg)?
             ny = U.coarseDims(2);
-            res = mod(nSeg, ny);
-            if nSeg ~= ny && res ~= 0   
-                if nSeg < ny
-                    ny = nSeg;
+            res = mod(nSegv, ny);
+            if nSegv ~= ny && res ~= 0   
+                if nSegv < ny
+                    ny = nSegv;
                     warning('U.coarseDims(2) set to nSeg (cannot be < than nSeg)')
                 else
                     nysup = ny;
@@ -84,14 +85,14 @@ classdef ExtrudedFault
                     maxIts = 10;
                     while its < maxIts && res ~= 0
                         nysup = nysup+1;
-                        resup = mod(nSeg, nysup);
+                        resup = mod(nSegv, nysup);
                         if resup == 0
                             ny = nysup;
                             res = 0;
                             break
                         end
                         nyinf = nyinf-1;
-                        resinf = mod(nSeg, nyinf);
+                        resinf = mod(nSegv, nyinf);
                         if resinf == 0
                             ny = nyinf;
                             res = 0;

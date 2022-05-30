@@ -23,12 +23,12 @@ mrstVerbose on     % set to on for more insight in the command window
 % dip angle, faulting depth, and burial depth. Further details about input parameter 
 % formatting, etc can always be checked from the documentation in the classes 
 % and functions.
-thickness = {repelem(25, 1, 4), [20 20 20 20 20]};                % [m]
+thickness = {repelem(25, 1, 4), [5 10 15 10 20 10 10 5 15]};                % [m]
 vcl       = {[0.1 0.4 0.2 0.5], ...
-             [0.3 0.6 0.1 0.55 0.2]};                        % fraction [-]
+             [0.3 0.6 0.1 0.7 0.2 0.8 0.3 0.9 0.1]};                        % fraction [-]
 dip       = [0, 0];                                                        % [deg.]
 faultDip  = 70;                                                             % [deg.]
-zf        = [1000, 1000];                                                     % [FW, HW], [m]
+zf        = [500, 500];                                                     % [FW, HW], [m]
 zmax      = {repelem(2000, numel(vcl{1})), repelem(2000, numel(vcl{2}))};   % {FW, HW}
 dim       = 3;                    % dimensions (2 = 2D, 3 = 3D)
 
@@ -41,8 +41,8 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 % 2.3 Flow upscaling options and number of simulations
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
 U.method          = 'tpfa';     % 'tpfa' recommended for 3D
-U.coarseDims      = [2 5 6];    % number of cells [x, y, z] in coarse grid
-Nsim              = 1000;       % Number of 3D simulations/realizations
+U.coarseDims      = [1 1 1];    % desired n cells [x, y, z] in coarse grid
+Nsim              = 1000;        % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
 % Organize the input parameters in HW and FW, and use that info to create a 
@@ -62,6 +62,8 @@ mySect = FaultedSection(footwall, hangingwall, faultDip, 'maxPerm', maxPerm);
 % intermediate variables.
 % Get material property distributions
 mySect = mySect.getMatPropDistr();
+% Get along-strike segmentation
+nSeg = getNSeg(mySect.Vcl, mySect.IsClayVcl, mySect.DepthFaulting);
 
 % 2.6 Generate intermediate variable samples, calculate smear dimensions 
 %     and upscale permeability.
@@ -77,13 +79,15 @@ smears = cell(Nsim, 1);
 faults = cell(Nsim, 1);
 upscaledPerm = zeros(Nsim, 3);
 D = sum(mySect.Tap(mySect.FW.Id));      % displacement
+Us = cell(Nsim, 1);
+nSeg_fcn = nSeg.fcn;
 tstart = tic;
-%parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
-for n=1
+parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+%for n=1
     % Instantiate fault section and get segmentation for this realization
     myFaultSection = Fault(mySect, faultDip);
     myFault = ExtrudedFault(myFaultSection, mySect);
-    [myFault, U] = myFault.getSegmentationLength(mySect, U, 10);
+    [myFault, Us{n}] = myFault.getSegmentationLength(mySect, U, nSeg_fcn);
     G = [];
     for k=1:numel(myFault.SegLen)
         % Get material property (intermediate variable) samples, and fix
@@ -110,7 +114,7 @@ for n=1
     end
 
     % Compute 3D upscaled permeability distribution
-    myFault = myFault.upscaleProps(G, U);
+    myFault = myFault.upscaleProps(G, Us{n});
     
     % Save results
     faults{n} = myFault;
@@ -124,23 +128,26 @@ telapsed = toc(tstart);
 % 3.1 Visualize stratigraphy and fault (with thickness corresponding to 1st realization)
 mySect.plotStrati(faults{1}.Thick, faultDip);  
 
-% % 3.2 Visualize intermediate variables
-% % We define a given parent material (id from 1 to n of materials in stratigraphy), 
-% % and generate histograms and correlation matrix plots.
-%layerId = 4;                                            
-%plotMatPropsHist(faultSections, smears, mySect, layerId, dim) 
+% 3.2 Visualize intermediate variables
+% We define a given parent material (id from 1 to n of materials in stratigraphy), 
+% and generate histograms and correlation matrix plots.
+layerId = 4;                                            
+plotMatPropsHist(faultSections, smears, mySect, layerId, dim) 
 % MatProps correlations
-%[R, P] = plotMatPropsCorr(faultSections, mySect, layerId, dim);
+[R, P] = plotMatPropsCorr(faultSections, mySect, layerId, dim);
+if dim==3
+    plotSeg(faults, nSeg)
+end
 
 % 3.3 Visualize fault materials
 % Visualization for one realization. Choice can be 'randm' (random), 'maxX' 
 % (realization with maximum upscaled permeability in across the fault), 'minX', 
 % 'maxZ' or 'minZ'.
 % General fault materials and perm view
-%plotId = selectSimId('randm', faults, Nsim);                % simulation index
-plotId = 1;
-faults{plotId}.plotMaterials(faultSections{1}{1}, mySect, U.coarseDims) 
+plotId = selectSimId('randm', faults, Nsim);                % simulation index
+%plotId = 1;
+faults{plotId}.plotMaterials(faultSections{1}{1}, mySect, Us{plotId}.coarseDims) 
 
 % 3.4. Visualize upscaled permeability
 % Plot upscaled permeability distributions (all simulations)
-%plotUpscaledPerm(faults, dim)
+plotUpscaledPerm(faults, dim)
