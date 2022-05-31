@@ -1,4 +1,4 @@
-function perm = getPermeability(vcl, isclayVcl, zf, zmax, cap, idHW)
+function perm = getPermeability(vcl, isclayVcl, zf, zmax, cap, idHW, FS)
 % Get permeability [m^2] across each faulted material.
 %
 % INPUT:
@@ -124,13 +124,15 @@ for n=1:N
 
 end
 % Overwrite perm for layers with passed perm
-% if nargin == 7
-%     idPassed = find([~isnan(FS.FW.Perm) ~isnan(FS.HW.Perm)]);
-%     permPassed = [FS.FW.Perm(~isnan(FS.FW.Perm)), ...
-%                   FS.HW.Perm(~isnan(FS.HW.Perm))];
-%     for k = 1:numel(idPassed)
-%         perm{idPassed(k)} = @(N) (permPassed(k) * md_to_m2) * ones(N, 1);
-%     end
-% end
+if nargin == 7
+    idPassed = find([~isnan(FS.FW.Perm) ~isnan(FS.HW.Perm)]);
+    permPassed = [FS.FW.Perm(~isnan(FS.FW.Perm)), ...
+                  FS.HW.Perm(~isnan(FS.HW.Perm))];
+    for k = 1:numel(idPassed)
+        perm.type{idPassed(k)} = 'constant';
+        perm.range{idPassed(k)} = [permPassed(k) permPassed(k)]*md_to_m2;
+        perm.fcn{idPassed(k)} = @(x) (permPassed(k) * md_to_m2) * ones(x, 1);
+    end
+end
 
 end

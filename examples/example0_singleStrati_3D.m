@@ -41,7 +41,7 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 % 2.3 Flow upscaling options and number of simulations
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
 U.method          = 'tpfa';     % 'tpfa' recommended for 3D
-U.coarseDims      = [1 1 1];    % desired n cells [x, y, z] in coarse grid
+U.coarseDims      = [1 4 4];    % desired n cells [x, y, z] in coarse grid
 Nsim              = 1000;        % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects

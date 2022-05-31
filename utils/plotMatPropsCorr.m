@@ -110,6 +110,10 @@ for n=1:nv
     % Edges for histograms
     m = min(T(:,n));
     M = max(T(:,n));
+    if m==M
+        m = m - 0.5;
+        M = M + 0.5;
+    end
     edges{n} = linspace(m, M, nbins(n));
 end
 

@@ -69,7 +69,7 @@ classdef ExtrudedFault
             else                     % Fcn determined from material properties
                 nSegv = nSeg(1);  
             end
-            obj.SegLen = repelem(floor(obj.Length/nSegv), 1, nSegv);
+            obj.SegLen = repelem(obj.Length/nSegv, 1, nSegv);
             
             % Adjust partition (to be compatible with nSeg)?
             ny = U.coarseDims(2);
@@ -110,7 +110,7 @@ classdef ExtrudedFault
             end
             
             % Adjust length of along-strike segments?
-            if sum(obj.SegLen) ~= obj.Length
+            if abs(sum(obj.SegLen) - obj.Length) > 0.01*obj.Disp
                 warning('Modified length of one along-strike segment to match fault length')
                 vdif = obj.Length - sum(obj.SegLen);
                 assert(vdif > 0);
@@ -226,7 +226,7 @@ classdef ExtrudedFault
             obj.Perm = computeCoarsePerm3D(G, obj.Grid.perm, U, CG);      
         end
         
-        function plotMaterials(obj, faultSection, FS, coarseDims)
+        function plotMaterials(obj, faultSection, FS, unit, coarseDims)
            %
            %
            %
@@ -235,11 +235,18 @@ classdef ExtrudedFault
            M = faultSection.MatMap;
            latx = {'Interpreter', 'latex'};
            sz = [14, 11];
+           if strcmp(unit, 'm')
+               m = 1;
+           elseif strcmp(unit, 'cm')
+               m = 100;
+           else
+               error('Add corresponding multiplier')
+           end
            
            % Create grids
            G = makeFaultGrid(obj.Thick, obj.Disp, obj.Length, obj.SegLen);
            CG = [];
-           if nargin > 3 && sum(coarseDims) > 3
+           if nargin > 4 && sum(coarseDims) > 3
                 p = partitionCartGrid(G.cartDims, coarseDims);
                 CG = generateCoarseGrid(G, p);
                 %CG = rmfield(CG, 'parent');
@@ -257,10 +264,15 @@ classdef ExtrudedFault
            xlim([0 obj.Thick]); ylim([0 obj.Disp]); c = colorbar;
            set(c,'YTick', unique(obj.Grid.units));
            xticks([0 obj.Thick])
-           xticklabels([0 round(obj.Thick, 1)])
-           xlabel('$x$ [m]', latx{:}); 
-           ylabel('$y$ [m]', latx{:})
-           zlabel('$z$ [m]', latx{:})
+           ntick = 4;
+           xticklabels([0 round(obj.Thick*m, 2)])
+           yticks(linspace(0,obj.Length,ntick))
+           yticklabels(round(linspace(0,obj.Length*m,ntick), 1))
+           zticks(linspace(0,obj.Length,ntick))
+           zticklabels(round(linspace(0,obj.Disp*m,ntick), 1))
+           xlabel(['$x$ [' unit ']'], latx{:}); 
+           ylabel(['$y$ [' unit ']'], latx{:})
+           zlabel(['$z$ [' unit ']'], latx{:})
            ax = gca;
            ax.DataAspectRatio = [0.1 1 1];
            ax.ZDir = 'normal';
@@ -360,7 +372,11 @@ classdef ExtrudedFault
            ax.ZDir = 'normal';
            view([30 20])
            xticks([0 obj.Thick])
-           xticklabels([0 round(obj.Thick, 1)])
+           xticklabels([0 round(obj.Thick*m, 2)])
+           yticks(linspace(0,obj.Length,ntick))
+           yticklabels(round(linspace(0,obj.Length*m,ntick), 1))
+           zticks(linspace(0,obj.Length,ntick))
+           zticklabels(round(linspace(0,obj.Disp*m,ntick), 1))
            if isempty(CG)
                title(['f$_{V_\mathrm{cl}} =$ ' num2str(obj.Vcl, ' %1.2f') ' [-]'], latx{:}, ...
                   'fontSize', sz(2));
@@ -391,6 +407,7 @@ classdef ExtrudedFault
            else
                title('$n$', latx{:}, 'fontSize', sz(2));
            end
+           axis off
            
            % 6. Cell and upscaled permeability
            nexttile
@@ -438,6 +455,7 @@ classdef ExtrudedFault
                title('$k_{xx}$', latx{:}, 'fontSize', sz(2));
            end
            grid on
+           xticks([]), yticks([]), zticks([])
            
            % 7 Cell permeability (sands)
            nexttile
@@ -460,6 +478,7 @@ classdef ExtrudedFault
            view([30 20])
            grid on
            set(hf, 'position', [200, 0, 1200, 350]);
+           xticks([]), yticks([]), zticks([])
 
            % upscaled grid figure
            if ~isempty(CG)

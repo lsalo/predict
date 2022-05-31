@@ -156,17 +156,32 @@ classdef FaultedSection
                                                obj.IsUndercompacted, obj.HW.Id);
                                        
            % Perm
-            obj.MatPropDistr.perm = getPermeability(obj.Vcl, obj.IsClayVcl, ...
-                                                    zf, zmax, obj.MaxPerm, ...
-                                                    obj.HW.Id);
+           if ~all([isempty(obj.FW.Perm) isempty(obj.HW.Perm)])
+               obj.MatPropDistr.perm = getPermeability(obj.Vcl, obj.IsClayVcl, ...
+                                                       zf, zmax, obj.MaxPerm, ...
+                                                       obj.HW.Id, obj);
+           else
+               obj.MatPropDistr.perm = getPermeability(obj.Vcl, obj.IsClayVcl, ...
+                                                       zf, zmax, obj.MaxPerm, ...
+                                                       obj.HW.Id);
+           end
             
         end
         
-        function plotStrati(obj, faultThick, faultDip, fontSize)
+        function plotStrati(obj, faultThick, faultDip, unit, fontSize)
            %
            %
            % This plot considers that dip is constant for all layers in FW
            % and same for the HW (FW and HW dips may be different).
+           
+           % Multiplier
+           if strcmp(unit, 'm')
+               m = 1;
+           elseif strcmp(unit, 'cm')
+               m = 100;
+           else
+               error('Add corresponding multiplier')
+           end
            
            % Measures
            dip = [obj.FW.Dip(1) obj.HW.Dip(1)];
@@ -190,7 +205,10 @@ classdef FaultedSection
                zFWf = [0 cumsum(obj.Tap(obj.FW.Id)*cosd(g))];
                zHWf = [0 cumsum(obj.Tap(obj.HW.Id)*cosd(g))];
            end
+           zFWf = zFWf*m;
+           zHWf = zHWf*m;
            xFWf = 0 - zFWf./tand(faultDip);
+           faultThick = faultThick*m;
            xHWf = faultThick - zHWf./tand(faultDip);
            fcoord = [0, 0; faultThick, 0; xFWf(end), zFWf(end); ...
                      faultThick + xFWf(end), zFWf(end)];
@@ -201,7 +219,7 @@ classdef FaultedSection
            % Utils
            colrs = flipud(copper(16));
            latx = {'Interpreter', 'latex'};
-           if nargin < 4
+           if nargin < 5
                sz = [14, 12, 11];
                distTextVcl = [2, 8];
            elseif strcmp(fontSize, 'large')
@@ -267,12 +285,12 @@ classdef FaultedSection
                    'fontSize', sz(3), 'color', colrtx)
            end
            hold off
-           axis equal
+           if strcmp(unit, 'm'), axis equal, end
            h = gca; h.XAxis.Visible = 'off';
            h.FontSize = sz(3);
            xlim([min([limx', xFWf, xHWf]), max([limx', xFWf, xHWf])])
            ylim([min([zFW, zHW, zFWf, zHWf]) max([zFW, zHW, zFWf, zHWf])])
-           ylabel('$z$ [m]', 'fontSize', sz(2), latx{:})
+           ylabel(['$z$ [' unit ']'], 'fontSize', sz(2), latx{:})
            title(['$z_\mathrm{f}$,  $z_\mathrm{max} =$ ' num2str(unique(obj.DepthFaulting)) ...
                   ', ' num2str(unique(obj.FW.DepthBurial)) ' m'], latx{:}, 'fontSize', sz(1))
         end
