@@ -270,7 +270,7 @@ classdef ExtrudedFault
            yticklabels(round(linspace(0,obj.Length*m,ntick), 1))
            zticks(linspace(0,obj.Length,ntick))
            zticklabels(round(linspace(0,obj.Disp*m,ntick), 1))
-           xlabel(['$x$ [' unit ']'], latx{:}); 
+           xlabel(['$x$ [' unit ']'], latx{:})
            ylabel(['$y$ [' unit ']'], latx{:})
            zlabel(['$z$ [' unit ']'], latx{:})
            ax = gca;
@@ -365,8 +365,9 @@ classdef ExtrudedFault
            %c.Label.Interpreter = 'latex'; 
            %c.Label.String = '$n$ [-]';
            %c.Label.FontSize = 12;
-           xlabel('$x$ [m]', latx{:}); ylabel('$y$ [m]', latx{:});
-           zlabel('$z$ [m]', latx{:})
+           xlabel(['$x$ [' unit ']'], latx{:}); 
+           ylabel(['$y$ [' unit ']'], latx{:})
+           zlabel(['$z$ [' unit ']'], latx{:})
            ax = gca;
            ax.DataAspectRatio = [0.1 1 1];
            ax.ZDir = 'normal';

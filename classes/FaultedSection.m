@@ -41,6 +41,7 @@ classdef FaultedSection
         MatPropDistr    % Distros of material properties to sample from
         IsUndercompacted% Undercompacted section? Default: false
         MaxPerm         % Perm Cap for FZ materials? Default: [] (none)
+        Failure         % shear (default) or hybrid (near-surface)
     end
     
     properties (Dependent, Hidden)
@@ -62,9 +63,11 @@ classdef FaultedSection
             % Optional inputs
             opt.maxPerm = [];                   % mD
             opt.isUndercompacted = false;
+            opt.failure = 'shear';
             opt = merge_options_relaxed(opt, varargin{:});
             obj.IsUndercompacted = opt.isUndercompacted;
             obj.MaxPerm = opt.maxPerm;
+            obj.Failure = opt.failure;
             
             % Assign or compute apparent and true thicknesses
             if footwall.IsThickApp == 1
@@ -144,8 +147,9 @@ classdef FaultedSection
            
            % SSFc
            obj.MatPropDistr.ssfc = getSSFc(obj.Vcl, obj.IsClayVcl, zf, ...
-                                           obj.Thick, Disp, obj.HW.Id);
-                                   
+                                           obj.Thick, Disp, obj.Failure, ...
+                                           obj.HW.Id);
+                
            % Perm Anisotropy Ratio
            obj.MatPropDistr.permAnisoRatio = ...
                     getAnisotropyRatio(obj.Vcl, zf, clayMine, obj.HW.Id);

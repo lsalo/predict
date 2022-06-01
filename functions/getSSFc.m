@@ -1,4 +1,4 @@
-function SSFc = getSSFc(vcl, isClayVcl, zf, thick, faultDisp, idHW)
+function SSFc = getSSFc(vcl, isClayVcl, zf, thick, faultDisp, failureType, idHW)
 % Get critical shale smear factor (SSFc), i.e. the value at which a given 
 % smear becomes discontinuous. Note that an object fault with field disp
 % must be passed as well.
@@ -74,7 +74,7 @@ SSFc.dist = cell(1, N);
 SSFc.fcn   = cell(1, N);
 
 % Expand faulting depths
-if nargin > 5
+if nargin > 6
     zf = [repelem(zf(1), idHW(1)-1), repelem(zf(2), numel(idHW))];
 else
     zf = repelem(zf, numel(vcl));
@@ -112,6 +112,27 @@ for n = 1:N
             endpoints = endpoints + (zf(n) - 500)/250;
         else 
             endpoints = endpoints + ((zf(n) - 1500)/1000 + 4);
+        end
+        
+        if strcmp(failureType, 'hybrid')
+            % Here, the clay initially fails in tension and this disrupts
+            % the continuous smear. Hence, smear can be discontinuous at
+            % any displacement.
+            warning(['Hybrid failure is based on sandbox experiments by ' ...
+                     'Urai´s group at RWTH Aachen and data is limited.'])
+            assert(all(zf < 100))
+            if faultDisp < 3*thick(n) 
+                endpoints(1) = min([endpoints(1) 0.3*faultDisp/thick(n)]);
+                endpoints(2) = endpoints(2) - 0.5*endpoints(2);
+            elseif faultDisp < 6*thick(n) 
+                endpoints(1) = min([endpoints(1) 0.5*faultDisp/thick(n)]);
+                endpoints(2) = endpoints(2) - 0.3*endpoints(2);
+                thickMax = 4*thick(n);
+            else
+                endpoints(1) = min([endpoints(1) 0.5*faultDisp/thick(n)]);
+                endpoints(2) = endpoints(2) - 0.3*endpoints(2);
+                thickMax = 2*thick(n);
+            end  
         end
 
         % Assign to output
