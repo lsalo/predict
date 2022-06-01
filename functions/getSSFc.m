@@ -124,15 +124,24 @@ for n = 1:N
             if faultDisp < 3*thick(n) 
                 endpoints(1) = min([endpoints(1) 0.3*faultDisp/thick(n)]);
                 endpoints(2) = endpoints(2) - 0.5*endpoints(2);
-            elseif faultDisp < 6*thick(n) 
-                endpoints(1) = min([endpoints(1) 0.5*faultDisp/thick(n)]);
-                endpoints(2) = endpoints(2) - 0.3*endpoints(2);
-                thickMax = 4*thick(n);
             else
                 endpoints(1) = min([endpoints(1) 0.5*faultDisp/thick(n)]);
                 endpoints(2) = endpoints(2) - 0.3*endpoints(2);
-                thickMax = 2*thick(n);
-            end  
+            end    
+        end
+        
+        % Thinner layers reach higher SSF. This is consistent with both
+        % experiments and field observations of faults at different
+        % scales. Data is very limited, so poorly constrained for now.
+        disp_to_thick = faultDisp/thick(n);
+        if disp_to_thick < 5
+            endpoints = endpoints - 0.2*endpoints;
+        elseif disp_to_thick >= 10 && disp_to_thick < 15
+            endpoints = endpoints + 0.6*endpoints;
+        elseif disp_to_thick >= 15 && disp_to_thick < 20
+            endpoints = endpoints + 0.8*endpoints;
+        elseif disp_to_thick >= 20
+            endpoints = 2*endpoints;
         end
 
         % Assign to output
