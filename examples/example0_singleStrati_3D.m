@@ -41,8 +41,10 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 % 2.3 Flow upscaling options and number of simulations
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
 U.method          = 'tpfa';     % 'tpfa' recommended for 3D
-U.coarseDims      = [1 4 4];    % desired n cells [x, y, z] in coarse grid
-Nsim              = 1000;        % Number of 3D simulations/realizations
+U.coarseDims      = [1 3 3];    % desired n cells [x, y, z] in coarse grid
+U.flexible        = true;       % default true, much faster but U.coarseDims
+                                % will be modified in some realizations.
+Nsim              = 100;        % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
 % Organize the input parameters in HW and FW, and use that info to create a 
@@ -81,13 +83,18 @@ upscaledPerm = zeros(Nsim, 3);
 D = sum(mySect.Tap(mySect.FW.Id));      % displacement
 Us = cell(Nsim, 1);
 nSeg_fcn = nSeg.fcn;
+U_flex = U.flexible;
 tstart = tic;
 parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
 %for n=1
     % Instantiate fault section and get segmentation for this realization
     myFaultSection = Fault(mySect, faultDip);
     myFault = ExtrudedFault(myFaultSection, mySect);
-    [myFault, Us{n}] = myFault.getSegmentationLength(mySect, U, nSeg_fcn);
+    if U_flex
+        [myFault, Us{n}] = myFault.getSegmentationLength(mySect, U, nSeg_fcn);
+    else
+        myFault = myFault.getSegmentationLength(mySect, U, nSeg_fcn);
+    end
     G = [];
     for k=1:numel(myFault.SegLen)
         % Get material property (intermediate variable) samples, and fix
@@ -96,7 +103,7 @@ parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
         myFaultSection.MatProps.thick = myFault.Thick;
         if isempty(G)
             G = makeFaultGrid(myFault.Thick, myFault.Disp, ...
-                              myFault.Length, myFault.SegLen);
+                              myFault.Length, myFault.SegLen, U);
         end
         
         % Generate smear object with T, Tap, L, Lmax
@@ -114,7 +121,11 @@ parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     end
 
     % Compute 3D upscaled permeability distribution
-    myFault = myFault.upscaleProps(G, Us{n});
+    if U_flex
+        myFault = myFault.upscaleProps(G, Us{n});
+    else
+        myFault = myFault.upscaleProps(G, U);
+    end
     
     % Save results
     faults{n} = myFault;
@@ -126,7 +137,7 @@ telapsed = toc(tstart);
 
 %% 3. Output Analysis
 % 3.1 Visualize stratigraphy and fault (with thickness corresponding to 1st realization)
-mySect.plotStrati(faults{1}.Thick, faultDip);  
+mySect.plotStrati(faults{1}.Thick, faultDip, 'm');  
 
 % 3.2 Visualize intermediate variables
 % We define a given parent material (id from 1 to n of materials in stratigraphy), 
@@ -146,7 +157,11 @@ end
 % General fault materials and perm view
 plotId = selectSimId('randm', faults, Nsim);                % simulation index
 %plotId = 1;
-faults{plotId}.plotMaterials(faultSections{1}{1}, mySect, Us{plotId}.coarseDims) 
+if U_flex
+    faults{plotId}.plotMaterials(faultSections{1}{1}, mySect, 'm', Us{plotId}) 
+else
+    faults{plotId}.plotMaterials(faultSections{1}{1}, mySect, 'm', U) 
+end
 
 % 3.4. Visualize upscaled permeability
 % Plot upscaled permeability distributions (all simulations)

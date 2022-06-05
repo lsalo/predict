@@ -69,54 +69,59 @@ classdef ExtrudedFault
             else                     % Fcn determined from material properties
                 nSegv = nSeg(1);  
             end
-            obj.SegLen = repelem(obj.Length/nSegv, 1, nSegv);
-            
-            % Adjust partition (to be compatible with nSeg)?
-            ny = U.coarseDims(2);
-            res = mod(nSegv, ny);
-            if nSegv ~= ny && res ~= 0   
-                if nSegv < ny
-                    ny = nSegv;
-                    warning('U.coarseDims(2) set to nSeg (cannot be < than nSeg)')
-                else
-                    nysup = ny;
-                    nyinf = ny;
-                    its = 0;
-                    maxIts = 10;
-                    while its < maxIts && res ~= 0
-                        nysup = nysup+1;
-                        resup = mod(nSegv, nysup);
-                        if resup == 0
-                            ny = nysup;
-                            res = 0;
-                            break
+            if ~isfield(U, 'flexible') || U.flexible 
+                obj.SegLen = repelem(obj.Length/nSegv, 1, nSegv);
+                
+                % Adjust partition (to be compatible with nSeg)?
+                ny = U.coarseDims(2);
+                res = mod(nSegv, ny);
+                if nSegv ~= ny && res ~= 0
+                    if nSegv < ny
+                        ny = nSegv;
+                        warning('U.coarseDims(2) set to nSeg (cannot be < than nSeg)')
+                    else
+                        nysup = ny;
+                        nyinf = ny;
+                        its = 0;
+                        maxIts = 10;
+                        while its < maxIts && res ~= 0
+                            nysup = nysup+1;
+                            resup = mod(nSegv, nysup);
+                            if resup == 0
+                                ny = nysup;
+                                res = 0;
+                                break
+                            end
+                            nyinf = nyinf-1;
+                            resinf = mod(nSegv, nyinf);
+                            if resinf == 0
+                                ny = nyinf;
+                                res = 0;
+                                break
+                            end
+                            its = its + 1;
                         end
-                        nyinf = nyinf-1;
-                        resinf = mod(nSegv, nyinf);
-                        if resinf == 0
-                            ny = nyinf;
-                            res = 0;
-                            break
+                        if its == maxIts && res ~= 0
+                            error('ny cannot be set, check U.coarseDims(2)')
                         end
-                        its = its + 1;
+                        warning(['U.coarseDims(2) set to closest nSeg integer divisor: ' ...
+                            num2str(ny)])
                     end
-                    if its == maxIts && res ~= 0
-                        error('ny cannot be set, check U.coarseDims(2)')
-                    end
-                    warning(['U.coarseDims(2) set to closest nSeg integer divisor: ' ...
-                             num2str(ny)]) 
+                    U.coarseDims(2) = ny;
                 end
-                U.coarseDims(2) = ny;  
-            end
             
-            % Adjust length of along-strike segments?
-            if abs(sum(obj.SegLen) - obj.Length) > 0.01*obj.Disp
-                warning('Modified length of one along-strike segment to match fault length')
-                vdif = obj.Length - sum(obj.SegLen);
-                assert(vdif > 0);
-                [~, id_min_dif] = min(abs(obj.SegLen - vdif));
-                obj.SegLen(id_min_dif) = obj.SegLen(id_min_dif) + vdif;
-            end  
+            else
+                obj.SegLen = repelem(round(obj.Length/nSegv), 1, nSegv);
+                
+                % Adjust length of along-strike segments?
+                if abs(sum(obj.SegLen) - obj.Length) > 0.001*obj.Length
+                    warning('Modified length of one along-strike segment to match fault length')
+                    vdif = obj.Length - sum(obj.SegLen);
+                    [~, id_min_dif] = min(abs(obj.SegLen - vdif));
+                    obj.SegLen(id_min_dif) = obj.SegLen(id_min_dif) + vdif;
+                    assert(sum(obj.SegLen) == obj.Length)
+                end
+            end
             
         end
         
@@ -226,7 +231,7 @@ classdef ExtrudedFault
             obj.Perm = computeCoarsePerm3D(G, obj.Grid.perm, U, CG);      
         end
         
-        function plotMaterials(obj, faultSection, FS, unit, coarseDims)
+        function plotMaterials(obj, faultSection, FS, unit, U)
            %
            %
            %
@@ -244,10 +249,10 @@ classdef ExtrudedFault
            end
            
            % Create grids
-           G = makeFaultGrid(obj.Thick, obj.Disp, obj.Length, obj.SegLen);
+           G = makeFaultGrid(obj.Thick, obj.Disp, obj.Length, obj.SegLen, U);
            CG = [];
-           if nargin > 4 && sum(coarseDims) > 3
-                p = partitionCartGrid(G.cartDims, coarseDims);
+           if sum(U.coarseDims) > 3
+                p = partitionCartGrid(G.cartDims, U.coarseDims);
                 CG = generateCoarseGrid(G, p);
                 %CG = rmfield(CG, 'parent');
                 %CG = computeGeometry(CG);

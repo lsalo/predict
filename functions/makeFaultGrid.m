@@ -1,4 +1,4 @@
-function G = makeFaultGrid(T, D, L, segLen, targetCellDim, makeplot)
+function G = makeFaultGrid(T, D, L, segLen, U, targetCellDim, makeplot)
 % Generate MRST grid (an MRST installation is required).
 %
 % INPUTS
@@ -28,15 +28,17 @@ function G = makeFaultGrid(T, D, L, segLen, targetCellDim, makeplot)
 %
 
 % User can pass desired grid resolution
-if nargin < 5 || isempty(targetCellDim)
+if nargin < 6 || isempty(targetCellDim)
     targetCellDim = [D/1000, D/100];             % [m], [thick., disp.]
     if nargin < 3 || isempty(L)
         dim = 2;
     else
         dim = 3;
-        % Uncomment following line for full along-strike resolution
-        % (much slower, results are not significantly different)
-        %targetCellDim = [D/1000, D/100, D/100];   % [thick, length, disp.]
+        if isfield(U, 'flexible') && ~U.flexible
+            % Full along-strike resolution
+            % (much slower, results are not significantly different)
+            targetCellDim = [D/1000, D/100, D/100];   % [thick, length, disp.]
+        end
     end
 else
     assert(isa(targetCellDim, 'double') && ...
@@ -91,7 +93,7 @@ elseif dim == 3
 %     G.xySwap = true;
 end
 
-if nargin > 5 && makeplot == 1
+if nargin > 6 && makeplot == 1
     f1 = figure(1);
     colormap(turbo)
     plotCellData(G, (1:G.cells.num)', 'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0.3);
