@@ -31,6 +31,7 @@ faultDip  = 70;                                                             % [d
 zf        = [500, 500];                                                     % [FW, HW], [m]
 zmax      = {repelem(2000, numel(vcl{1})), repelem(2000, numel(vcl{2}))};   % {FW, HW}
 dim       = 3;                    % dimensions (2 = 2D, 3 = 3D)
+unit_plot = 'm';
 
 % 2.2 Optional input parameters
 % In this case, we indicate a maximum fault material permeability of and a correlation 
@@ -137,7 +138,7 @@ telapsed = toc(tstart);
 
 %% 3. Output Analysis
 % 3.1 Visualize stratigraphy and fault (with thickness corresponding to 1st realization)
-mySect.plotStrati(faults{1}.Thick, faultDip, 'm');  
+mySect.plotStrati(faults{1}.Thick, faultDip, unit_plot);  
 
 % 3.2 Visualize intermediate variables
 % We define a given parent material (id from 1 to n of materials in stratigraphy), 
@@ -158,9 +159,10 @@ end
 plotId = selectSimId('randm', faults, Nsim);                % simulation index
 %plotId = 1;
 if U_flex
-    faults{plotId}.plotMaterials(faultSections{1}{1}, mySect, 'm', Us{plotId}) 
+    faults{plotId}.plotMaterials(faultSections{1}{1}, mySect, ...
+                                 unit_plot, Us{plotId}) 
 else
-    faults{plotId}.plotMaterials(faultSections{1}{1}, mySect, 'm', U) 
+    faults{plotId}.plotMaterials(faultSections{1}{1}, mySect, unit_plot, U) 
 end
 
 % 3.4. Visualize upscaled permeability

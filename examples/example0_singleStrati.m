@@ -30,6 +30,7 @@ faultDip  = 70;                                                             % [d
 zf        = [500, 500];                                                     % [FW, HW], [m]
 zmax      = {repelem(2000, numel(vcl{1})), repelem(2000, numel(vcl{2}))};   % {FW, HW}
 dim       = 2;                    % dimensions (2 = 2D, 3 = 3D)
+unit_plot = 'm';                  % 'm' or 'cm' depending on fault dimensions
 
 % 2.2 Optional input parameters
 % In this case, we indicate a maximum fault material permeability of and a correlation 
@@ -43,6 +44,7 @@ U.method          = 'mpfa';     % 'tpfa' recommended if useAcceleration = 0
 U.outflux         = 0;          % compare outflux of fine and upscaled model
 U.ARcheck         = 0;          % check if Perm obtained with grid with aspect ratio of 
                                 % only 5 gives same output.
+U.coarseDims      = [1 1 1];    % Mandatory one cell if 2D
 Nsim              = 1000;       % Number of simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
@@ -83,6 +85,7 @@ faults = cell(Nsim, 1);
 smears = cell(Nsim, 1);
 tstart = tic;
 parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
+%for n=1
     myFault = Fault(mySect, faultDip);
     
     % Get material property (intermediate variable) samples, and fix 
@@ -112,15 +115,15 @@ telapsed = toc(tstart);
 
 %% 3. Output Analysis
 % 3.1 Visualize stratigraphy and fault (with thickness corresponding to 1st realization)
-mySect.plotStrati(faults{1}.MatProps.thick, faultDip);  
+mySect.plotStrati(faults{1}.MatProps.thick, faultDip, unit_plot);  
 
 % 3.2 Visualize intermediate variables
 % We define a given parent material (id from 1 to n of materials in stratigraphy), 
 % and generate histograms and correlation matrix plots.
 layerId = 4;                                            
-plotMatPropsHist(faults, smears, mySect, layerId) 
+plotMatPropsHist(faults, smears, mySect, layerId, dim) 
 % MatProps correlations
-[R, P] = plotMatPropsCorr(faults, mySect, layerId);
+[R, P] = plotMatPropsCorr(faults, mySect, layerId, dim);
 
 % 3.3 Visualize fault materials
 % Visualization for one realization. Choice can be 'randm' (random), 'maxX' 
@@ -132,4 +135,4 @@ faults{plotId}.plotMaterials(mySect, G0)
 
 % 3.4. Visualize upscaled permeability
 % Plot upscaled permeability distributions (all simulations)
-plotUpscaledPerm(faults)
+plotUpscaledPerm(faults, dim)
