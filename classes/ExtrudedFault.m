@@ -60,7 +60,7 @@ classdef ExtrudedFault
             obj.Thick = FS.MatPropDistr.thick.fcn(obj.Disp);
         end
         
-        function [obj, U] = getSegmentationLength(obj, FS, U, nSeg)
+        function [obj, U] = getSegmentationLength(obj, U, nSeg)
             %
             % Get length of material segments in the strike direction
             %
@@ -69,9 +69,9 @@ classdef ExtrudedFault
             else                     % Fcn determined from material properties
                 nSegv = nSeg(1);  
             end
+            obj.SegLen = repelem(obj.Length/nSegv, 1, nSegv);
+            
             if ~isfield(U, 'flexible') || U.flexible 
-                obj.SegLen = repelem(obj.Length/nSegv, 1, nSegv);
-                
                 % Adjust partition (to be compatible with nSeg)?
                 ny = U.coarseDims(2);
                 res = mod(nSegv, ny);
@@ -109,18 +109,6 @@ classdef ExtrudedFault
                     end
                     U.coarseDims(2) = ny;
                 end
-            
-            else
-                obj.SegLen = repelem(round(obj.Length/nSegv), 1, nSegv);
-                
-                % Adjust length of along-strike segments?
-                if abs(sum(obj.SegLen) - obj.Length) > 0.001*obj.Length
-                    warning('Modified length of one along-strike segment to match fault length')
-                    vdif = obj.Length - sum(obj.SegLen);
-                    [~, id_min_dif] = min(abs(obj.SegLen - vdif));
-                    obj.SegLen(id_min_dif) = obj.SegLen(id_min_dif) + vdif;
-                    assert(sum(obj.SegLen) == obj.Length)
-                end
             end
             
         end
@@ -134,8 +122,8 @@ classdef ExtrudedFault
             [nx, ny, nz] = deal(G.cartDims(1), G.cartDims(2), G.cartDims(3));
             % Initial checks
             if ~isnan(G.cellDim(2))
-                assert(mod(obj.SegLen(k)/G.cellDim(2), 1)==0)
-                nklayers = obj.SegLen(k)/G.cellDim(2);      % repeat 2D section for nklayers
+                nklayers = round(obj.SegLen(k)/G.cellDim(2));      % repeat 2D section for nklayers
+                assert(mod(nklayers, 1)==0)
             else
                 assert(G.cartDims(2) == numel(obj.SegLen))  % 1 cell per along-strike segment  
                 nklayers = 1;
@@ -155,7 +143,7 @@ classdef ExtrudedFault
                     if G.cartDims(2) == numel(obj.SegLen)       % 1 cell layer per segment
                         idFirst0 = nx*(k-1) + 1;
                     else    % multiple cell layers per segment
-                        nklayers_prev = sum(obj.SegLen(1:k-1)/G.cellDim(2));
+                        nklayers_prev = round(sum(obj.SegLen(1:k-1)/G.cellDim(2)));
                         idFirst0 = nx*(nklayers_prev) + 1;
                     end
                 end

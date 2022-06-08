@@ -34,10 +34,12 @@ if nargin < 6 || isempty(targetCellDim)
         dim = 2;
     else
         dim = 3;
+        nSeg = numel(segLen);
         if isfield(U, 'flexible') && ~U.flexible
             % Full along-strike resolution
             % (much slower, results are not significantly different)
-            targetCellDim = [D/1000, D/100, D/100];   % [thick, length, disp.]
+            LCellDim = segLen(1)/round(100/nSeg);
+            targetCellDim = [D/1000, LCellDim, D/100];   % [thick, length, disp.]
         end
     end
 else
@@ -54,7 +56,6 @@ if dim == 2
     G = computeGeometry(cartGrid([nelem, nelem], [T, D]));
     G.cellDim = [T/nelem, D/nelem];
 elseif dim == 3
-    nSeg = numel(segLen);
     cumSegLen = cumsum(segLen);
     if numel(targetCellDim) == 2
         nelem = [round(T / targetCellDim(1)), ...
@@ -70,12 +71,13 @@ elseif dim == 3
         G = computeGeometry(G);
         G.cellDim = [T/nelem_max, nan, D/nelem_max];
     else
-         nelem = max([round(T / targetCellDim(1)), ...
-                  round(L / targetCellDim(2)), ...
-                  round(D / targetCellDim(3))]);
-         G = computeGeometry(cartGrid([nelem, nelem, nelem], ...
+         nelem = [round(T / targetCellDim(1)), ...
+                  round(L / LCellDim), ...
+                  round(D / targetCellDim(3))];
+         nel_max = max(nelem([1 3]));
+         G = computeGeometry(cartGrid([nel_max, nelem(2), nel_max], ...
                                       [T, L, D]));
-         G.cellDim = [T/nelem, L/nelem, D/nelem];
+         G.cellDim = [T/nel_max, L/nelem(2), D/nel_max];
     end
     
 % elseif dim == 3     % extrude 2D cartesian grid

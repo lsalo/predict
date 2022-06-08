@@ -133,6 +133,9 @@ for n = 1:N
         % Thinner layers reach higher SSF. This is consistent with both
         % experiments and field observations of faults at different
         % scales. Data is very limited, so poorly constrained for now.
+        % TBD: this should be in absolute values of thickness, e.g. > 100m
+        %      reduce, and smaller than 1m increase, around 1cm increase
+        %      again.
         disp_to_thick = faultDisp/thick(n);
         if disp_to_thick < 5
             endpoints = endpoints - 0.2*endpoints;

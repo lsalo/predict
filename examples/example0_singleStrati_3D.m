@@ -42,10 +42,10 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 % 2.3 Flow upscaling options and number of simulations
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
 U.method          = 'tpfa';     % 'tpfa' recommended for 3D
-U.coarseDims      = [1 3 3];    % desired n cells [x, y, z] in coarse grid
-U.flexible        = true;       % default true, much faster but U.coarseDims
+U.coarseDims      = [1 1 1];    % desired n cells [x, y, z] in coarse grid
+U.flexible        = false;       % default true, much faster but U.coarseDims
                                 % will be modified in some realizations.
-Nsim              = 100;        % Number of 3D simulations/realizations
+Nsim              = 10;         % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
 % Organize the input parameters in HW and FW, and use that info to create a 
@@ -92,9 +92,9 @@ parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
     myFaultSection = Fault(mySect, faultDip);
     myFault = ExtrudedFault(myFaultSection, mySect);
     if U_flex
-        [myFault, Us{n}] = myFault.getSegmentationLength(mySect, U, nSeg_fcn);
+        [myFault, Us{n}] = myFault.getSegmentationLength(U, nSeg_fcn);
     else
-        myFault = myFault.getSegmentationLength(mySect, U, nSeg_fcn);
+        myFault = myFault.getSegmentationLength(U, nSeg_fcn);
     end
     G = [];
     for k=1:numel(myFault.SegLen)
