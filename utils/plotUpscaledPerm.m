@@ -39,8 +39,8 @@ end
 % Hist params
 K = log10(perms);
 nbins = 25;
-logMinP = min(min(K));
-logMaxP = max(max(K));
+logMinP = -6; %min(min(K));
+logMaxP = 2; %max(max(K));
 edges = linspace(fix(logMinP)-1, fix(logMaxP)+1, nbins);
 
 

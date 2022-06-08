@@ -130,21 +130,35 @@ for n = 1:N
             end    
         end
         
-        % Thinner layers reach higher SSF. This is consistent with both
+        % Thinner layers reach higher SSF. This is reported in both
         % experiments and field observations of faults at different
         % scales. Data is very limited, so poorly constrained for now.
-        % TBD: this should be in absolute values of thickness, e.g. > 100m
-        %      reduce, and smaller than 1m increase, around 1cm increase
-        %      again.
-        disp_to_thick = faultDisp/thick(n);
-        if disp_to_thick < 5
-            endpoints = endpoints - 0.2*endpoints;
-        elseif disp_to_thick >= 10 && disp_to_thick < 15
-            endpoints = endpoints + 0.6*endpoints;
-        elseif disp_to_thick >= 15 && disp_to_thick < 20
-            endpoints = endpoints + 0.8*endpoints;
-        elseif disp_to_thick >= 20
-            endpoints = 2*endpoints;
+        if thick(n) > 100                % km-scale faults
+            endpoints = endpoints - 0.3*endpoints;
+        elseif thick(n) > 1              % m-scale faults
+            % nothing for now
+        elseif thick(n) > 0.1            % m to cm scale faults
+            disp_to_thick = faultDisp/thick(n);
+            if disp_to_thick < 5
+                endpoints = endpoints - 0.2*endpoints;
+            elseif disp_to_thick >= 10 && disp_to_thick < 15
+                endpoints = endpoints + 0.2*endpoints;
+            elseif disp_to_thick >= 15 && disp_to_thick < 20
+                endpoints = endpoints + 0.3*endpoints;
+            elseif disp_to_thick >= 20
+                endpoints = endpoints + 0.4*endpoints;
+            end
+        elseif thick(n) <= 0.1           % cm to mm scale faults (lab)
+            disp_to_thick = faultDisp/thick(n);
+            if disp_to_thick < 5
+                endpoints = endpoints - 0.2*endpoints;
+            elseif disp_to_thick >= 10 && disp_to_thick < 15
+                endpoints = endpoints + 0.6*endpoints;
+            elseif disp_to_thick >= 15 && disp_to_thick < 20
+                endpoints = endpoints + 0.8*endpoints;
+            elseif disp_to_thick >= 20
+                endpoints = 2*endpoints;
+            end
         end
 
         % Assign to output

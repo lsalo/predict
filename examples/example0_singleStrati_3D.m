@@ -43,8 +43,10 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
 U.method          = 'tpfa';     % 'tpfa' recommended for 3D
 U.coarseDims      = [1 1 1];    % desired n cells [x, y, z] in coarse grid
-U.flexible        = false;       % default true, much faster but U.coarseDims
+U.flexible        = false;      % default true, much faster but U.coarseDims
                                 % will be modified in some realizations.
+                                % Do not set to false if U.coarseDims = [1 1 1]
+                               
 Nsim              = 10;         % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects

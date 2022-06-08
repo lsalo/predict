@@ -473,6 +473,81 @@ classdef ExtrudedFault
            grid on
            set(hf, 'position', [200, 0, 1200, 350]);
            xticks([]), yticks([]), zticks([])
+           
+           % 2D view and smears
+           hf = figure(randi(1000, 1));
+           tiledlayout(1, 2, 'Padding', 'tight', 'TileSpacing', 'tight');
+           nexttile
+           set(gca, 'colormap', copper)
+           plotToolbar(G, log10(obj.Grid.perm(:,1)/(milli*darcy)), ...
+                       'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0.1);
+           xlim([0 obj.Thick]); ylim([0 obj.Disp]); 
+           c = colorbar;
+           c.Label.Interpreter = 'latex'; 
+           c.Label.String = '$\log_{10} k_{xx}$ [mD]';
+           c.Label.FontSize = 12;
+           set(gca,'fontSize', 10)
+           xlabel(['$x$ [' unit ']'], latx{:}); 
+           ylabel(['$y$ [' unit ']'], latx{:})
+           zlabel(['$z$ [' unit ']'], latx{:})
+           ax = gca;
+           ax.DataAspectRatio = [0.05 1 1];
+           ax.ZDir = 'normal';
+           view([0 0])
+           xticks([0 obj.Thick])
+           xticklabels([0 round(obj.Thick*m, 2)])
+           yticks(linspace(0,obj.Length,ntick))
+           yticklabels(round(linspace(0,obj.Length*m,ntick), 1))
+           zticks(linspace(0,obj.Length,ntick))
+           zticklabels(round(linspace(0,obj.Disp*m,ntick), 1))
+           
+           nexttile
+           cmap = copper;
+           set(gca, 'colormap', cmap(1:128, :))
+           plotToolbar(G, log10(obj.Grid.perm(:,1)/(milli*darcy)), ...
+                       obj.Grid.isSmear, 'EdgeColor', [0.8 0.8 0.8], ...
+                       'EdgeAlpha', 0.1);
+           xlim([0 obj.Thick]); zlim([0 obj.Disp]); ylim([0 obj.Length]);
+           c = colorbar;
+           %caxis([min(log10(obj.Grid.perm(:,1)/(milli*darcy))) ...
+           %       max(log10(obj.Grid.perm(:,4)/(milli*darcy)))]);
+           c.Label.Interpreter = 'latex'; 
+           c.Label.String = '$\log_{10} k_{xx}$ [mD] (Clay smears)';
+           c.Label.FontSize = 12;
+           set(gca,'fontSize', 10)  
+           val = zeros(1,3);
+           units = cell(1,3);
+           form = cell(1,3);
+           for n=1:3
+               val(n) = obj.Perm(n)/(milli*darcy);
+               if val(n) < 1e-3
+                   val(n) = val(n)*1000;
+                   units{n} = ' [$\mu$D]';
+                   form{n} = ' %1.3f';
+               elseif val(n) > 999
+                   val(n) = val(n)/1000;
+                   units{n} = ' [D]';
+                   form{n} = ' %1.2f';
+               else
+                   units{n} = ' [mD]';
+                   form{n} = ' %3.3f';
+               end
+           end
+           ax = gca;
+           ax.DataAspectRatio = [0.1 1 1];
+           ax.ZDir = 'normal';
+           view([30 20])
+           if isempty(CG)
+           title(['$k_{jj} =$ ' num2str(val(1), form{1}) units{1}, ...
+                  ' $\vert$ ' num2str(val(2), form{2}) units{2}, ...
+                  ' $\vert$ ' num2str(val(3), form{3}) units{3}], latx{:}, ...
+                  'fontSize', sz(2));
+           else
+               title('$k_{xx}$', latx{:}, 'fontSize', sz(2));
+           end
+           grid on
+           xticks([]), yticks([]), zticks([])
+           set(hf, 'position', [200, 0, 600, 350]);
 
            % upscaled grid figure
            if ~isempty(CG)
