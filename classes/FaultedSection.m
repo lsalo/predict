@@ -232,7 +232,7 @@ classdef FaultedSection
            end
            
            % Plot
-           figure(1)
+           f = figure(1);
            hold on
            for n=1:numel(obj.FW.Thickness)
               x =  [limx(1), xFWf(n), xFWf(n+1), limx(1), limx(1)];
@@ -289,7 +289,7 @@ classdef FaultedSection
                    'fontSize', sz(3), 'color', colrtx)
            end
            hold off
-           if strcmp(unit, 'm'), axis equal, end
+           %if strcmp(unit, 'm'), axis equal, end
            h = gca; h.XAxis.Visible = 'off';
            h.FontSize = sz(3);
            xlim([min([limx', xFWf, xHWf]), max([limx', xFWf, xHWf])])
@@ -297,6 +297,7 @@ classdef FaultedSection
            ylabel(['$z$ [' unit ']'], 'fontSize', sz(2), latx{:})
            title(['$z_\mathrm{f}$,  $z_\mathrm{max} =$ ' num2str(unique(obj.DepthFaulting)) ...
                   ', ' num2str(unique(obj.FW.DepthBurial)) ' m'], latx{:}, 'fontSize', sz(1))
+           set(f, 'position', [200, 0, 300, 400]);
         end
     end
 end
