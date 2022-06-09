@@ -141,12 +141,12 @@ for n = 1:N
             disp_to_thick = faultDisp/thick(n);
             if disp_to_thick < 5
                 endpoints = endpoints - 0.2*endpoints;
-            elseif disp_to_thick >= 10 && disp_to_thick < 15
-                endpoints = endpoints + 0.2*endpoints;
+            %elseif disp_to_thick >= 10 && disp_to_thick < 15
+                %    endpoints = endpoints + 0.2*endpoints;
             elseif disp_to_thick >= 15 && disp_to_thick < 20
-                endpoints = endpoints + 0.3*endpoints;
+                endpoints = endpoints + 0.1*endpoints;
             elseif disp_to_thick >= 20
-                endpoints = endpoints + 0.4*endpoints;
+                endpoints = endpoints + 0.2*endpoints;
             end
         elseif thick(n) <= 0.1           % cm to mm scale faults (lab)
             disp_to_thick = faultDisp/thick(n);
