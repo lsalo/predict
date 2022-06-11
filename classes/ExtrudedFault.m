@@ -475,12 +475,15 @@ classdef ExtrudedFault
            xticks([]), yticks([]), zticks([])
            
            % 2D view and smears
+           G2 = makeFaultGrid(obj.Thick, obj.Disp);
            hf = figure(randi(1000, 1));
            tiledlayout(1, 2, 'Padding', 'tight', 'TileSpacing', 'tight');
            nexttile
            set(gca, 'colormap', copper)
-           plotToolbar(G, log10(obj.Grid.perm(:,1)/(milli*darcy)), ...
-                       'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0.1);
+           %plotToolbar(G, log10(obj.Grid.perm(:,1)/(milli*darcy)), ...
+           %            'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0.1);
+           plotToolbar(G2, log10(faultSection.Grid.perm(:,1)/(milli*darcy)), ...
+                       'EdgeColor', 'none');
            xlim([0 obj.Thick]); ylim([0 obj.Disp]); 
            c = colorbar;
            c.Label.Interpreter = 'latex'; 
@@ -488,18 +491,18 @@ classdef ExtrudedFault
            c.Label.FontSize = 12;
            set(gca,'fontSize', 10)
            xlabel(['$x$ [' unit ']'], latx{:}); 
-           ylabel(['$y$ [' unit ']'], latx{:})
-           zlabel(['$z$ [' unit ']'], latx{:})
+           ylabel(['$z$ [' unit ']'], latx{:})
+           %zlabel(['$z$ [' unit ']'], latx{:})
            ax = gca;
            ax.DataAspectRatio = [0.05 1 1];
            ax.ZDir = 'normal';
-           view([0 0])
+           %view([0 0])
            xticks([0 obj.Thick])
            xticklabels([0 round(obj.Thick*m, 2)])
-           yticks(linspace(0,obj.Length,ntick))
-           yticklabels(round(linspace(0,obj.Length*m,ntick), 1))
-           zticks(linspace(0,obj.Length,ntick))
-           zticklabels(round(linspace(0,obj.Disp*m,ntick), 1))
+           %yticks(linspace(0,obj.Length,ntick))
+           %yticklabels(round(linspace(0,obj.Length*m,ntick), 1))
+           yticks(linspace(0,obj.Disp,ntick))
+           yticklabels(round(linspace(0,obj.Disp*m,ntick), 1))
            
            nexttile
            cmap = copper;

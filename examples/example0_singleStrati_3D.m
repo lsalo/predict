@@ -43,7 +43,7 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
 U.method          = 'tpfa';     % 'tpfa' recommended for 3D
 U.coarseDims      = [1 1 1];    % desired n cells [x, y, z] in coarse grid
-U.flexible        = false;      % default true, much faster but U.coarseDims
+U.flexible        = true;       % default true, much faster but U.coarseDims
                                 % will be modified in some realizations.
                                 % Do not set to false if U.coarseDims = [1 1 1]
                                
@@ -161,10 +161,10 @@ end
 plotId = selectSimId('randm', faults, Nsim);                % simulation index
 %plotId = 1;
 if U_flex
-    faults{plotId}.plotMaterials(faultSections{1}{1}, mySect, ...
+    faults{plotId}.plotMaterials(faultSections{plotId}{1}, mySect, ...
                                  unit_plot, Us{plotId}) 
 else
-    faults{plotId}.plotMaterials(faultSections{1}{1}, mySect, unit_plot, U) 
+    faults{plotId}.plotMaterials(faultSections{plotId}{1}, mySect, unit_plot, U) 
 end
 
 % 3.4. Visualize upscaled permeability
