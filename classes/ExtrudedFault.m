@@ -113,7 +113,7 @@ classdef ExtrudedFault
             
         end
         
-        function obj = assignExtrudedVals(obj, G, faultSection, k)
+        function obj = assignExtrudedVals(obj, G, faultSection, id_seg)
             %
             % Assign cell-based values from 2D fault sections to 
             % 3D fault
@@ -122,13 +122,13 @@ classdef ExtrudedFault
             [nx, ny, nz] = deal(G.cartDims(1), G.cartDims(2), G.cartDims(3));
             % Initial checks
             if ~isnan(G.cellDim(2))
-                nklayers = round(obj.SegLen(k)/G.cellDim(2));      % repeat 2D section for nklayers
+                nklayers = round(obj.SegLen(id_seg)/G.cellDim(2));      % repeat 2D section for nklayers
                 assert(mod(nklayers, 1)==0)
             else
                 assert(G.cartDims(2) == numel(obj.SegLen))  % 1 cell per along-strike segment  
                 nklayers = 1;
             end
-            if k == 1
+            if id_seg == 1
                 obj.Grid.isSmear = false(G.cells.num, 1);
                 obj.Grid.units = zeros(G.cells.num, 1);
                 obj.Grid.vcl = zeros(G.cells.num, 1);
@@ -137,13 +137,13 @@ classdef ExtrudedFault
                 idFirst0 = 1;
             else
                 if ~isnan(G.cellDim(2)) && isfield(G, 'layerSize')    % constant along-strike cell L, layeredGrid
-                    idFirst0 = G.layerSize*sum(obj.SegLen(1:k-1)/G.cellDim(2)) + 1;
+                    idFirst0 = G.layerSize*sum(obj.SegLen(1:id_seg-1)/G.cellDim(2)) + 1;
                 else
                     assert(~isfield(G, 'layerSize'))            % cartGrid
                     if G.cartDims(2) == numel(obj.SegLen)       % 1 cell layer per segment
-                        idFirst0 = nx*(k-1) + 1;
+                        idFirst0 = nx*(id_seg-1) + 1;
                     else    % multiple cell layers per segment
-                        nklayers_prev = round(sum(obj.SegLen(1:k-1)/G.cellDim(2)));
+                        nklayers_prev = round(sum(obj.SegLen(1:id_seg-1)/G.cellDim(2)));
                         idFirst0 = nx*(nklayers_prev) + 1;
                     end
                 end

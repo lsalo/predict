@@ -1,4 +1,4 @@
-function c = findSandConn(M, method)
+function c = findSandConn(M, method, dim, G)
 % From a binary matrix with 0 for sand and 1 for clay, find whether any
 % object (group of connected sand pixels) connects the left boundary to the
 % right boundary (x dimension) and/or the top boundary with the bottom
@@ -28,28 +28,57 @@ function c = findSandConn(M, method)
 % REQUIREMENTS:
 %   Image Processing Toolbox
 %
-assert(ismatrix(M));        % check input is matrix
+if nargin < 3 || dim == 2
+    assert(ismatrix(M));        % check input is matrix
+elseif dim == 3                 % reshape to 3D array for connectivity
+    M_grid = M;
+    [nx, ny, nz] = deal(G.cellDim(1), G.cellDim(2), G.cellDim(3));
+    M = zeros(nx,nz,ny);
+    layerSize = nx*nz;
+    id_layer1 = repmat(1:nx, nz, 1);
+    id_layer1(2:end, :) = id_layer1(2:end, :) + (1:nz-1)'*(nx*ny);
+    id_layer1 = reshape(id_layer1', layerSize, 1);
+    %spy(M(id_layer1));
+    id_layers = [id_layer1 repmat(id_layer1, 1, ny-1) + (1:ny-1)*nx];
+    id_layers = reshape(id_layers, nx*ny*nz, 1);
+    M(:) = M_grid(id_layers);
+    M = flipud(pagetranspose(M));
+end
 M = 1 - M;                  % we want 0 = clay, 1 = sand
 
 % Set pixel connectivity
-conn2D = 8;
-if nargin > 1 && strcmp(method, 'tpfa')
-    conn2D = 4;     
+conn = 8;
+if nargin > 1 && nargin < 3 && strcmp(method, 'tpfa') || ...
+   dim == 2 && strcmp(method, 'tpfa')
+    conn = 4;     
+elseif dim == 3 && strcmp(method, 'tpfa')
+    conn = 6;
 end
 
 % Get bounding box
-L = labelmatrix(bwconncomp(M, conn2D));
+L = labelmatrix(bwconncomp(M, conn));
 B = regionprops(L, 'BoundingBox');
 %imshow(label2rgb(repelem(L, 10, 1),'jet'), 'InitialMagnification','fit');
+%imshow(L, 'InitialMagnification', 'fit');
 %axis on
 
 % Find extension of each object
-dim = size(M);
-c.x = arrayfun(@(s) s.BoundingBox(3), B)';
-c.z = arrayfun(@(s) s.BoundingBox(4), B)';
-c.bc = false(1, 2);
-if any(c.x == dim(1)), c.bc(1) = true; end
-if any(c.z == dim(2)), c.bc(2) = true; end
+sz = size(M);
+if nargin < 3 || dim == 2
+    c.x = arrayfun(@(s) s.BoundingBox(3), B)';
+    c.z = arrayfun(@(s) s.BoundingBox(4), B)';
+    c.bc = false(1, 2);
+    if any(c.x == sz(1)), c.bc(1) = true; end
+    if any(c.z == sz(2)), c.bc(2) = true; end
+elseif dim == 3
+    c.x = arrayfun(@(s) s.BoundingBox(4), B)';
+    c.z = arrayfun(@(s) s.BoundingBox(5), B)';
+    c.y = arrayfun(@(s) s.BoundingBox(6), B)';
+    c.bc = false(1, 3);
+    if any(c.x == sz(1)), c.bc(1) = true; end
+    if any(c.z == sz(2)), c.bc(2) = true; end
+    if any(c.y == sz(3)), c.bc(3) = true; end
+end
 
 
 end
