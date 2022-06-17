@@ -43,6 +43,9 @@ elseif dim == 3                 % reshape to 3D array for connectivity
     id_layers = reshape(id_layers, nx*ny*nz, 1);
     M(:) = M_grid(id_layers);
     M = flipud(pagetranspose(M));
+    if ismatrix(M)  % one layer only, we duplicate layer to make 3D
+        M(:,:,2) = M;
+    end
 end
 M = 1 - M;                  % we want 0 = clay, 1 = sand
 
@@ -72,11 +75,7 @@ if nargin < 3 || dim == 2
     if any(c.z == sz(2)), c.bc(2) = true; end
 elseif dim == 3
     c.x = arrayfun(@(s) s.BoundingBox(4), B)';
-    try
-        c.z = arrayfun(@(s) s.BoundingBox(5), B)';
-    catch
-        a = 3;
-    end
+    c.z = arrayfun(@(s) s.BoundingBox(5), B)'; 
     c.y = arrayfun(@(s) s.BoundingBox(6), B)';
     c.bc = false(1, 3);
     if any(c.x == sz(1)), c.bc(1) = true; end
