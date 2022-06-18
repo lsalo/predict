@@ -27,6 +27,47 @@ latx = {'Interpreter', 'latex'};
 lw = {'linewidth', 1};
 sz = [14, 12];
 
+%% Along-strike segmentation
+vcl_c = [0.4 0.55 0.7 0.85 1];
+nSegv = zeros(Nsim,numel(zf), numel(vcl_c));
+for n=1:numel(vcl_c)
+    for k=1:numel(zf)
+        nSeg = getNSeg(vcl_c(n), isClayVcl, zf(k));
+        nSegv(:,k,n) = nSeg.fcn(Nsim);
+    end
+end
+
+% Hist params
+nbins = 16;
+edg_nSeg = linspace(1, 16, nbins);
+colrs = [0 0 0; 1 0 0; 0 0 1; 0.6 0.6 0.6; 0 1 1];
+
+fh2 = figure(127);
+tiledlayout(1, numel(vcl_c), 'Padding', 'compact', 'TileSpacing', 'compact');
+for n = 1:numel(vcl_c)
+    nexttile
+    for k=1:numel(zf)
+        hold on
+        histogram(nSegv(:, k, n), edg_nSeg, 'Normalization', 'probability', ...
+                  'DisplayStyle', 'stairs',  'DisplayName', ...
+                  ['$z_\mathrm{f} =$ ' num2str(zf(k))], 'EdgeColor', colrs(k, :))
+    end
+    if n == 1
+        xlabel('$s_\mathrm{s}$ [-]', latx{:}, 'fontSize', sz(2))
+        ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+        title(['$N_\mathrm{sim} =$ ' num2str(Nsim), ' $\vert$ $V_\mathrm{cl}$ = ' ...
+               num2str(round(vcl_c(n), 2))], latx{:}, 'fontSize', sz(2))
+        h = legend(latx{:}, 'fontSize', 9, 'location', 'southeast');
+        set(h.BoxFace, 'ColorType','truecoloralpha', ...
+            'ColorData', uint8(255*[1;1;1;.5])); 
+    else
+        title(['$V_\mathrm{cl}$ = ' num2str(round(vcl_c(n), 2))], latx{:}, ...
+               'fontSize', sz(2))
+    end
+    xlim([1, 16]); ylim([0 0.3]); grid on; xticks([1 6 11 16]); yticks(0:.05:.3)
+end
+set(fh2, 'position', [500, 200, 200*numel(vcl_c), 225]);
+
 %% Fault thickness
 f.thick = getFaultThickness();
 thickVal = f.thick.fcn(repelem(f.disp, Nsim, 1));
@@ -86,7 +127,7 @@ zf_all = repelem(zf', numel(thick), 1);
 thick_all = repmat(thick', numel(zf), numel(vcl));
 fdisp = f.disp;
 for j=1:N
-    SSFc = getSSFc(vcl, isClayVcl, zf_all(j), thick_all(j, :), fdisp);
+    SSFc = getSSFc(vcl, isClayVcl, zf_all(j), thick_all(j, :), fdisp, 'shear');
     SSFcVals(:, id, j) = cell2mat(cellfun(@(x) x(Nsim), SSFc.fcn(id), ...
                                           'uniformOutput', false));
 end
