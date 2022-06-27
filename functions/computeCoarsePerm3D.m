@@ -22,6 +22,8 @@ if strcmp(U.method, 'tpfa')
 elseif strcmp(U.method, 'mpfa')
     assert(all(U.coarseDims==1), ...
            "mpfa not implemented for upscaled grids with ncells > 1")
+    assert(~isfield(U, 'flexible') || U.flexible, ...
+           "mpfa too slow for fine-scale grids with full along-strike resolution")
     Dp{1} = 5*barsa;
     if U.useAcceleration == 1
         inB = 'mex';
