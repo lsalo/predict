@@ -1,8 +1,8 @@
-%% Example 0: Single stratigraphic case + analysis
+%% Example 0: Single stratigraphic case + analysis (3D)
 % This is a complete introductory example. It shows how to load the appropriate 
 % MRST modules, define the inputs according to a given faulted stratigraphy, and 
 % generate the output permeability distributions. A comprehensive analysis of 
-% the results is also shown.
+% the results is also shown. The algorithm is run in 3D mode.
 % 
 % We first make sure that the workspace is clean:
 clear
@@ -43,10 +43,11 @@ rho     = 0.6;                  % Corr. coeff. for multivariate distributions
 U.useAcceleration = 1;          % 1 requires MEX setup, 0 otherwise (slower for MPFA).
 U.method          = 'tpfa';     % 'tpfa' recommended for 3D
 U.coarseDims      = [1 1 1];    % desired n cells [x, y, z] in coarse grid
-U.flexible        = true;      % default true, much faster but U.coarseDims
-                                % will be modified in some realizations.
-                                % Do not set to false if U.coarseDims = [1 1 1]
-Nsim              = 10;         % Number of 3D simulations/realizations
+U.flexible        = true;       % default true, much faster but U.coarseDims
+                                % will be modified in some realizations
+                                % unless U.coarseDims = [1 1 1] (do not set
+                                % to false in that case).
+Nsim              = 1000;       % Number of 3D simulations/realizations
 
 % 2.4 Define Stratigraphy and FaultedSection objects
 % Organize the input parameters in HW and FW, and use that info to create a 
@@ -90,8 +91,8 @@ tstart = tic;
 parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
 %for n=1
     % Instantiate fault section and get segmentation for this realization
-    myFaultSection = Fault(mySect, faultDip);
-    myFault = ExtrudedFault(myFaultSection, mySect);
+    myFaultSection = Fault2D(mySect, faultDip);
+    myFault = Fault3D(myFaultSection, mySect);
     if U_flex
         [myFault, Us{n}] = myFault.getSegmentationLength(U, nSeg_fcn);
     else

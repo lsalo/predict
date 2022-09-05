@@ -1,4 +1,4 @@
-classdef Fault
+classdef Fault2D
     %
     % SUMMARY:
     %   Define a FaultedSection object, with corresponding properties,
@@ -64,7 +64,7 @@ classdef Fault
     end
     
     methods
-        function obj = Fault(FS, dip)
+        function obj = Fault2D(FS, dip)
             %
             % We instantiate a Fault object with the fundamental 
             % dimensions.

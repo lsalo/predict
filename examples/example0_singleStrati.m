@@ -1,8 +1,8 @@
-%% Example 0: Single stratigraphic case + analysis
+%% Example 0: Single stratigraphic case + analysis (2D)
 % This is a complete introductory example. It shows how to load the appropriate 
 % MRST modules, define the inputs according to a given faulted stratigraphy, and 
 % generate the output permeability distributions. A comprehensive analysis of 
-% the results is also shown.
+% the results is also shown. The algorithm is run in 2D mode.
 % 
 % We first make sure that the workspace is clean:
 clear
@@ -86,7 +86,7 @@ smears = cell(Nsim, 1);
 tstart = tic;
 parfor n=1:Nsim    % parfor allowed if you have the parallel computing toolbox
 %for n=1
-    myFault = Fault(mySect, faultDip);
+    myFault = Fault2D(mySect, faultDip);
     
     % Get material property (intermediate variable) samples, and fix 
     % along-strike thickness of current realization if 3D.

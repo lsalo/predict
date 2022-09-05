@@ -1,4 +1,4 @@
-classdef ExtrudedFault
+classdef Fault3D
     %
     % SUMMARY:
     % 
@@ -47,7 +47,7 @@ classdef ExtrudedFault
    
     
     methods
-        function obj = ExtrudedFault(faultSection, FS)
+        function obj = Fault3D(faultSection, FS)
             %
             % We instantiate an ExtrudedFault object with the fundamental 
             % dimensions and properties from any 2D faultSection
