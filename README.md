@@ -106,7 +106,7 @@ Examples are provided in the folder <a href="https://github.mit.edu/lsalo/predic
 
 
 ## License
-PREDICT incorporates MRST functionality, so it legally becomes an extension of MRST. This means that, if publicly released, it should be done under the terms of the GPL license.
+PREDICT incorporates MRST functionality, so it legally becomes an extension of MRST. Therefore, it is also released under the terms of the GPL license.
 
 ## Acknowledgements
 This work was funded by **ExxonMobil** through the project *"Modeling and Mitigation of Induced Seismicity and Fault Leakage during CO<sub>2</sub>  storage"*. L.S. and R.J. greatly appreciate the numerous, productive discussions with the ExxonMobil team participating in the project. We also thank ExxonMobil for permission to publish this code.
