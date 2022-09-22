@@ -20,7 +20,7 @@
 
 <p align="center">
   <a href="#overview">Overview</a> •
-  <a href="#citation">Reference</a> •
+  <a href="#citation">Citation</a> •
   <a href="#requirements">Requirements</a> •
   <a href="#download">Download</a> •
   <a href="#installation">Installation</a> •
@@ -59,7 +59,7 @@ Similar to the 2D version, steps two to five are repeated multiple times, each i
 
 ![predict_workflow](readme_docs/predict_workflow_3D.png)
 
-## Reference
+## Citation
 The full description of PREDICT is provided in the paper (and, in particular, the supplement) below. **To be updated** 
 ```
 @article{salo22fk,
@@ -81,7 +81,7 @@ PREDICT can be run on Windows, macOS and Linux (i.e. any OS where <a href="https
 In addition, PREDICT uses the following MATLAB add-on toolboxes:
 
 * <a href="https://www.mathworks.com/products/parallel-computing.html">Statistics and Machine Learning Toolbox</a> (**required**): For generating intermediate variable distributions and samples.
-* <a href="https://www.mathworks.com/products/parallel-computing.html">Parallel Computing Toolbox</a> (*recommended*): Not required, but *highly* recommended for anyone using the code beyond exploration purposes. Time gains when running parallel simulations are illustrated below for 1000 realizations/simulations of a given stratigraphic case.
+* <a href="https://www.mathworks.com/products/parallel-computing.html">Parallel Computing Toolbox</a> (*recommended*): Not required, but *highly* recommended for anyone using the code beyond exploration purposes. Time gains when running parallel simulations are illustrated above for 1000 realizations/simulations of a given stratigraphic case.
 * <a href="https://www.mathworks.com/products/curvefitting.html">Curve Fitting Toolbox</a> (*recommended*): Not required, but may be useful for output analysis.
 
 ## Download
