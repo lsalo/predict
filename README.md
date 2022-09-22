@@ -17,8 +17,6 @@
     <img src="https://img.shields.io/github/last-commit/lsalo/predict?color=blue"
          alt="GitHub last commit">
     <a href="https://doi.org/10.5281/zenodo.7104886"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.7104886.svg" alt="DOI"></a>
-
-
 </p>
 
 <p align="center">
@@ -68,14 +66,29 @@ Similar to the 2D version, steps two to five are repeated multiple times, each i
 
 ## Citation
 The full description of PREDICT is provided in the paper (and, in particular, the supplement) below. **To be updated** 
+
+**Paper**
 ```
-@article{salo22fk,
+@article{salo22faultpermPaper,
   title={Fault permeability from stochastic modeling of clay smears},
-  author={Llu{\'\i}s Sal{\'o}-Salgado and Davis, J Steven and Juanes, Ruben},
+  author={Llu{\'i}s Sal{\'o}-Salgado and Davis, J Steven and Juanes, Ruben},
   year={Accepted for publication in {\em Geology}}
 }
 ```
-If PREDICT is useful for your research, please consider citing our paper.
+
+**Code**
+```
+@software{salo22faultpermCode,
+  author = {Llu{\'i}s Sal{\'o}-Salgado and Davis, J Steven and Juanes, Ruben},
+  doi = {https://doi.org/10.5281/zenodo.7104886},
+  title = {{PREDICT}},
+  url = {https://github.com/lsalo/predict},
+  version = {1.0.0},
+  month = {09},
+  year = {2022}
+}
+```
+If PREDICT is useful for your research, please consider citing it.
 
 ## Requirements
 **Hardware**: When running thousands of simulations, a machine with multiple cores (4+) and few GB of RAM (6-8+) is recommended (2D version). For the 3D version, we recommend a machine with a minimum of 16GB RAM, given that some of the structures will be heavy, but it is possible to run the code with a 8GB RAM laptop. Running times are provided below for 1000 realizations in a given stratigraphy:
