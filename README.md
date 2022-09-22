@@ -59,9 +59,13 @@ Similar to the 2D version, steps two to five are repeated multiple times, each i
 ![predict_workflow](readme_docs/predict_workflow_3D.png)
 
 ## Reference
-The full description of PREDICT is provided in the paper (and, in particular, the supplement) below. **TBD** 
+The full description of PREDICT is provided in the paper (and, in particular, the supplement) below. **To be updated** 
 ```
-bibtex reference here.
+@article{salo22fk,
+  title={Fault permeability from stochastic modeling of clay smears},
+  author={Llu{\'\i}s Sal{\'o}-Salgado and Davis, J Steven and Juanes, Ruben},
+  year={Accepted for publication in {\em Geology}}
+}
 ```
 If PREDICT is useful for your research, please consider citing our paper.
 
