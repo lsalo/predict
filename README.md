@@ -30,7 +30,11 @@
 </p>
 
 ---
-This code was developed as part of my PhD in Prof. Ruben Juanes' lab (<a href="http://juanesgroup.mit.edu">juanesgroup.mit.edu</a> ) at MIT Civil and Environmental Engineering. 
+This code was developed as part of my PhD in Prof. Ruben Juanes' lab (<a href="http://juanesgroup.mit.edu">juanesgroup.mit.edu</a>) at MIT Civil and Environmental Engineering. 
+
+**NOTE**: Several code files are not documented yet. I will be adding documentation in the file headers in September and October, 2022.
+
+**NOTE 2**: Contributions are welcome, please send me a message first (lsalo@mit.edu).
 
 ## Short Description
 Computes upscaled fault permeability distributions using a parameter-based, probabilistic description of clay and sand smears. MATLAB and MRST are required to run this code.
