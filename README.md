@@ -16,6 +16,9 @@
     <a href="https://github.com/lsalo/predict/commits/master">
     <img src="https://img.shields.io/github/last-commit/lsalo/predict?color=blue"
          alt="GitHub last commit">
+    <a href="https://doi.org/10.5281/zenodo.7104886"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.7104886.svg" alt="DOI"></a>
+
+
 </p>
 
 <p align="center">
