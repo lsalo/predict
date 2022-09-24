@@ -1,30 +1,21 @@
 classdef Fault2D
     %
     % SUMMARY:
-    %   Define a FaultedSection object, with corresponding properties,
-    %   based on the footwall and hangingwall stratigraphy. It does not
-    %   depend on fault characteristics, just Stratigraphy objects.
+    %   Define a 2D fault object based on the faulted stratigraphy. 
+    %   Defined using the class FaultedSection and the fault dip.
+    %   A 2D fault has [x, z] dimensions. 
+    %   See below for details on properties and methods.
     %
     %
     % SYNOPSIS:
-    %   mySection = FaultedSection(footwall, hangingwall)
-    %
-    %
-    % DESCRIPTION:
+    %   myFault = Fault2D(mySection, faultDip);
     % 
-    %   TBD
-    %  
-    %   Decreasing porosity and perm with increased shear strain is
-    %   consistent with literature, though more pronounced for
-    %   low-clay content and measured at high confinement (Crawford
-    %   et al., JGR, 2008).
-    % 
+    %
     % REQUIRED PARAMETERS:
-    %   footwall:       Stratigraphy object with corresponding property 
-    %                   values for the footwall of the fault.
+    %   mySection:      FaultedSection object incorporating the information
+    %                   from the footwall and hangingwall stratigraphy.
     %
-    %   hangingwall:    Stratigraphy object with corresponding property 
-    %                   values for the footwall of the fault.
+    %   faultDip:       Fault dip angle.
     %
     %
     % OPTIONAL PARAMETERS:
@@ -32,7 +23,7 @@ classdef Fault2D
     %
     %
     % RETURNS:
-    %   Class instance.
+    %   Fault2D class instance.
     %   
     % ____________________________________________________________________
     
@@ -66,7 +57,7 @@ classdef Fault2D
     methods
         function obj = Fault2D(FS, dip)
             %
-            % We instantiate a Fault object with the fundamental 
+            % We instantiate a Fault2D object with the fundamental 
             % dimensions.
             %
             
@@ -83,11 +74,22 @@ classdef Fault2D
         end
         
         function obj = getMaterialProperties(obj, FS, varargin)
-            % Get material parameters
+            %
+            % Get samples for the fault material parameters based on their
+            % marginal probability distributions. Dependency is accounted
+            % for using Gaussian copulas. See S1.2 in the paper supplement
+            % for details, or the code below.
             %
             % INPUT:
-            %   obj: An instance of Fault
+            %   obj: An instance of Fault2D
             %   FS:  An instance of FaultedSection
+            %
+            % OPTIONAL INPUT:
+            %   corrcoef: linear correlation coefficient for variables with
+            %             dependency. Recommended value = 0.6 (default).
+            %
+            % OUTPUT: property "MatProps" added to obj, with corresponding 
+            %         material parameter values as subfields.
             %
             
             % Optional inputs
@@ -226,6 +228,19 @@ classdef Fault2D
             % each fault material. See documentation in used functions 
             % below for details.
             %
+            % INPUT:
+            %   obj:    An instance of Fault2D with MatProps defined
+            %   FS:     An instance of FaultedSection
+            %   smear:  An instance of Smear
+            %   G:      fault grid (corresponding MRST grid structure)
+            %
+            % OUTPUT: 
+            %   property "MatMap" added to obj, with corresponding 
+            %   subfields (including the 0s and 1s smear matrix).
+            %   
+            %   property "Grid" added to obj, with corresponding subfields
+            %   (cell Vcl, cell porosity and cell permeability)
+            %
             obj.Grid.cellDim = G.cellDim;
             
             % Mapping matrix (material in each grid cell)
@@ -257,6 +272,15 @@ classdef Fault2D
             %
             % Upscale Vcl, Poro and Perm
             %
+            % INPUT:
+            %   obj:    An instance of Fault2D with MatMap and Grid
+            %           properties
+            %   G:      fault grid (corresponding MRST grid structure)
+            %   U:      upscaling options. See example0_singleStrati.m
+            %
+            % OUTPUT: 
+            %   property "Vcl", "Poro" and "Perm" added to obj,
+            %   corresponding  to the upscaled values.
             
             % Upscale Vcl (additive)
             obj.Vcl = mean(obj.Grid.vcl);
@@ -281,7 +305,7 @@ classdef Fault2D
         
         function plotMaterials(obj, FS, G0)
            %
-           %
+           % plot fault materials,etc. See code below for details.
            %
            
            % Generate Grid (Must be same as grid used within Fault)
