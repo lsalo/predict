@@ -2,26 +2,23 @@ classdef Fault3D
     %
     % SUMMARY:
     % 
-    %   TBD
+    %   Define a 3D faulted object based on a 2D fault and the faulted
+    %   stratigraphy. A 3D fault consists of several 2D fault objects
+    %   arranged along strike.
+    %   See below for property and method details
+    %
     %
     % SYNOPSIS:
-    %   myFault = ExtrudedFault(TBD)
-    %
-    %
-    % DESCRIPTION:
-    % 
-    %   TBD
+    %   myFault = Fault3D(myFault2D, myFaultedSection);
     %
     % 
     % REQUIRED PARAMETERS:
-    %   TBD
+    %   myFault2D:      An instance of Fault2D
     %
-    %   footwall:       Stratigraphy object with corresponding property 
-    %                   values for the footwall of the fault.
-    %
-    %
-    % OPTIONAL PARAMETERS:
-    %   'property' - Set property to the specified value.
+    %   myFaultedSection:       An instance of FaultedSection with material
+    %                           property distributions
+    %   
+    %   * See example0_singleStrati_3D.m for workflow
     %
     %
     % RETURNS:
@@ -49,8 +46,15 @@ classdef Fault3D
     methods
         function obj = Fault3D(faultSection, FS)
             %
-            % We instantiate an ExtrudedFault object with the fundamental 
-            % dimensions and properties from any 2D faultSection
+            % We instantiate an Fault3D (extruded fault) object with the 
+            % fundamental dimensions and properties from any Fault2D
+            %
+            % INPUT:
+            %   faultSection:   an instance of Fault2D
+            %   FS:             an instance of FaultedSection
+            %
+            % OUTPUT:
+            %   an instance of Fault3D
             %
             
             % Geometry
@@ -64,6 +68,17 @@ classdef Fault3D
             %
             % Get length of material segments in the strike direction
             %
+            % INPUT:
+            %   obj:   an instance of Fault3D
+            %   U:     structure with upscaling options
+            %   nSeg:  strike-parallel smear segmentation function (see
+            %          getNSeg.m)
+            %
+            % OUTPUT:
+            %   obj:   an instance of Fault3D with SegLen property added
+            %   U:     updated U.coarseDims(2), if needed
+            %
+
             if isa(nSeg, 'double')   % prescribe number of segments (equal length)
                 nSegv = nSeg;
             else                     % Fcn determined from material properties
@@ -118,6 +133,18 @@ classdef Fault3D
             % Assign cell-based values from 2D fault sections to 
             % 3D fault
             %
+            % INPUT:
+            %   obj:   an instance of Fault3D
+            %   G:     3D fault grid (MRST grid structure, see 
+            %          makeFaultGrid)
+            %   faultSection:  an instance of Fault2D
+            %   id_seg: fault section id number, so that cell-based values
+            %           are placed in the correct positions of the 3D fault
+            %
+            % OUTPUT:
+            %   obj:   an instance of Fault3D with cell-based values from
+            %          corresponding 2D section assigned
+            % 
             
             [nx, ny, nz] = deal(G.cartDims(1), G.cartDims(2), G.cartDims(3));
             % Initial checks
@@ -198,7 +225,19 @@ classdef Fault3D
         
         function [obj, CG] = upscaleProps(obj, G, U)
             %
+            % upscale Vcl, Poro and Perm
             %
+            % INPUT:
+            %   obj:   an instance of Fault3D with cell based values from
+            %          all corresponding sections
+            %   G:     3D fault grid (MRST grid structure, see 
+            %          makeFaultGrid)
+            %   U:     upscaling options
+            %
+            % OUTPUT:
+            %   obj:   an instance of Fault3D with values for properties
+            %          Vcl, Poro and Perm
+            %   CG:    coarse grid used for upscaling, defined from U
             %
 
             % Generate coarse grid
@@ -221,7 +260,7 @@ classdef Fault3D
         
         function plotMaterials(obj, faultSection, FS, unit, U)
            %
-           %
+           % plot fault materials,etc. See code below for details.
            %
            
            % utils
