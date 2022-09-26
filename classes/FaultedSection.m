@@ -9,18 +9,13 @@ classdef FaultedSection
     % SYNOPSIS:
     %   mySection = FaultedSection(footwall, hangingwall)
     %
-    %
-    % DESCRIPTION:
-    % 
-    %   TBD
-    %
     % 
     % REQUIRED PARAMETERS:
     %   footwall:       Stratigraphy object with corresponding property 
     %                   values for the footwall of the fault.
     %
     %   hangingwall:    Stratigraphy object with corresponding property 
-    %                   values for the footwall of the fault.
+    %                   values for the hangingwall of the fault.
     %
     %
     % OPTIONAL PARAMETERS:
@@ -55,9 +50,32 @@ classdef FaultedSection
     methods
         function obj = FaultedSection(footwall, hangingwall, faultDip, varargin)
             % We instantiate the object with the FW and HW objects required
-            % to construct it.
+            % to construct it, as well as optional inputs.
             %
-            % Example: mySect = FaultedSection(footwall, hangingwall)
+            % INPUTS:
+            %   footwall:       Footwall Stratigraphy object
+            %   hangingwall:    Hangingwall Stratigraphy object
+            %   faultDip:       Fault dip angle, in degrees
+            %
+            % OPTIONAL INPUTS:
+            %   isUndercompacted: default set to false. Do not set true 
+            %                     unless overpressured formation
+            %   failure:        default 'shear', should be left defaulted
+            %                   in most cases. Other possibility is
+            %                   'hybrid', currently only calibrated for
+            %                   small (sandbox) faults based on work by
+            %                   Prof. Urai's group (e.g., Kettermann 
+            %                   et al., JGR:SE (2017).
+            %   maxPerm:        if you want to ensure permeability of any
+            %                   material in the fault is never above a 
+            %                   given value (cap), pass that value in mD
+            %   
+            %
+            % OUTPUT:
+            %   obj with initial properties assigned
+            %
+            % Example: mySect = FaultedSection(footwall, hangingwall, ...
+            %                                  faultDip)
             %
             
             % Optional inputs
@@ -65,6 +83,8 @@ classdef FaultedSection
             opt.isUndercompacted = false;
             opt.failure = 'shear';
             opt = merge_options_relaxed(opt, varargin{:});
+            
+            % Assign initial props from inputs
             obj.IsUndercompacted = opt.isUndercompacted;
             obj.MaxPerm = opt.maxPerm;
             obj.Failure = opt.failure;
@@ -105,30 +125,46 @@ classdef FaultedSection
         end
         
         function vcl = get.Vcl(obj)
-            % 
+            % get layer Vcl
            vcl = [obj.FW.Vcl obj.HW.Vcl]; 
         end
         
         function isClayVcl = get.IsClayVcl(obj)
-            % 
+            % get threshold Vcl at or above which a layer will produce
+            % clay smear
            assert(obj.FW.IsClayVcl == obj.HW.IsClayVcl)
            isClayVcl = obj.FW.IsClayVcl; 
         end
         
         function zf = get.DepthFaulting(obj)
-            % 
+            % get faulting depth
            zf = [obj.FW.DepthFaulting obj.HW.DepthFaulting]; 
         end
         
         function zf = get.DepthBurial(obj)
-            % 
+            % get burial depth
            zf = [obj.FW.DepthBurial obj.HW.DepthBurial]; 
         end
         
         function obj = getMatPropDistr(obj)
-           %
-           % TBD
-           %
+            %
+            % Get material property distributions, which depend on the
+            % inputs only (as indicated in the HW, FW, and then
+            % FaultedSection objects).
+            % Refer to the functions in the code below for details
+            % on how each distribution is computed.
+            %
+            %
+            % INPUTS:
+            %   obj:       An instance of FaultedSection with initial
+            %              properties
+            %   
+            %
+            % OUTPUT:
+            %   obj with MatPropDistr property and subfields assigned
+            %
+            % Example: mySect = mySect.getMatPropDistr();
+            %
             
            % Shorten input names
            zf   = obj.DepthFaulting;
@@ -174,9 +210,10 @@ classdef FaultedSection
         
         function plotStrati(obj, faultThick, faultDip, unit, fontSize)
            %
-           %
+           % Plot stratgraphy, see code for details.
            % This plot considers that dip is constant for all layers in FW
            % and same for the HW (FW and HW dips may be different).
+           %
            
            % Multiplier
            if strcmp(unit, 'm')
