@@ -1,18 +1,21 @@
 classdef Smear
     %
     % SUMMARY:
-    % Get a smear object with:
+    % Get a 2D [x, z] smear object with:
     %   - smear thickness (Thick).
     %   - apparent smear thickness in fault (ThickInFault).
-    %   - smear length (Length).
-    %   - maximum smear segment length (SegLenMax).
+    %   - smear down-dip length (Length).
+    %   - maximum down-dip smear segment length (SegLenMax).
+    %   - Length of smear domains in the fault (Domain Length).
     %   - Smear fraction in the corresponding domain within the fault 
     %     (Psmear). 
+    % Further description on the dimensions of clay smears are provided in 
+    % the paper supplement
     %
     %
     % SYNOPSIS:
-    %   smear = Smear(myFaultedSection, myFault, Nsim)
-    %
+    %   smear = Smear(myFaultedSection, myFault, G, Nsim)
+    %   * see examples for usage workflow in 2D and 3D
     %
     % DESCRIPTION:
     %   See constructor for details.
@@ -22,11 +25,8 @@ classdef Smear
     %   myFaultedSection: An instance of FaultedSection.
     %   myFault: Usually, an instance of Fault with valid properties/fields 
     %            (see Fault class documentation).
+    %   G: Fault grid (MRST grid structure)
     %   Nsim: Number of smear property realizations (typically 1).
-    %
-    %
-    % OPTIONAL PARAMETERS:
-    %   none
     %
     %
     % RETURNS:
@@ -37,7 +37,7 @@ classdef Smear
     properties (SetAccess = protected)
         Thick
         ThickInFault
-        Length
+        Length      
         SegLenMax
         DomainLength
         Psmear
@@ -50,6 +50,17 @@ classdef Smear
     
     methods
         function smear = Smear(FS, fault, G, Nsim)
+            %
+            % instantiate a Smear object
+            % 
+            % INPUTS:
+            %   FS:     an instance of FaultedSection
+            %   fault:  an instance of Fault2D with material property values
+            %   G:      fault grid (MRST grid)
+            %   Nsim:   number of smear realizations
+            %   
+            %   * refer to examples for workflow
+            %
             % Key references:
             %   Childs et al., GSLSP (2007)
             %   Egholm et al., Geology (2008)
@@ -63,14 +74,14 @@ classdef Smear
             %                    et al., Geology (2008), Eq. 5.
             %           - ThickInFault: apparent smear thickness in the dir
             %                           parallel to a diagonal from the 
-            %                           top left or top right of fault to 
+            %                           top left or top right of the fault to 
             %                           bottom right or bottom left of 
             %                           fault.
-            %           - Length: Total smear length within the fault, as 
+            %           - Length: Total smear down-dip length within the fault, as 
             %                     obtained from the source layer thickness, 
             %                     smear angle in the fault (alpha), and 
             %                     SSFc.
-            %           - SegLenMax: The maximum length of an individual 
+            %           - SegLenMax: The maximum down-dip length of an individual 
             %                        segment of a smear within the fault.
             %                        The closer the SSFc is to the upper
             %                        bound, the more fragmented (same logic
