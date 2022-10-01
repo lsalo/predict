@@ -2,16 +2,20 @@ classdef Stratigraphy       % Value class to define a data structure.
     %
     % SUMMARY:
     %   Define a stratigraphy object with appropriate fields, such
-    %   as number of layers, thickness of each layer, clay content of each
+    %   as number of layers, thickness of each layer, clay fraction of each
     %   layer, and so on. 
     %   For each input array, the first index corresponds to the 
     %   deepest layer, and the last one to the shallowest.
+    %   Each side of the fault is definied separately (i.e., an instance of
+    %   this class will be for the footwall and another one for the
+    %   hangingwall)
     %
     % 
     % REQUIRED PARAMETERS:
     %   thickness:  Thickness of each layer on that side of the 
     %               fault (hangingwall or footwall). Can be a single value
-    %               or a double array of size 1xN [meters].
+    %               or a double array of size 1xN, where N is the number of
+    %               layers. Units: [m]
     %               For horizontal layers, it is the true thickness if no
     %               dip angle is passed. If dip angle is passed (even if
     %               0), then it is the apparent thickness on the fault.
@@ -22,10 +26,15 @@ classdef Stratigraphy       % Value class to define a data structure.
     %   vcl:        Clay volume fraction of each layer. Must be a double   
     %               array of size 1xN, where N is the number of layers.
     %
+    %   For the hangingwall object, set the property 'IsHW' to 1 when
+    %   defining the object. You will also need to pass the number of 
+    %   footwall layers (property 'NumLayersFW'). See examples below.
+    %
     %
     % RECOMMENDED PARAMETERS:
-    %   'DepthFaulting':  Faulting depth, in meters.
-    %   'DepthBurial':    Maximum burial depth, in meters.
+    %   'DepthFaulting':  Faulting depth, in meters (single value)
+    %   'DepthBurial':    Maximum burial depth, in meters. One value for
+    %                     each layer.
     %
     %
     % OPTIONAL PARAMETERS:
@@ -48,6 +57,8 @@ classdef Stratigraphy       % Value class to define a data structure.
     %                           'DepthBurial', 2000)
     %   hangingwall = Stratigraphy(thickness, vcl, 'Dip', dip, 'IsHW', 1, ...
     %                              'NumLayersFW', footwall.NumLayers)
+    %
+    %   * See the folder examples for workflow on how to use this  class
     % 
     % ____________________________________________________________________
     
@@ -83,6 +94,21 @@ classdef Stratigraphy       % Value class to define a data structure.
         function obj = Stratigraphy(thickness, vcl, varargin)
             %
             %  Construct an instance of this class with properties
+            %
+            % REQUIRED INPUTS
+            %   Thickness:  thickness of each layer in m
+            %   Vcl:        clay volume fraction of each layer
+            %
+            % RECOMMENDED INPUTS
+            %   DepthFaulting:  sediment faulting depth
+            %   DepthBurial:    maximum burial depth of sediments
+            %
+            %   * See full description at the top of this class, as well as
+            %   properties above
+            %
+            % OUTPUT
+            %   obj: an instance of Stratigraphy with corresponding 
+            %   properties set.
             %
 
             % Required inputs
