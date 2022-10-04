@@ -1,11 +1,23 @@
 function Perm = computeCoarsePerm3D(G, permG, U, CG)
 %
 % SUMMARY
-% Obtain the permeability of a single-cell grid equivalent to that of the
+% Obtain the permeability of the coarse grid equivalent to that of the
 % fine grid, i.e. upscale the fine-grid permeability. This is accomplished
 % using flow-based upscaling. Flow-based upscaling consists in imposing an
 % axial p-drop in each direction, while maintaining the other two
-% boundaries sealed.
+% boundaries sealed (similar to laboratory experiments).
+%
+% INPUTS: 
+%   G:      fault grid (MRST grid, fine-scale)
+%   permG:  fine-grid anisotropic permeability, typically ncells x 6
+%   U:      upscaling options (U.method 'tpfa' or 'mpfa', however 'mpfa' is
+%                              restricted to certain conditions, see below)
+%   CG:     coarse grid (MRST grid, based on partition of G)
+%   * see examples for workflow, and Fault3D for input definition
+%
+%  OUTPUT: 
+%   Perm =  upscaled permeability (n coarse cells x 3). First column is
+%           kxx, second is kyy and third is kzz.
 % 
 
 % Initial variables
@@ -41,51 +53,5 @@ elseif strcmp(U.method, 'mpfa')
 else
     error("U.method not supported. Choose 'tpfa' or 'mpfa'.")
 end
-
-% Plot
-% cmap = copper;
-% f2 = figure(2);
-% colormap(cmap);
-% plotCellData(G, log10(extrudedPerm(:,1)/(milli*darcy)), 'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0.1)
-% ax = gca;
-% colorbar;
-% %xlim([0 T]); ylim([0 D]);
-% title(['Number of cells = ' num2str(G.cells.num)])
-% set(f2, 'position', [400, 100, 600, 600]);
-% ax.DataAspectRatio = [0.2 1 1];
-% xlabel('x [m]'), ylabel('y [m]'); zlabel('z [m]');
-% view([30 20])
-% ax.ZDir = 'normal';
-% 
-% f3 = figure(3);
-% subplot(1,2,1)
-% plotCellData(G, log10(extrudedPerm(isSmear,1)/(milli*darcy)), isSmear, ...
-%              'EdgeColor', [0.8 0.8 0.8], 'EdgeAlpha', 0.1)
-% ax = gca;
-% colormap(ax, cmap(1:100, :));
-% colorbar;
-% %xlim([0 T]); ylim([0 D]);
-% title(['Clay smear perm'])
-% set(f3, 'position', [100, 100, 500, 600]);
-% ax.DataAspectRatio = [0.2 1 1];
-% xlabel('x [m]'), ylabel('y [m]'); zlabel('z [m]');
-% view([30 20])
-% ax.ZDir = 'normal';
-% grid on
-% 
-% subplot(1,2,2)
-% plotCellData(G, log10(extrudedPerm(~isSmear,1)/(milli*darcy)), ~isSmear, ...
-%              'EdgeColor', [0.2 0.2 0.2], 'EdgeAlpha', 0.1)
-% ax = gca;
-% colormap(ax, cmap(156:end,:));
-% colorbar;
-% %xlim([0 T]); ylim([0 D]);
-% title(['Sand smear perm'])
-% set(f3, 'position', [100, 100, 900, 500]);
-% ax.DataAspectRatio = [0.2 1 1];
-% %xlabel('x [m]'), ylabel('y [m]'); zlabel('z [m]');
-% view([30 20])
-% ax.ZDir = 'normal';
-% grid on
 
 end
