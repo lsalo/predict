@@ -88,7 +88,7 @@ The full description of PREDICT is provided in the paper (and, in particular, th
   year = {2022}
 }
 ```
-If PREDICT is useful for your research, please consider citing it.
+If PREDICT is useful for your research, please cite it where appropriate.
 
 ## Requirements
 **Hardware**: When running thousands of simulations, a machine with multiple cores (4+) and few GB of RAM (6-8+) is recommended (2D version). For the 3D version, we recommend a machine with a minimum of 16GB RAM, given that some of the structures will be heavy, but it is possible to run the code with a 8GB RAM laptop. Running times are provided below for 1000 realizations in a given stratigraphy:
@@ -100,14 +100,14 @@ PREDICT can be run on Windows, macOS and Linux (i.e. any OS where <a href="https
 
 In addition, PREDICT uses the following MATLAB add-on toolboxes:
 
-* <a href="https://www.mathworks.com/products/parallel-computing.html">Statistics and Machine Learning Toolbox</a> (**required**): For generating intermediate variable distributions and samples.
+* <a href="https://www.mathworks.com/products/statistics.html">Statistics and Machine Learning Toolbox</a> (**required**): For generating intermediate variable distributions and samples.
 * <a href="https://www.mathworks.com/products/parallel-computing.html">Parallel Computing Toolbox</a> (*recommended*): Not required, but *highly* recommended for anyone using the code beyond exploration purposes. Time gains when running parallel simulations are illustrated above for 1000 realizations/simulations of a given stratigraphic case.
 * <a href="https://www.mathworks.com/products/curvefitting.html">Curve Fitting Toolbox</a> (*recommended*): Not required, but may be useful for output analysis.
 
 ## Download
 * **MATLAB**: Can be installed following the instructions <a href="https://www.mathworks.com/products/get-matlab.html?s_tid=gn_getml">on the website</a>, and your academic institution likely provides campus-wide access free of charge.
-* **MRST**: The latest public release of MRST can be downloaded <a href="https://www.sintef.no/projectweb/mrst/download/">here</a>:
-* **PREDICT**: The repository can be cloned or downloaded from <a href="https://github.mit.edu/lsalo/predict">here</a> (green button "clone or download"). [**TBD**]
+* **MRST**: The latest public release of MRST can be downloaded <a href="https://www.sintef.no/projectweb/mrst/download/">here</a>.
+* **PREDICT**: This repository can be cloned or downloaded from <a href="https://github.com/lsalo/predict">the top of the page</a> (green button "code"). 
 
 ## Installation
 We show installation steps for both MRST and PREDICT.
