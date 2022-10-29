@@ -65,22 +65,36 @@ Similar to the 2D version, steps two to five are repeated multiple times, each i
 ![predict_workflow](readme_docs/predict_workflow_3D.png)
 
 ## Citation
-The full description of PREDICT is provided in the paper (and, in particular, the supplement) below. **To be updated** 
+The full description of PREDICT is provided in the paper (and, in particular, the supplement) below.
 
 **Paper**
 ```
-@article{salo22faultpermPaper,
+@article{salo22faultPaper,
   title={Fault permeability from stochastic modeling of clay smears},
   author={Llu{\'i}s Sal{\'o}-Salgado and Davis, J Steven and Juanes, Ruben},
-  year={Accepted for publication in {\em Geology}}
+  year={2023},
+  journal={Geology},
+  volume={51},
+  number={1},
+  publisher={Geological Society of America},
+  doi={10.1130/G50739.1}
+}
+```
+```
+@article{salo22faultSupplement,
+  title={Supplemental Material: Fault permeability from stochastic modeling of clay smears},
+  author={Llu{\'i}s Sal{\'o}-Salgado and Davis, J Steven and Juanes, Ruben},
+  year={2022},
+  url={https://gsapubs.figshare.com/articles/journal_contribution/Supplemental_Material_Fault_permeability_from_stochastic_modeling_of_clay_smears/21397161},
+  doi={10.1130/GEOL.S.21397161.v1}
 }
 ```
 
 **Code**
 ```
-@software{salo22faultpermCode,
+@software{salo22faultCode,
   author = {Llu{\'i}s Sal{\'o}-Salgado and Davis, J Steven and Juanes, Ruben},
-  doi = {https://doi.org/10.5281/zenodo.7104886},
+  doi = {10.5281/zenodo.7104886},
   title = {{PREDICT}},
   url = {https://github.com/lsalo/predict},
   version = {1.0.0},
