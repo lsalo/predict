@@ -37,6 +37,9 @@ classdef FaultedSection
         IsUndercompacted% Undercompacted section? Default: false
         MaxPerm         % Perm Cap for FZ materials? Default: [] (none)
         Failure         % shear (default) or hybrid (near-surface)
+        TotThick        % if clay source thicknesses > what is present in window.
+                        % Empty or 1x2 cell, containing apparent and true
+                        % total thicknesses, respectively.
     end
     
     properties (Dependent, Hidden)
@@ -69,6 +72,14 @@ classdef FaultedSection
             %   maxPerm:        if you want to ensure permeability of any
             %                   material in the fault is never above a 
             %                   given value (cap), pass that value in mD
+            %   totThick:       if the thickness of any clay layer is
+            %                   larger than what is contained in the throw 
+            %                   window, you can pass an array indicating 
+            %                   the thickness of all layers 
+            %                   [FW, HW], with nan for sand layers and clay
+            %                   layers fully included in throw window. [m]
+            %                   True or apparent thickness interpreted
+            %                   in the same way as FW/HW T.
             %   
             %
             % OUTPUT:
@@ -82,6 +93,8 @@ classdef FaultedSection
             opt.maxPerm = [];                   % mD
             opt.isUndercompacted = false;
             opt.failure = 'shear';
+            opt.totThick = [];
+            
             opt = merge_options_relaxed(opt, varargin{:});
             
             % Assign initial props from inputs
@@ -90,20 +103,47 @@ classdef FaultedSection
             obj.Failure = opt.failure;
             
             % Assign or compute apparent and true thicknesses
+            if ~isempty(opt.totThick) && any(~isnan(opt.totThick))
+                cout = true;
+                totThickFW = opt.totThick(footwall.Id);
+                totThickHW = opt.totThick(hangingwall.Id);
+                totTapFW = totThickFW; totTapHW = totThickHW;
+                totTFW = totThickFW;   totTHW = totThickHW;
+                FWtot = footwall; HWtot = hangingwall;  
+                FWtot.Thickness = totThickFW; HWtot.Thickness = totThickHW;
+            else
+                cout = false;
+            end
             if footwall.IsThickApp == 1
                 TapFW = footwall.Thickness;
                 TFW = getThick(footwall, hangingwall, faultDip);
+                if cout && any(~isnan(totThickFW))
+                    totTapFW = totThickFW;
+                    totTFW = getThick(FWtot, HWtot, faultDip);
+                end
             else
                 TapFW = getApparentThick(footwall, hangingwall, faultDip);
                 TFW = footwall.Thickness;
+                if cout && any(~isnan(totThickFW))
+                    totTapFW = getApparentThick(FWtot, HWtot, faultDip);
+                    totTFW = totThickFW;
+                end
             end
             if hangingwall.IsThickApp == 1
                 TapHW = hangingwall.Thickness;
                 [~, THW] = getThick(footwall, hangingwall, faultDip);
+                if cout && any(~isnan(totThickHW))
+                    totTapHW = totThickHW;
+                    [~, totTHW] = getThick(FWtot, HWtot, faultDip);
+                end
             else
                 [~, TapHW] = getApparentThick(footwall, hangingwall, ...
                                               faultDip);
                 THW = hangingwall.Thickness;
+                if cout && any(~isnan(totThickHW))
+                    [~, totTapHW] = getApparentThick(FWtot, HWtot, faultDip);
+                    totTHW = totThickHW;
+                end
             end
             
             % Checks
@@ -116,6 +156,11 @@ classdef FaultedSection
             obj.HW = hangingwall;
             obj.Tap = [TapFW, TapHW];
             obj.Thick = [TFW, THW];
+            if cout
+                obj.TotThick = {[totTapFW, totTapHW], [totTFW, totTHW]};
+            else
+                obj.TotThick = [];
+            end
         end
         
         function parentId = get.ParentId(obj)
@@ -184,7 +229,7 @@ classdef FaultedSection
            % SSFc
            obj.MatPropDistr.ssfc = getSSFc(obj.Vcl, obj.IsClayVcl, zf, ...
                                            obj.Thick, Disp, obj.Failure, ...
-                                           obj.HW.Id);
+                                           obj.TotThick, obj.HW.Id);
                 
            % Perm Anisotropy Ratio
            obj.MatPropDistr.permAnisoRatio = ...

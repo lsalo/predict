@@ -191,7 +191,7 @@ else
     xlabel(labls(1), latx{:}, 'fontSize', sz(2))
     ylabel('P [-]', latx{:}, 'fontSize', sz(2))
     xlim([fix(logMinP)-1 fix(logMaxP)+1])
-    ylim([0 0.6]); yticks(0:.2:.6)
+    ylim([0 1]); yticks(0:.2:1)
     grid on
     %xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
     
@@ -211,7 +211,7 @@ else
     xlabel('$\hat{k}_{yy}$ [mD]', latx{:}, 'fontSize', sz(2))
     ylabel('P [-]', latx{:}, 'fontSize', sz(2))
     xlim([fix(logMinP)-1 fix(logMaxP)+1])
-    ylim([0 0.6]); yticks(0:.2:.6)
+    ylim([0 1]); yticks(0:.2:1)
     grid on
     %xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
     hold off
@@ -223,7 +223,7 @@ else
     xlabel(labls(3), latx{:}, 'fontSize', sz(2))
     ylabel('P [-]', latx{:}, 'fontSize', sz(2))
     xlim([fix(logMinP)-1 fix(logMaxP)+1])
-    ylim([0 0.6]); yticks(0:.2:.6)
+    ylim([0 1]); yticks(0:.2:1)
     grid on
     %xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
     

@@ -1,4 +1,5 @@
-function SSFc = getSSFc(vcl, isClayVcl, zf, thick, faultDisp, failureType, idHW)
+function SSFc = getSSFc(vcl, isClayVcl, zf, thick, faultDisp, ...
+                        failureType, totThick, idHW)
 % Get critical shale smear factor (SSFc), i.e. the value at which a given 
 % smear becomes discontinuous. Note that an object fault with field disp
 % must be passed as well.
@@ -13,6 +14,8 @@ function SSFc = getSSFc(vcl, isClayVcl, zf, thick, faultDisp, failureType, idHW)
 %   zf: faulting depth [m] (1x1 or 1x2 array if idHW is passed)
 %   thick: true thickness of each layer [m] (1xN array)
 %   faultDisp: fault Displacement [m]
+%   totThick: true thickness of clay source layers extending beyond throw
+%             window [m] (1xN array)
 %   idHW: [optional] indices of layers in HW (e.g. 3:5)
 %
 % MODELS:
@@ -74,18 +77,23 @@ SSFc.dist = cell(1, N);
 SSFc.fcn   = cell(1, N);
 
 % Expand faulting depths
-if nargin > 6
+if nargin > 7
     zf = [repelem(zf(1), idHW(1)-1), repelem(zf(2), numel(idHW))];
 else
     zf = repelem(zf, numel(vcl));
 end
 assert(numel(zf) == numel(vcl));
 
+% Consider total clay thickness extending beyond throw window
+if ~isempty(totThick) 
+   idBeyond         = ~isnan(totThick{2});
+   thick(idBeyond)  = totThick{2}(idBeyond);
+end
+
 % Maximum and minimum available thickness for triangular mode placement
-thickMax = faultDisp;
+thickMax = max(faultDisp, thick, 'omitnan');
 thickMin = faultDisp/50;            % algorithm limit accounting for
                                     % resoultion when meshing fault. 
-
 for n = 1:N
     if vcl(n) >= isClayVcl    
         % 1. SSFc_min and SSFc_max (endpoints) for each layer
@@ -165,8 +173,8 @@ for n = 1:N
         SSFc.range{n} = endpoints;
 
         % 3. Compute mode of triangular distribution to sample from.
-        assert(thick(n) <= thickMax)
-        peak = (1 - min([1; ((thickMax - thick(n))/(thickMax - thickMin))])) ...
+        assert(thickMax(n) >= thick(n));
+        peak = (1 - min([1; ((thickMax(n) - thick(n))/(thickMax(n) - thickMin))])) ...
                .* (endpoints(2) - endpoints(1)) + endpoints(1);
         SSFc.param{n} = peak;
 

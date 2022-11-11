@@ -106,8 +106,13 @@ classdef Smear
             % Get required vars
             vcl = FS.Vcl;
             isClayVcl = FS.IsClayVcl;
-            T = FS.Thick;
-            Tap = FS.Tap;
+            if ~isempty(FS.TotThick)    % clay layer(s) beyond throw window
+                Tap = max(FS.Tap, FS.TotThick{1}, 'omitnan');
+                T = max(FS.Thick, FS.TotThick{2}, 'omitnan');
+            else
+                Tap = FS.Tap;
+                T = FS.Thick;
+            end
             zf = FS.DepthFaulting;
             
             % Initialize
