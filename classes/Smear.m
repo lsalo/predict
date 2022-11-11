@@ -145,6 +145,17 @@ classdef Smear
                 end
                 termCot = cotd(theta_c) - cotd(theta_s);
                 smear.Thick(n, :)  = termCot .* T(idc).^2 ./ Lf;
+                if ~isempty(FS.TotThick)  
+                    % Smear thicknes scales with clay source thickness
+                    % squared so the whole source thickness should be
+                    % accounted for. However, only a fraction of the
+                    % total smear thickness will appear in this window,
+                    % based on the relative source thickness present.
+                    ido = ~isnan(FS.TotThick{2}(idc));
+                    Tin = FS.Thick(idc);
+                    To  = T(idc);
+                    smear.Thick(n, ido) = (Tin(ido)./To(ido)).*smear.Thick(n, ido);
+                end
                 
                 
                 % (2) Thickness in Fault or Apparent thickness in fault
