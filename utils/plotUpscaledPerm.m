@@ -1,4 +1,4 @@
-function plotUpscaledPerm(faults, dim, plotOpt)
+function plotUpscaledPerm(faults, dim, plotOpt, fignum)
 %
 %
 %
@@ -47,13 +47,18 @@ edges = linspace(fix(logMinP)-1, fix(logMaxP)+1, nbins);
 % Plot
 if nargin > 2 && strcmp(plotOpt, 'histOnly')
     % Histograms
-    fh = figure(randi(10000, 1, 1));
-    %tiledlayout(3, 1, 'Padding', 'compact', 'TileSpacing', 'compact');
-    tiledlayout(1, 3, 'Padding', 'compact', 'TileSpacing', 'compact');
+    if nargin < 4
+        fh = figure(randi(10000, 1, 1));
+        %tiledlayout(3, 1, 'Padding', 'compact', 'TileSpacing', 'compact');
+        tiledlayout(1, 3, 'Padding', 'compact', 'TileSpacing', 'compact');
+        nexttile(1)
+    else
+        fh = figure(fignum);
+        hold on
+    end
     labls = ["$\log_{10}(k_{xx}$ [mD])", ...
         "$\log_{10}(k_{yy}$ [mD])", ...
         "$\log_{10}(k_{zz}$ [mD])"];
-    nexttile(1)
     histogram(K(:, 1), edges, 'Normalization', 'probability', ...
         'FaceColor', [0.5 0.5 0.5], 'FaceAlpha', 1)
     xlabel(labls(1), latx{:}, 'fontSize', sz(2))
