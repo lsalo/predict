@@ -48,7 +48,8 @@ edges = linspace(fix(logMinP)-1, fix(logMaxP)+1, nbins);
 if nargin > 2 && strcmp(plotOpt, 'histOnly')
     % Histograms
     fh = figure(randi(10000, 1, 1));
-    tiledlayout(3, 1, 'Padding', 'compact', 'TileSpacing', 'compact');
+    %tiledlayout(3, 1, 'Padding', 'compact', 'TileSpacing', 'compact');
+    tiledlayout(1, 3, 'Padding', 'compact', 'TileSpacing', 'compact');
     labls = ["$\log_{10}(k_{xx}$ [mD])", ...
         "$\log_{10}(k_{yy}$ [mD])", ...
         "$\log_{10}(k_{zz}$ [mD])"];
@@ -93,7 +94,8 @@ if nargin > 2 && strcmp(plotOpt, 'histOnly')
     ylim([0 1]); yticks(0:.2:1)
     grid on
     %xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
-    set(fh, 'position', [200, 200, 150, 350]);
+    %set(fh, 'position', [200, 200, 150, 350]);
+    set(fh, 'position', [200, 200, 600, 200]);
     
 else
     if nargin > 2 && strcmp(plotOpt, 'all')
