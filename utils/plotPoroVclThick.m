@@ -53,12 +53,14 @@ nexttile(2)
 hold on
 histogram(disp./thick , edg_T, 'Normalization', 'probability','FaceColor', [0.3 0.3 0.3])
 xlabel('$\mathrm{f}_\mathrm{D} / \mathrm{f}_\mathrm{T}$ [-]', latx{:}, 'fontSize', sz(2))
-ylabel('P [-]', latx{:}, 'fontSize', sz(2))
-title(['$N_\mathrm{sim} =$ ' num2str(numel(faults))], ...
-         latx{:}, 'fontSize', sz(1))
+%ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+%title(['$N_\mathrm{sim} =$ ' num2str(numel(faults))], ...
+%         latx{:}, 'fontSize', sz(1))
 xlim([8 1100])
-ylim([0 0.2])
-yticks(0:.04:.2)
+% ylim([0 0.2])
+% yticks(0:.04:.2)
+ylim([0 1])
+yticks(0:.2:1)
 grid on
 set(gca,'XScale','log')
 xticks([10 100 1000])
@@ -72,7 +74,7 @@ hold on
 histogram(poro , edges, 'Normalization', 'probability', ...
           'FaceColor', [0.3 0.3 0.3])
 xlabel('$\mathrm{f}_\mathrm{n}$ [-]', latx{:}, 'fontSize', sz(2))
-ylabel('P [-]', latx{:}, 'fontSize', sz(2))
+%ylabel('P [-]', latx{:}, 'fontSize', sz(2))
 xlim([0 1])
 ylim([0 1])
 grid on
