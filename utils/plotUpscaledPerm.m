@@ -293,14 +293,14 @@ else
     % Scatters
     %tidss = [2 3 4 6 7 8];
     tidss = [4 5 6];
-    x = [1 2 3];
-    y = [2 3 1];
+    x = [1 1 2];
+    y = [2 3 3];
     %colrs = [128, 0, 0; 0, 119, 128; 128, 0, 0; 128, 119, 128; 0, 119, 128; ...
     %    128, 119, 128]./255;
     [R, P] = corrcoef(K);           % corrcoeff and pval matrices
     a = 0.05;                       % significance level
-    pvals = P'; pvals = pvals([4,8,3]);
-    r = R'; r = r([4, 8, 3]);
+    pvals = P'; pvals = pvals([4,3,8]);
+    r = R';     r = r([4, 3, 8]);
     markr = ['+', 'x', '^'];
     for n=1:numel(tidss)
         nexttile(tidss(n))
