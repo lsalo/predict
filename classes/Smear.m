@@ -145,12 +145,20 @@ classdef Smear
                 end
                 termCot = cotd(theta_c) - cotd(theta_s);
                 smear.Thick(n, :)  = termCot .* T(idc).^2 ./ Lf;
-                if ~isempty(FS.TotThick)  
+                if ~isempty(FS.TotThick)
                     % Smear thicknes scales with clay source thickness
                     % squared so the whole source thickness should be
                     % accounted for. However, only a fraction of the
-                    % total smear thickness will appear in this window,
+                    % total smear thickness may appear in this window,
                     % based on the relative source thickness present.
+                    % Strictly, this doesn't apply if the layer beyond window 
+                    % is at the top in FW (bot in HW), because in that case 
+                    % the full thickness appears. However, for compatibility 
+                    % with faultMaterialMap and placeSmearObjects, and also because
+                    % this only divides the smear in two, but doesn't change
+                    % the total thickness or individual length, we also 
+                    % assign the relative fraction of the total thickness 
+                    % to the FW, and HW. 
                     ido = ~isnan(FS.TotThick{2}(idc));
                     Tin = FS.Thick(idc);
                     To  = T(idc);
@@ -201,6 +209,7 @@ classdef Smear
                 if any(smear.Psmear(n, :) > 1)
                     smear.Psmear(n, smear.Psmear(n, :) > 1) = 1;
                 end
+                
             end
         
         end
