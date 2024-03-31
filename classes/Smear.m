@@ -151,9 +151,9 @@ classdef Smear
                     % accounted for. However, only a fraction of the
                     % total smear thickness may appear in this window,
                     % based on the relative source thickness present.
-                    % Strictly, this doesn't apply if the layer beyond window 
-                    % is at the top in FW (bot in HW), because in that case 
-                    % the full thickness appears. However, for compatibility 
+                    % Strictly, this may or may not apply if the layer beyond 
+                    % window is at the top in FW (bot in HW), because in that case 
+                    % the full thickness may appear. However, for compatibility 
                     % with faultMaterialMap and placeSmearObjects, and also because
                     % this only divides the smear in two, but doesn't change
                     % the total thickness or individual length, we also 
