@@ -114,7 +114,8 @@ if nargin > 2 && strcmp(plotOpt, 'histOnly')
         fh = figure(randi(10000, 1, 1));
         tiledlayout(s, 3, 'Padding', 'compact', 'TileSpacing', 'compact');
         for n=1:s
-            nexttile(1+3*(n-1))
+            j = s-(n-1);
+            nexttile(1+3*(j-1))
             labls = ["$\log_{10}(k_{xx}$ [mD])", ...
                 "$\log_{10}(k_{yy}$ [mD])", ...
                 "$\log_{10}(k_{zz}$ [mD])"];
@@ -129,7 +130,7 @@ if nargin > 2 && strcmp(plotOpt, 'histOnly')
             grid on
             %xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
             
-            nexttile(2+3*(n-1))
+            nexttile(2+3*(j-1))
             histogram(K_cell(:, 2, n), edges, 'Normalization', 'probability', ...
                 'FaceColor', rr, 'FaceAlpha', 1)
             if n == 1
@@ -139,10 +140,15 @@ if nargin > 2 && strcmp(plotOpt, 'histOnly')
             xlim([fix(logMinP)-1 fix(logMaxP)+1])
             ylim([0 1]); yticks(0:.2:1)
             grid on
+            if n==1
+                text(-4, 0.9, 'Bottom fault cell')
+            elseif n==s
+                text(-4, 0.9, 'Top fault cell')
+            end
             %xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
             hold off
             
-            nexttile(3+3*(n-1))
+            nexttile(3+3*(j-1))
             histogram(K_cell(:, 3, n), edges, 'Normalization', 'probability', ...
                 'FaceColor', bb, 'FaceAlpha', 1)
             if n==1
@@ -155,7 +161,7 @@ if nargin > 2 && strcmp(plotOpt, 'histOnly')
             %xticks(10.^(fix(logMinP)-1:2:fix(logMaxP)+1))
             %set(fh, 'position', [200, 200, 150, 350]);
         end
-        set(fh, 'position', [100, 100, 600, 1200]);
+        set(fh, 'position', [100, 100, 800, 1000]);
     end
     
 else
@@ -271,7 +277,7 @@ else
     end
     histogram(K(:, 2), edges, 'Normalization', 'probability', ...
         'FaceColor', rr, 'FaceAlpha', 1)
-    xlabel('$\hat{k}_{yy}$ [mD]', latx{:}, 'fontSize', sz(2))
+    xlabel(labls(2), latx{:}, 'fontSize', sz(2))
     ylabel('P [-]', latx{:}, 'fontSize', sz(2))
     xlim([fix(logMinP)-1 fix(logMaxP)+1])
     ylim([0 1]); yticks(0:.2:1)
@@ -293,8 +299,8 @@ else
     % Scatters
     %tidss = [2 3 4 6 7 8];
     tidss = [4 5 6];
-    x = [1 1 2];
-    y = [2 3 3];
+    x = [1 2 3];
+    y = [2 3 1];
     %colrs = [128, 0, 0; 0, 119, 128; 128, 0, 0; 128, 119, 128; 0, 119, 128; ...
     %    128, 119, 128]./255;
     [R, P] = corrcoef(K);           % corrcoeff and pval matrices
@@ -322,9 +328,9 @@ else
             colr = 'k';
             fw = 'normal';
         end
-        text(edges(1) + 0.05*(edges(end) - edges(1)), ...
-            edges(end) - 0.05*(edges(end) - edges(1)), ...
-            ['\rho = ' num2str(round(r(n), 3))],  'color', colr, 'fontSize', 10, 'fontWeight', fw);
+        %text(edges(1) + 0.05*(edges(end) - edges(1)), ...
+        %    edges(end) - 0.05*(edges(end) - edges(1)), ...
+        %    ['\rho = ' num2str(round(r(n), 3))],  'color', colr, 'fontSize', 10, 'fontWeight', fw);
         xlim([fix(logMinP)-1 fix(logMaxP)+1])
         ylim([fix(logMinP)-1 fix(logMaxP)+1])
         grid on
@@ -332,6 +338,6 @@ else
         ylabel(labls{y(n)}, latx{:}, 'fontSize', sz(2))
     end
     %set(fh, 'position', [200, 200, 500, 300]);
-    set(fh, 'position', [200, 200, 1400, 700]);
+    set(fh, 'position', [200, 200, 900, 450]);
 end
 end

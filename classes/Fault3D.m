@@ -401,7 +401,7 @@ classdef Fault3D
            ylabel(['$y$ [' unit ']'], latx{:})
            zlabel(['$z$ [' unit ']'], latx{:})
            ax = gca;
-           ax.DataAspectRatio = [0.1 1 1];
+           ax.DataAspectRatio = [0.05 1 1];
            ax.ZDir = 'normal';
            view([30 20])
            xticks([0 obj.Thick])
