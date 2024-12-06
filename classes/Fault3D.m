@@ -223,7 +223,7 @@ classdef Fault3D
                                  repmat([kxx, kxz, kyy, kzz], nklayers, 1);
         end
         
-        function [obj, CG] = upscaleProps(obj, G, U)
+        function [obj, CG, U] = upscaleProps(obj, G, U, M)
             %
             % upscale Vcl, Poro and Perm
             %
@@ -233,6 +233,8 @@ classdef Fault3D
             %   G:     3D fault grid (MRST grid structure, see 
             %          makeFaultGrid)
             %   U:     upscaling options
+            % 
+            %   M:     instance of Fault2D.MatMap [optional]
             %
             % OUTPUT:
             %   obj:   an instance of Fault3D with values for properties
@@ -241,7 +243,52 @@ classdef Fault3D
             %
 
             % Generate coarse grid
-            p = partitionCartGrid(G.cartDims, U.coarseDims);
+            if isfield(U, 'win') % coarse grid with coarse cell in desired window
+                assert(nargin == 4, " M must be passed to specify upscaling window.")
+                assert((U.coarseDims(1) == U.coarseDims(2)) && (U.coarseDims(2) == 1), ...
+                       "Currently, win must be a single coarse cell.")
+                % FW
+                if U.win.juxt(1,1) == 1
+                    nczFW = M.layerDiagBot(U.win.juxt(1, 1)):M.layerDiagTop(U.win.juxt(1, end));
+                else
+                    nczFW = M.layerDiagTop(U.win.juxt(1, 1)-1):M.layerDiagTop(U.win.juxt(1, end));
+                end
+                nczFW = G.cartDims(end) - abs(nczFW);
+                
+                % HW
+                nczHW = max(1, M.layerDiagTop(U.win.juxt(2, 1)-1)):M.layerDiagTop(U.win.juxt(2, end));
+                assert(M.layerDiagTop(end)==G.cartDims(end)-1)
+                nczHW = nczHW + 1;
+                
+                % Select window
+                ncz = intersect(nczFW, nczHW);
+                U.nz = numel(ncz);
+                
+                % Create partition
+                p = ones(G.cells.num, 1);
+                [nx, ny] = deal(G.cartDims(1), G.cartDims(2));
+                if ncz(1) == 1
+                    U.coarseDims = [1, 1, 2];
+                    U.win.cell = 1;
+                    cid = (ncz(end)*nx*ny+1):G.cells.num;
+                    p(cid) = 2;
+                elseif ncz(end) == G.cartDims(end)
+                    U.coarseDims = [1, 1, 2];
+                    U.win.cell = 2;
+                    cid = ((ncz(1)-1)*nx*ny+1):G.cells.num;
+                    p(cid) = 2;
+                else
+                    U.coarseDims = [1, 1, 3]; 
+                    U.win.cell = 2;
+                    cid = ((ncz(1)-1)*nx*ny+1):(ncz(end)*nx*ny);
+                    p(cid) = 2;
+                    cid = (ncz(end)*nx*ny+1):G.cells.num;
+                    p(cid) = 3;
+                end
+                
+            else % coarse grid with n cells with equal dimensions
+                p = partitionCartGrid(G.cartDims, U.coarseDims);
+            end
             CG = generateCoarseGrid(G, p);
             
             % Upscale Vcl and Porosity (additive)
