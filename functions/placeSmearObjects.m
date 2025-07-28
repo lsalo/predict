@@ -556,8 +556,8 @@ M.P = [M.Psmear; p_fin];               % [desired; obtained] (incl. continuous s
                                                         smear_win, smear_ndiag, diag_is_smear_var);
             
             % Compute updated P
-            M_test_remove = transpose(full(spdiags(diag_is_smear_domain, diag_ids, false(G.cartDims(1)))));
-            p_obj_it = sum(M_test_remove(M_test_remove==true)) / sum(n_cells_domain);
+            M_test_var = transpose(full(spdiags(diag_is_smear_domain, diag_ids, false(G.cartDims(1)))));
+            p_obj_it = sum(M_test_var(M_test_var==true)) / sum(n_cells_domain);
             
             % Break if finished and verbose messages
             if abs(p_obj_it - p) < tolerance
