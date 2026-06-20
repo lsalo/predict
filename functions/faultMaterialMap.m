@@ -155,7 +155,7 @@ function M = faultMaterialMap(G, FS, smear)
     %% 2. Diagonals with sand
     % 2.1 Assign sand domains between clay smear domains
     idc = find(M.isclay); % needs to be updated
-    M = assignSandDomains(M, nx, idc, sand_method, p_sand);  
+    M = assignSandDomains(M, nx, idc, sand_method);  
 
     % 2.2 Add field divLayerDiag for layer with lower and upper diags
     M = assignDivLayerDiag(M);
