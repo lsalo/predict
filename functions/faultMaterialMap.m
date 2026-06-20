@@ -334,10 +334,6 @@ function M = faultMaterialMap(G, FS, smear)
         function idx = selectUnitIndex(id_source, method)
             % 'random': all units overlapping have same probability of
             %           being selected.
-            % 'pffr': PFFRs are chosen whenever both clay smears and PFFRs
-            %         are overlapping
-            % 'vcl': The higher the vcl, the more likely to be chosen
-            %
             switch lower(method)
                 case 'random'
                     idx = randi(numel(id_source), 1);   
@@ -576,7 +572,7 @@ function M = faultMaterialMap(G, FS, smear)
         % target: scalar, typically central diagonal or elevation
         % sand_values: array (same units as target), represents sand domain "centers"
         % sand_unit_ids: array of parent IDs, corresponds to sand_values
-        % method: string, e.g. 'closest', 'pffr', ...
+        % method: string, e.g. 'closest', ...
         %
         
         % Calculate absolute distance, consider juxtaposition proximity as well
