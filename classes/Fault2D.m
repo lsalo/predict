@@ -222,7 +222,7 @@ classdef Fault2D
                                                    obj.MatProps.thick);
         end
         
-        function obj = placeMaterials(obj, FS, smear, G)
+        function obj = placeMaterials(obj, FS, smear, G, varargin)
             %
             % Place materials in the fault zone, assign permeabilities to
             % each fault material. See documentation in used functions 
@@ -234,6 +234,12 @@ classdef Fault2D
             %   smear:  An instance of Smear
             %   G:      fault grid (corresponding MRST grid structure)
             %
+            % OPTIONAL INPUT (name-value, forwarded to faultMaterialMap):
+            %   'SmearOverlapRule': 'random' (default; legacy single-parent
+            %                       overlap handling) or 'cell_union_psmear'
+            %                       (each clay source realizes its own smear;
+            %                       active source masks are then unioned).
+            %
             % OUTPUT: 
             %   property "MatMap" added to obj, with corresponding 
             %   subfields (including the 0s and 1s smear matrix).
@@ -243,24 +249,26 @@ classdef Fault2D
             %
             obj.Grid.cellDim = G.cellDim;
             
-            % Mapping matrix (material in each grid cell)
-            % MatMap makes this object somewhat heavy on RAM.
-            obj.MatMap = faultMaterialMap(G, FS, smear);
+            % Mapping matrix (geometry of material domains). In cell_union_psmear
+            % mode this returns per-source band descriptors and sets
+            % M.cellUnion = true; the stochastic realization, union and cell
+            % labeling are deferred to placeSmearObjects.
+            obj.MatMap = faultMaterialMap(G, FS, smear, varargin{:});
             
-            % Smear placement (object simulation)
-            if any(obj.MatMap.Psmear < 1)
-                    tol = 0.025;
-                    obj.MatMap = placeSmearObjects(obj.MatMap, smear, FS, ...
-                                                   G, tol, 0);
-                else
-                    if isempty(obj.MatMap.Psmear)
-                        disp('No smear: P(smear) = 0')
-                    %else
-                    %    disp('Continuous smears: P(smear) = 1')
-                    end
-                    obj.MatMap.vals = transpose(obj.MatMap.vals);
-                    obj.MatMap.P = [obj.MatMap.Psmear; ...  % desired (calculated)
-                                    obj.MatMap.Psmear];     % obtained
+            % Smear placement (object-based simulation).
+            isCellUnion = isfield(obj.MatMap, 'cellUnion') && obj.MatMap.cellUnion;
+            if isCellUnion || any(obj.MatMap.Psmear < 1)
+                % cell_union_psmear always enters here: it needs the per-source
+                % realization + union even when every source is continuous.
+                tol = 0.025;
+                obj.MatMap = placeSmearObjects(obj.MatMap, smear, FS, G, tol, 0);
+            else
+                if isempty(obj.MatMap.Psmear)
+                    disp('No smear: P(smear) = 0')
+                end
+                obj.MatMap.vals = transpose(obj.MatMap.vals);
+                obj.MatMap.P = [obj.MatMap.Psmear; ...   % desired (calculated)
+                                obj.MatMap.Psmear];      % obtained
             end
             
             % Assign vcl, porosity and permeability          

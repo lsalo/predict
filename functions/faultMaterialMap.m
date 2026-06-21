@@ -1,4 +1,4 @@
-function M = faultMaterialMap(G, FS, smear)
+function M = faultMaterialMap(G, FS, smear, varargin)
     %
     % -----------------------------SUMMARY------------------------------------
     % This function takes as inputs the Grid structure (G), faulted section (FS)
@@ -34,6 +34,21 @@ function M = faultMaterialMap(G, FS, smear)
     % G   = MRST Grid structure
     % FS  = FaultedSection object with valid fields.
     % smear = Smear object with valid fields.
+    %
+    % -------------------------OPTIONAL INPUTS--------------------------------
+    % 'SmearOverlapRule' = how clay-smear overlaps are handled. One of:
+    %     'random' (default) : legacy behavior. In each overlapping diagonal
+    %                          group a single parent clay source is selected
+    %                          (uniform PMF), then smears are realized by
+    %                          object-based simulation (placeSmearObjects).
+    %     'cell_union_psmear': each clay source is kept as a separate,
+    %                          untrimmed domain here; the stochastic
+    %                          realization, cell-wise union of active source
+    %                          masks, and parent labeling are deferred to
+    %                          placeSmearObjects. In this mode the function
+    %                          returns per-source band descriptors and sets
+    %                          M.cellUnion = true (see below); it does NOT
+    %                          resolve overlaps or place sand diagonals.
     %
     % ------------------------------OUTPUT------------------------------------
     % M = matrix structure. Contains the following fields:
@@ -114,6 +129,13 @@ function M = faultMaterialMap(G, FS, smear)
     % Method to handle clay smear overlaps and sand units
     sand_method = 'closest';
     overlap_method = 'random';                    % 'random' or 'pffr' or 'vcl'
+
+    % Optional input: clay-smear overlap rule. 'random' keeps the legacy
+    % single-parent path; 'cell_union_psmear' switches to the deferred
+    % per-source realization + union handled in placeSmearObjects.
+    opt.SmearOverlapRule = 'random';
+    opt = merge_options_relaxed(opt, varargin{:});
+    smearOverlapRule = normalizeSmearOverlapRule(opt.SmearOverlapRule);
     
     % Initial values to Matrix structure
     nx            = G.cartDims(1);
@@ -136,7 +158,18 @@ function M = faultMaterialMap(G, FS, smear)
     % 1.2 Calculate number of diagonals with potential smear and assign
     %     initial domains
     M = assignInitialDiags(FS, M, smear, nx, idc);
-    
+
+    % 1.2b cell_union_psmear: hand off untrimmed per-source band descriptors
+    %      to the placement stage and return. We deliberately skip overlap
+    %      resolution (1.4), the full-fault check (1.3/1.5), and sand-diagonal
+    %      assignment (2.x): in this mode each clay source is realized
+    %      independently and overlaps are resolved by cell-wise union (with
+    %      nearest-source / nearest-sand labeling) inside placeSmearObjects.
+    if strcmp(smearOverlapRule, 'cell_union_psmear')
+        M = buildCellUnionDescriptors(M, FS, smear, idc, nz, lz);
+        return
+    end
+
     % 1.3: Check if smear covers the whole fault area
     smearThickAsFault = checkFullFaultSmear(M, nx, idc);
     
@@ -516,7 +549,7 @@ function M = faultMaterialMap(G, FS, smear)
                 end
                 
                 % 2. Smear window for this clay domain
-                [idTop, idBot] = getSmearWindow(M, FS, nz, lz, n);
+                [idTop, idBot] = getSmearWindow(M, FS, nz, lz, M.unit(n));
                 M.windowTop(n) = idTop;
                 M.windowBot(n) = idBot;
                 
@@ -546,22 +579,6 @@ function M = faultMaterialMap(G, FS, smear)
             sand_centers = M.layerDiagCenter(~M.isclayIn);
             clay_center = mean([M.DiagBot(k); M.DiagTop(k)]);
             sandId = getSandUnit(M, clay_center, sand_centers, sand_unit_ids, method);
-        end
-        
-        function [idTop, idBot] = getSmearWindow(M, FS, nz, lz, n)
-            % Gets top and bottom cell indices for smear window in diagonal n.
-            % Returns indices for rows of "diagVals" used in spdiags.           
-            zTot = nz * lz;     % total height
-            
-            if ismember(M.unit(n), FS.FW.Id)  % Smear source is FW
-                idTop = round((M.layerTop(M.unit(n)) / zTot) * nz);
-                idTop = min(idTop, nz);
-                idBot = 1;
-            else                              % Smear source is HW
-                idTop = nz;
-                idBot = round((M.layerBot(M.unit(n)) / zTot) * nz);
-                if idBot == 0, idBot = 1; end
-            end
         end
         
     end
@@ -595,8 +612,101 @@ function M = faultMaterialMap(G, FS, smear)
         
     end
 
-    
+    function [idTop, idBot] = getSmearWindow(M, FS, nz, lz, unitId)
+        % Top and bottom cell indices (rows of "diagVals" used in spdiags)
+        % of the elevation window in which a clay source can smear: a FW
+        % source only at z <= its layer top, a HW source only at z >= its
+        % layer bottom. Shared by populateMappingMatrices (legacy path, called
+        % with M.unit(n)) and buildCellUnionDescriptors (cell-union path,
+        % called per clay source). Takes the parent unit id directly.
+        zTot = nz * lz;     % total height
 
+        if ismember(unitId, FS.FW.Id)     % Smear source is FW
+            idTop = round((M.layerTop(unitId) / zTot) * nz);
+            idTop = min(idTop, nz);
+            idBot = 1;
+        else                              % Smear source is HW
+            idTop = nz;
+            idBot = round((M.layerBot(unitId) / zTot) * nz);
+            if idBot == 0, idBot = 1; end
+        end
+    end
+
+    function M = buildCellUnionDescriptors(M, FS, smear, idc, nz, lz)
+        %
+        % cell_union_psmear handoff. Reduce M to the list of clay SOURCES,
+        % each kept untrimmed (no overlap resolution), described by its
+        % diagonal band (DiagBot/DiagTop/nDiag), elevation window
+        % (windowTop/windowBot) and Psmear. The stochastic realization,
+        % cell-wise union of active source masks, and parent-unit labeling
+        % are deferred to placeSmearObjects (which detects M.cellUnion).
+        %
+        % Full-length input/geometry fields are intentionally retained:
+        %   - M.unitIn, M.isclayIn : needed to identify sand parent units and
+        %                            to map per-source smear lengths.
+        %   - M.layerDiagCenter, M.layerTop, M.layerBot, ... : needed for the
+        %                            nearest-source and nearest-sand labeling
+        %                            in the placement stage (indexed by the
+        %                            actual parent unit id, not by source #).
+        %
+        % NOTE on indexing: after this function the reduced descriptor arrays
+        % (M.unit, M.DiagBot/Top, M.nDiag, M.windowTop/Bot, M.Psmear) are
+        % aligned to the clay-source order (idc), i.e. indexed by source #.
+        % The retained layer-geometry arrays remain indexed by parent unit id.
+
+        nSrc = numel(idc);
+        assert(numel(smear.Psmear) == nSrc, ...
+               'smear.Psmear length must equal the number of clay sources.')
+
+        % Per-source elevation window (rows of the diagonal reachable by the
+        % smear). Mirrors getSmearWindow in the legacy populate step: a FW
+        % source can only smear at z <= its layer top; a HW source only at
+        % z >= its layer bottom.
+        windowTop = nan(1, nSrc);
+        windowBot = nan(1, nSrc);
+        for s = 1:nSrc
+            [windowTop(s), windowBot(s)] = getSmearWindow(M, FS, nz, lz, idc(s));
+        end
+
+        % Reduce to clay-source descriptors (aligned to idc)
+        M.unit      = idc;                       % clay source unit ids
+        M.isclay    = true(1, nSrc);
+        M.DiagBot   = M.DiagBot(idc);
+        M.DiagTop   = M.DiagTop(idc);
+        M.nDiag     = M.nDiag(idc);
+        M.windowTop = windowTop;
+        M.windowBot = windowBot;
+        M.Psmear    = reshape(smear.Psmear, 1, []);   % aligned to idc
+
+        % Mode flag (consumed by placeSmearObjects and Fault2D.placeMaterials)
+        M.cellUnion        = true;
+        M.smearOverlapRule = 'cell_union_psmear';
+    end
+
+
+    function rule = normalizeSmearOverlapRule(ruleIn)
+        %
+        % Canonical name for the clay-smear overlap rule. Only 'random'
+        % (legacy) and 'cell_union_psmear' are supported here; the 'geologic'
+        % rule from the prototype is intentionally omitted.
+        %
+        if isstring(ruleIn)
+            ruleIn = char(ruleIn);
+        end
+        assert(ischar(ruleIn), ...
+               'SmearOverlapRule must be a character vector or string scalar.')
+        rule = lower(strtrim(ruleIn));
+        switch rule
+            case {'random', 'legacy', 'uniform_random'}
+                rule = 'random';
+            case {'cell_union_psmear', 'cell-union-psmear', ...
+                  'union_psmear', 'psmear_cell_union'}
+                rule = 'cell_union_psmear';
+            otherwise
+                error(['Unknown SmearOverlapRule "%s". Use "random" or ' ...
+                       '"cell_union_psmear".'], ruleIn)
+        end
+    end
 
 
 end
