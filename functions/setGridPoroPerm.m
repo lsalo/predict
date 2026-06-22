@@ -96,6 +96,39 @@ T = [cosd(alpha) sind(alpha); ...
 fn = 0.01;                                              % porosity var factor
 fk = 0.2;                                               % log perm var factor
 
+if isfield(M, 'cellBasedFinal') && M.cellBasedFinal
+    % cell_union_psmear: M.units already holds the final per-cell parent unit
+    % id for every cell. Assign properties per parent unit,grouping cells by id rather 
+    % than by diagonal band: a unit's cells may bedispersed across the fault, 
+    % but each still gets an independent per-cell perturbation, exactly as in
+    % the legacy contiguous-domain case.
+    whichUnit = reshape(transpose(flipud(M.units)), ncell, 1);
+    unitIds = unique(whichUnit(isfinite(whichUnit) & whichUnit > 0))';
+    for uid = unitIds
+        cellIds = whichUnit == uid;
+        cellNum = sum(cellIds);
+        if cellNum == 0
+            continue
+        end
+
+        units(cellIds) = uid;
+        unitPoroCorrRange = [unitPoro(uid)-fn unitPoro(uid)+fn];
+        assert(all(unitPoroCorrRange > 0))
+        unitPermCorrRangeLog = log10(unitPerm(uid)) + [-fk, fk];
+
+        poroG(cellIds) = unitPoroCorrRange(1) + rand(cellNum, 1)*diff(unitPoroCorrRange);
+        kx_loc(cellIds) = 10.^(unitPermCorrRangeLog(1) + rand(cellNum, 1)*diff(unitPermCorrRangeLog));
+        vcl(cellIds) = FS.Vcl(uid);
+        kz_loc(cellIds) = kx_loc(cellIds) * permAnisoRatio(uid);
+        permG = assignRotatedTensor(permG, cellIds, kx_loc, kz_loc, T);
+    end
+
+    assert(all(isfinite(poroG)), 'Cell-based porosity assignment failed.')
+    assert(all(isfinite(permG(:))), 'Cell-based permeability assignment failed.')
+    assert(all(isfinite(vcl)), 'Cell-based Vcl assignment failed.')
+    return
+end
+
 for n=1:numel(M.unit)
     % To get cellIds, we use idsUnitBlock instead of whichUnit == M.unit(n)
     % since same unit can appear more than once, in separate blocks.
@@ -233,4 +266,18 @@ for n=1:numel(M.unit)
     end
 end
 
+end
+
+function permG = assignRotatedTensor(permG, cellIds, kx_loc, kz_loc, T)
+% Rotate local material permeability into fault axes.
+
+cellIdx = find(cellIds);
+cellNum = numel(cellIdx);
+S = zeros(2, 2, cellNum);
+S(1, 1, :) = reshape(kx_loc(cellIds), 1, 1, []);
+S(2, 2, :) = reshape(kz_loc(cellIds), 1, 1, []);
+kmat = transformTensor(S, T, 'posDef');
+permG(cellIdx, :) = [reshape(kmat(1, 1, :), [], 1), ...
+                     reshape(kmat(1, 2, :), [], 1), ...
+                     reshape(kmat(2, 2, :), [], 1)];
 end
