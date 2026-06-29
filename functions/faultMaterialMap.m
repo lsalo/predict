@@ -128,7 +128,7 @@ function M = faultMaterialMap(G, FS, smear, varargin)
     
     % Method to handle clay smear overlaps and sand units
     sand_method = 'closest';
-    overlap_method = 'random';                    % 'random' or 'pffr' or 'vcl'
+    overlap_method = 'random';                    
 
     % Optional input: clay-smear overlap rule. 'random' keeps the legacy
     % single-parent path; 'cell_union_psmear' switches to the deferred
@@ -301,7 +301,7 @@ function M = faultMaterialMap(G, FS, smear, varargin)
         % Internal helpers
         % -----------------
         function Omap = buildOverlapMap(M, nx, idc)
-            nDiag = nx - 1;
+            nDiag = 2*nx - 1;
             nc = sum(M.isclay);
             Omap = zeros(nDiag, nc);
             for k = 1:nc
@@ -370,7 +370,7 @@ function M = faultMaterialMap(G, FS, smear, varargin)
             switch lower(method)
                 case 'random'
                     idx = randi(numel(id_source), 1);   
-                    
+
                 otherwise
                     error('Selection method not implemented');
             end
@@ -427,7 +427,6 @@ function M = faultMaterialMap(G, FS, smear, varargin)
         M.unit    = M.unit(idToSort(pos));
         M.isclay  = M.isclay(idToSort(pos));
         M.Psmear  = M.Psmear(pos);  % Only the clays that survived
-        M.isPFFRIn = all([FS.Vcl >= 0.3; FS.Vcl < 0.4]);
         M.TapIn   = FS.Tap;
         M.VclIn   = FS.Vcl;
         M.disp    = sum(FS.Tap(1:FS.FW.Id(end)));
@@ -445,6 +444,10 @@ function M = faultMaterialMap(G, FS, smear, varargin)
         if isempty(sandDiag)
             return;
         end
+
+        % Snapshot clay-only DiagBot before any sand domains are inserted
+        % (legacy field; M.DiagBot is still clay-only at this point).
+        M.clayDiagBot = M.DiagBot;
         
         % 1. Find contiguous sand diagonal groups
         sandGroups = findContiguousGroups(sandDiag);
@@ -475,7 +478,7 @@ function M = faultMaterialMap(G, FS, smear, varargin)
             
             for k = 1:nGroups
                 center_diag = mean(sandGroups(:, k));
-                sandParents(k) = getSandUnit(M, center_diag, sand_centers_grid, sand_unit_ids, method_sand);
+                sandParents(k) = getSandUnit(center_diag, sand_centers_grid, sand_unit_ids, method_sand);
             end
         end
         
@@ -578,29 +581,21 @@ function M = faultMaterialMap(G, FS, smear, varargin)
             sand_unit_ids = M.unitIn(~M.isclayIn);
             sand_centers = M.layerDiagCenter(~M.isclayIn);
             clay_center = mean([M.DiagBot(k); M.DiagTop(k)]);
-            sandId = getSandUnit(M, clay_center, sand_centers, sand_unit_ids, method);
+            sandId = getSandUnit(clay_center, sand_centers, sand_unit_ids, method);
         end
         
     end
 
 
-    function sandId = getSandUnit(M, target, sand_values, sand_unit_ids, method)
+    function sandId = getSandUnit(target, sand_values, sand_unit_ids, method)
         %
         % target: scalar, typically central diagonal or elevation
         % sand_values: array (same units as target), represents sand domain "centers"
         % sand_unit_ids: array of parent IDs, corresponds to sand_values
         % method: string, e.g. 'closest', ...
         %
-        
-        % Calculate absolute distance, consider juxtaposition proximity as well
-        n = round((M.nDiagTot + 1) / 2);            
-        if target < 0
-            target = n + target;
-        end
-        ids = sand_values < 0;
-        sand_values(ids) = n + sand_values(ids);
         dist = abs(target - sand_values);       
-        
+
         switch lower(method)
             case 'closest'
                 [~, sid] = min(dist);
