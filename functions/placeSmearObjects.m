@@ -602,203 +602,202 @@ end
 % (which has no cellUnion field, so it runs the legacy path).
 
 function M = placeSmearObjectsCellUnion(M, smear, FS, G, tolerance, verbose)
-% Realize each clay source's discontinuous smear independently, take the
-% cell-wise union of the active masks, then label every cell with a parent
-% unit: overlapping active clay cells get the nearest clay source; non-clay
-% cells get the nearest sand source. Produces a final per-cell map and sets
-% M.cellBasedFinal = true.
-
-n  = G.cartDims(1);          % mapping-matrix dimension (square grid)
-nz = G.cartDims(end);
-
-% Diagonal index of each cell in the final (transposed) orientation, i.e. the
-% same orientation as the legacy post-placement M.vals.
-[rowId, colId] = ndgrid(1:n, 1:n);
-cellDiag = rowId - colId;
-
-nSrc     = numel(M.unit);    % clay-source descriptor list from faultMaterialMap
-clayMask = false(n, n);
-unitMap  = zeros(n, n);
-bestDist = inf(n, n);
-actualP  = zeros(1, nSrc);   % realized coverage per source (aligned to M.unit)
-
-for s = 1:nSrc
-    unitId = M.unit(s);
-
-    % Skip empty / zero-probability sources
-    if M.nDiag(s) <= 0 || ~(M.Psmear(s) > 0)
-        continue
-    end
-
-    % Cells this source could occupy: diagonal band intersected with its
-    % elevation window (window precomputed in faultMaterialMap).
-    candidateMask = sourceCandidateMask(n, nz, M.DiagBot(s), M.DiagTop(s), ...
-                                        M.windowBot(s), M.windowTop(s));
-    if ~any(candidateMask(:))
-        continue
-    end
-
-    % Realize this source's smear. Continuous sources fill the candidate;
-    % discontinuous sources are realized by the legacy object placement.
-    if M.Psmear(s) >= 1
-        sourceMask = candidateMask;
-        actualP(s) = 1;
-    else
-        [sourceMask, actualP(s)] = realizeSourcePsmear(M, smear, FS, G, s, ...
-                                                       candidateMask, ...
-                                                       tolerance, verbose);
-    end
-    if ~any(sourceMask(:))
-        continue
-    end
-
-    % Union, and assign parent = nearest clay source (ties: lower unit id).
-    % NOTE (suspected sign error, from prototype). This only affects PARENT LABELING in OVERLAP cells
-    % (which source's poro/perm/Vcl a shared cell gets); Left as-is to match Shaowen's
-    % prototype; verify and switch to the line below during the MATLAB pass.
-    srcDist = abs(cellDiag - M.layerDiagCenter(unitId));
-    % srcDist = abs(cellDiag + M.layerDiagCenter(unitId));   % suspected fix
+    % Realize each clay source's discontinuous smear independently, take the
+    % cell-wise union of the active masks, then label every cell with a parent
+    % unit: overlapping active clay cells get the nearest clay source; non-clay
+    % cells get the nearest sand source. Produces a final per-cell map and sets
+    % M.cellBasedFinal = true.
     
-    tie     = abs(srcDist - bestDist) <= 1e-12 & (unitMap == 0 | unitId < unitMap);
-    upd     = sourceMask & (srcDist < bestDist | tie);
-
-    clayMask      = clayMask | sourceMask;
-    unitMap(upd)  = unitId;
-    bestDist(upd) = srcDist(upd);
-end
-
-% Fill non-clay cells with the nearest sand parent.
-sandMap = nearestSandUnitMap(M, cellDiag);
-if any(~clayMask(:)) && any(sandMap(~clayMask) == 0)
-    error(['cell_union_psmear requires at least one sand parent unit when ' ...
-           'some cells are not occupied by clay smear.'])
-end
-unitMap(~clayMask) = sandMap(~clayMask);
-if any(clayMask(:) & unitMap(:) == 0)
-    error('cell_union_psmear failed to assign a parent unit to some clay cells.')
-end
-
-% Finalize per-cell map. Orientation matches the legacy post-placement M.vals
-% (transposed once), so setGridPoroPerm's transpose(flipud(.)) maps correctly.
-M.vals  = clayMask;
-M.units = unitMap;
-M.cellBasedFinal = true;
-
-% Rebuild domain descriptors from the realized map (band fields NaN; M.unit
-% lists every unit actually present in the fault).
-M = rebuildCellUnionDescriptors(M, actualP);
+    n  = G.cartDims(1);          % mapping-matrix dimension (square grid)
+    nz = G.cartDims(end);
+    
+    % Diagonal index of each cell in the final (transposed) orientation, i.e. the
+    % same orientation as the legacy post-placement M.vals.
+    [rowId, colId] = ndgrid(1:n, 1:n);
+    cellDiag = rowId - colId;
+    
+    nSrc     = numel(M.unit);    % clay-source descriptor list from faultMaterialMap
+    clayMask = false(n, n);
+    unitMap  = zeros(n, n);
+    bestDist = inf(n, n);
+    actualP  = zeros(1, nSrc);   % realized coverage per source (aligned to M.unit)
+    
+    for s = 1:nSrc
+        unitId = M.unit(s);
+    
+        % Skip empty / zero-probability sources
+        if M.nDiag(s) <= 0 || ~(M.Psmear(s) > 0)
+            continue
+        end
+    
+        % Cells this source could occupy: diagonal band intersected with its
+        % elevation window (window precomputed in faultMaterialMap).
+        candidateMask = sourceCandidateMask(n, nz, M.DiagBot(s), M.DiagTop(s), ...
+            M.windowBot(s), M.windowTop(s));
+        if ~any(candidateMask(:))
+            continue
+        end
+    
+        % Realize this source's smear. Continuous sources fill the candidate;
+        % discontinuous sources are realized by the legacy object placement.
+        if M.Psmear(s) >= 1
+            sourceMask = candidateMask;
+            actualP(s) = 1;
+        else
+            [sourceMask, actualP(s)] = realizeSourcePsmear(M, smear, FS, G, s, ...
+                candidateMask, ...
+                tolerance, verbose);
+        end
+        if ~any(sourceMask(:))
+            continue
+        end
+    
+        % Union, and assign parent = nearest clay source (ties: lower unit id).
+        % NOTE (suspected sign error, from prototype). This only affects PARENT LABELING in OVERLAP cells
+        % (which source's poro/perm/Vcl a shared cell gets); Left as-is to match Shaowen's
+        % prototype; verify and switch to the line below during the MATLAB pass.
+        srcDist = abs(cellDiag - M.layerDiagCenter(unitId));
+        % srcDist = abs(cellDiag + M.layerDiagCenter(unitId));   % suspected fix
+    
+        tie     = abs(srcDist - bestDist) <= 1e-12 & (unitMap == 0 | unitId < unitMap);
+        upd     = sourceMask & (srcDist < bestDist | tie);
+    
+        clayMask      = clayMask | sourceMask;
+        unitMap(upd)  = unitId;
+        bestDist(upd) = srcDist(upd);
+    end
+    
+    % Fill non-clay cells with the nearest sand parent.
+    sandMap = nearestSandUnitMap(M, cellDiag);
+    if any(~clayMask(:)) && any(sandMap(~clayMask) == 0)
+        error(['cell_union_psmear requires at least one sand parent unit when ' ...
+            'some cells are not occupied by clay smear.'])
+    end
+    unitMap(~clayMask) = sandMap(~clayMask);
+    if any(clayMask(:) & unitMap(:) == 0)
+        error('cell_union_psmear failed to assign a parent unit to some clay cells.')
+    end
+    
+    % Finalize per-cell map. Orientation matches the legacy post-placement M.vals
+    % (transposed once), so setGridPoroPerm's transpose(flipud(.)) maps correctly.
+    M.vals  = clayMask;
+    M.units = unitMap;
+    M.cellBasedFinal = true;
+    
+    % Rebuild domain descriptors from the realized map (band fields NaN; M.unit
+    % lists every unit actually present in the fault).
+    M = rebuildCellUnionDescriptors(M, actualP);
 
 end
 
 
 function mask = sourceCandidateMask(n, nz, diagBot, diagTop, idBot, idTop)
-% Cells reachable by one clay source: its diagonal band [diagBot, diagTop]
-% intersected with its elevation-window rows [idBot, idTop]. Built in the same
-% transposed-once orientation as the legacy M.vals.
-
-nDiag = diagTop - diagBot + 1;
-if nDiag <= 0
-    mask = false(n, n);
-    return
+    % Cells reachable by one clay source: its diagonal band [diagBot, diagTop]
+    % intersected with its elevation-window rows [idBot, idTop]. Built in the same
+    % transposed-once orientation as the legacy M.vals.
+    
+    nDiag = diagTop - diagBot + 1;
+    if nDiag <= 0
+        mask = false(n, n);
+        return
+    end
+    diagVals = false(nz, nDiag);
+    diagVals(idBot:idTop, :) = true;
+    diagVals = flipud(diagVals);                       % for spdiags (as in legacy)
+    maskPreT = full(spdiags(diagVals, -diagTop:-diagBot, false(n)));
+    mask = transpose(maskPreT);
 end
-diagVals = false(nz, nDiag);
-diagVals(idBot:idTop, :) = true;
-diagVals = flipud(diagVals);                       % for spdiags (as in legacy)
-maskPreT = full(spdiags(diagVals, -diagTop:-diagBot, false(n)));
-mask = transpose(maskPreT);
-end
 
 
-function [activeMask, actualP] = realizeSourcePsmear(M, smear, FS, G, s, ...
-                                                     candidateMask, tol, verbose)
-% Realize one discontinuous clay source using the legacy single-band object
-% placement: build a one-domain M and call placeSmearObjects recursively. The
-% sub-call has no cellUnion field, so it runs the legacy path. The realized
-% mask is clipped to the source's candidate cells.
-
-Msrc           = struct();
-Msrc.vals      = false(size(M.vals));
-Msrc.units     = zeros(size(M.units));
-Msrc.unit      = M.unit(s);
-Msrc.isclay    = true;
-Msrc.unitIn    = M.unitIn;
-Msrc.isclayIn  = M.isclayIn;
-Msrc.nDiag     = M.nDiag(s);
-Msrc.DiagBot   = M.DiagBot(s);
-Msrc.DiagTop   = M.DiagTop(s);
-Msrc.Psmear    = M.Psmear(s);
-Msrc.windowBot = M.windowBot(s);
-Msrc.windowTop = M.windowTop(s);
-
-Msrc = placeSmearObjects(Msrc, smear, FS, G, tol, verbose);
-
-activeMask = logical(Msrc.vals) & candidateMask;
-actualP    = sum(activeMask(:)) / max(1, sum(candidateMask(:)));
+function [activeMask, actualP] = realizeSourcePsmear(M, smear, FS, G, s, candidateMask, tol, verbose)
+    % Realize one discontinuous clay source using the legacy single-band object
+    % placement: build a one-domain M and call placeSmearObjects recursively. The
+    % sub-call has no cellUnion field, so it runs the legacy path. The realized
+    % mask is clipped to the source's candidate cells.
+    
+    Msrc           = struct();
+    Msrc.vals      = false(size(M.vals));
+    Msrc.units     = zeros(size(M.units));
+    Msrc.unit      = M.unit(s);
+    Msrc.isclay    = true;
+    Msrc.unitIn    = M.unitIn;
+    Msrc.isclayIn  = M.isclayIn;
+    Msrc.nDiag     = M.nDiag(s);
+    Msrc.DiagBot   = M.DiagBot(s);
+    Msrc.DiagTop   = M.DiagTop(s);
+    Msrc.Psmear    = M.Psmear(s);
+    Msrc.windowBot = M.windowBot(s);
+    Msrc.windowTop = M.windowTop(s);
+    
+    Msrc = placeSmearObjects(Msrc, smear, FS, G, tol, verbose);
+    
+    activeMask = logical(Msrc.vals) & candidateMask;
+    actualP    = sum(activeMask(:)) / max(1, sum(candidateMask(:)));
 end
 
 
 function unitMap = nearestSandUnitMap(M, cellDiag)
-% Assign each cell to the closest sand source layer (ties: lower unit id).
-% NOTE (possible sign error, from prototype): same convention as the clay
-% labeling, the commented line is the suspected fix to verify during the MATLAB pass.
-
-sandUnits = M.unitIn(~M.isclayIn);
-unitMap = zeros(size(cellDiag));
-if isempty(sandUnits)
-    return
-end
-bestDistance = inf(size(cellDiag));
-for i = 1:numel(sandUnits)
-    unitId  = sandUnits(i);
-    srcDist = abs(cellDiag - M.layerDiagCenter(unitId));
-    % srcDist = abs(cellDiag + M.layerDiagCenter(unitId));   % fix?
-    tie     = abs(srcDist - bestDistance) <= 1e-12 & ...
-              (unitMap == 0 | unitId < unitMap);
-    update  = srcDist < bestDistance | tie;
-    unitMap(update)      = unitId;
-    bestDistance(update) = srcDist(update);
-end
+    % Assign each cell to the closest sand source layer (ties: lower unit id).
+    % NOTE (possible sign error, from prototype): same convention as the clay
+    % labeling, the commented line is the suspected fix to verify during the MATLAB pass.
+    
+    sandUnits = M.unitIn(~M.isclayIn);
+    unitMap = zeros(size(cellDiag));
+    if isempty(sandUnits)
+        return
+    end
+    bestDistance = inf(size(cellDiag));
+    for i = 1:numel(sandUnits)
+        unitId  = sandUnits(i);
+        srcDist = abs(cellDiag - M.layerDiagCenter(unitId));
+        % srcDist = abs(cellDiag + M.layerDiagCenter(unitId));   % fix?
+        tie     = abs(srcDist - bestDistance) <= 1e-12 & ...
+                  (unitMap == 0 | unitId < unitMap);
+        update  = srcDist < bestDistance | tie;
+        unitMap(update)      = unitId;
+        bestDistance(update) = srcDist(update);
+    end
 end
 
 
 function M = rebuildCellUnionDescriptors(M, actualP)
-% Rebuild M.unit / M.isclay / Psmear etc. from the realized per-cell M.units,
-% enumerating every unit actually present in the fault (clay sources that
-% labeled >= 1 cell, plus every sand unit that labeled a cell). Band fields are
-% set to NaN: cell-union domains do not form non-overlapping diagonal bands.
-
-% Map per-source quantities (aligned to the clay-source list M.unit) to
-% per-unit-id arrays BEFORE M.unit is overwritten.
-pSmearByUnit = zeros(1, max(M.unitIn));
-actualByUnit = zeros(1, max(M.unitIn));
-pSmearByUnit(M.unit) = M.Psmear;
-actualByUnit(M.unit) = actualP;
-inputClayUnits = M.unit;                 % clay sources we attempted
-
-% Units present in the realized map
-appearing = unique(M.units(:))';
-appearing(appearing == 0) = [];
-appearingClay = unique(M.units(logical(M.vals)))';
-appearingClay(appearingClay == 0) = [];
-
-% Descriptor arrays for all present units (bands undefined in this mode)
-M.unit           = appearing;
-M.isclay         = ismember(M.unit, M.unitIn(M.isclayIn));
-M.nDiag          = nan(1, numel(M.unit));
-M.DiagBot        = nan(1, numel(M.unit));
-M.DiagTop        = nan(1, numel(M.unit));
-M.windowTop      = nan(1, numel(M.unit));
-M.windowBot      = nan(1, numel(M.unit));
-M.unitInClayGaps = nan(1, numel(M.unit));
-M.clayDiagBot    = [];
-M.divLayerDiag   = [];
-
-% Probabilities for clay units that actually label cells
-M.Psmear             = pSmearByUnit(appearingClay);
-M.P                  = [M.Psmear; actualByUnit(appearingClay)];
-M.PsmearByUnit       = pSmearByUnit;
-M.actualPsmearByUnit = actualByUnit;
-
-% Clay sources that produced no labeled clay cells (removed by overlap/union)
-M.idSmearInRemoved = find(~ismember(inputClayUnits, appearingClay));
+    % Rebuild M.unit / M.isclay / Psmear etc. from the realized per-cell M.units,
+    % enumerating every unit actually present in the fault (clay sources that
+    % labeled >= 1 cell, plus every sand unit that labeled a cell). Band fields are
+    % set to NaN: cell-union domains do not form non-overlapping diagonal bands.
+    
+    % Map per-source quantities (aligned to the clay-source list M.unit) to
+    % per-unit-id arrays BEFORE M.unit is overwritten.
+    pSmearByUnit = zeros(1, max(M.unitIn));
+    actualByUnit = zeros(1, max(M.unitIn));
+    pSmearByUnit(M.unit) = M.Psmear;
+    actualByUnit(M.unit) = actualP;
+    inputClayUnits = M.unit;                 % clay sources we attempted
+    
+    % Units present in the realized map
+    appearing = unique(M.units(:))';
+    appearing(appearing == 0) = [];
+    appearingClay = unique(M.units(logical(M.vals)))';
+    appearingClay(appearingClay == 0) = [];
+    
+    % Descriptor arrays for all present units (bands undefined in this mode)
+    M.unit           = appearing;
+    M.isclay         = ismember(M.unit, M.unitIn(M.isclayIn));
+    M.nDiag          = nan(1, numel(M.unit));
+    M.DiagBot        = nan(1, numel(M.unit));
+    M.DiagTop        = nan(1, numel(M.unit));
+    M.windowTop      = nan(1, numel(M.unit));
+    M.windowBot      = nan(1, numel(M.unit));
+    M.unitInClayGaps = nan(1, numel(M.unit));
+    M.clayDiagBot    = [];
+    M.divLayerDiag   = [];
+    
+    % Probabilities for clay units that actually label cells
+    M.Psmear             = pSmearByUnit(appearingClay);
+    M.P                  = [M.Psmear; actualByUnit(appearingClay)];
+    M.PsmearByUnit       = pSmearByUnit;
+    M.actualPsmearByUnit = actualByUnit;
+    
+    % Clay sources that produced no labeled clay cells (removed by overlap/union)
+    M.idSmearInRemoved = find(~ismember(inputClayUnits, appearingClay));
 end
